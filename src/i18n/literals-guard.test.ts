@@ -50,6 +50,14 @@ const ALLOWED: Array<{ file: string; because: string }> = [
       "meant to be changed, and translating them would turn a sample into a recommendation",
   },
   {
+    file: "scripts/demo.ts",
+    because:
+      "a household's own words: what somebody writes on an expense — «Empanadas», "
+      + "«Quincena», «Cena de cumpleaños». It is the same kind of thing as the seed's "
+      + "accounts, and a demo of a Venezuelan household that describes its spending in "
+      + "English would be a demo of nothing",
+  },
+  {
     file: "src/test/fixtures.ts",
     because: "test data: real Venezuelan receipt text, which the fuzzy matching is calibrated on",
   },
