@@ -1,0 +1,268 @@
+{
+  "error": {
+    "generic": "No pude completarlo. Revisa el registro del servidor: el detalle quedó ahí."
+  },
+  "recordTransaction": {
+    "householdNotFound": "El hogar no existe",
+    "accountNotFound": "No encontré ninguna cuenta parecida a \"{input}\"",
+    "noAccounts": "El hogar no tiene ninguna cuenta configurada",
+    "defaultedAccount": "No dijiste de qué cuenta, lo cargué a {account}.",
+    "toAccountNotTransfer": {
+      "head": "\"to_account\" es la cuenta de DESTINO de una transferencia, y esto es un {kind, select, income {ingreso} other {gasto}}, no una transferencia. ",
+      "hint": "Si \"{sent}\" es la cuenta donde {kind, select, income {entró} other {salió}} el dinero, mándala en \"account\". ",
+      "retry": "Repite la llamada con account y sin to_account ni to_amount."
+    },
+    "transferNeedsDestination": "Una transferencia necesita cuenta de destino",
+    "sameAccount": "El origen y el destino de la transferencia son la misma cuenta",
+    "categoryNotRecognised": "No reconocí la categoría \"{input}\"; lo dejé sin categorizar para que lo revises.",
+    "categoryUnsure": "Interpreté \"{input}\" como {category}, pero no estoy seguro.",
+    "noCategory": "No indicaste categoría.",
+    "currencyMismatch": "El monto viene en {amountCurrency} pero la cuenta {account} lleva {accountCurrency}. Si cambiaste plata de una moneda a otra, eso es una transferencia entre cuentas.",
+    "zeroAmount": "El monto no puede ser cero",
+    "noRate": "No pude conseguir la tasa del día, así que lo guardé sin el equivalente en dólares. Queda marcado para revisar.",
+    "staleRate": "Usé la tasa del {date} porque no había del día.",
+    "accountUnsure": "Interpreté \"{input}\" como {account}, pero no estoy seguro.",
+    "when": {
+      "justNow": "hace un momento",
+      "minutesAgo": "hace {n, plural, one {# minuto} other {# minutos}}"
+    },
+    "duplicate": {
+      "head": "Eso ya está registrado: «{description}» por {amount} en {account}, {when}. No lo dupliqué. ",
+      "noCent": "Cambiar el monto unos céntimos no lo esquiva, cae aquí igual. ",
+      "allow": "Si de verdad es una compra distinta, repite la llamada con allow_duplicate: true. ",
+      "amend": "Si lo que quieres es cambiar la que ya existe —la cuenta, la categoría, el monto—, usa planfly_amend con target: \"{id}\" y el campo nuevo en la misma llamada.",
+      "warn": "Ojo: {when} registré un movimiento idéntico en la misma cuenta ({description})."
+    },
+    "transferNeedsToAmount": "La transferencia va de {from} a {to}: dime cuánto llegó a {account}.",
+    "itemsNeedReview": "Hay productos que no reconocí del todo; quedan para revisar.",
+    "itemsExceedTotal": "Los productos suman {amount}, más que el total del recibo.",
+    "summary": {
+      "dryRun": "(simulación, no lo guardé)",
+      "transfer": "Transferencia de {amount} de {from} a {to}",
+      "entry": "{kind, select, expense {Gasto} income {Ingreso} other {Ajuste}} de {amount}{equivalent}{category} {kind, select, income {a} other {desde}} {account}",
+      "category": " en {name}",
+      "equivalent": " (≈ {base} {source})",
+      "items": "{n, plural, one {# producto} other {# productos}}{missing}",
+      "itemsMissing": ", faltan {amount} por desglosar",
+      "balance": "Saldo {account}: {amount}",
+      "alreadyStored": "Ya lo tenía registrado, no lo dupliqué. ",
+      "noDescription": "Sin descripción",
+      "transferDescription": "Transferencia"
+    }
+  },
+  "updateTransaction": {
+    "householdNotFound": "El hogar no existe",
+    "notFound": "No encontré ese movimiento",
+    "voided": "Ese movimiento está anulado, y un anulado no se edita: sigue en el histórico como registro de lo que pasó. Si hace falta, regístralo de nuevo.",
+    "notEditable": "No encontré ese movimiento entre los que puedo corregir (solo los que registré yo, de los últimos 7 días).",
+    "malformed": "Ese movimiento no tiene línea de origen",
+    "accountNotFound": "No encontré ninguna cuenta parecida a \"{wanted}\"",
+    "accountCurrencyMismatch": "{account} lleva {accountCurrency} y la línea está en {legCurrency}. Si de verdad fue esa cuenta, dime también el monto en {accountCurrency}: el saldo de una cuenta no puede mezclar monedas.",
+    "notATransferAccount": "Ese movimiento no es una transferencia, no tiene cuenta de destino. Si lo que quieres es cambiar la cuenta de la que salió, mándala en \"account\", no en \"to_account\".",
+    "sameAccount": "El origen y el destino quedarían en la misma cuenta: eso no es una transferencia.",
+    "zeroAmount": "El monto no puede ser cero",
+    "notATransferAmount": "Ese movimiento no es una transferencia: solo tiene una línea, así que no hay monto de destino.",
+    "sameCurrencyAmounts": "Las dos cuentas están en la misma moneda, así que lo que sale y lo que entra tiene que ser la misma cifra.",
+    "transferHasNoCategory": "Ese movimiento es una transferencia entre tus cuentas, y esas no llevan categoría: no es un gasto, solo cambiaste la plata de sitio.",
+    "categoryNotFound": "No encontré la categoría \"{input}\".",
+    "notATransferRate": "Ese movimiento no es una transferencia: no hay línea de destino a la que ponerle tasa.",
+    "itemsWithCurrencyChange": "No puedo cambiar la moneda y el desglose a la vez: los precios que se ven están en la moneda anterior. Cambia la moneda, guarda, y corrige el desglose después.",
+    "zeroItemTotal": "La línea \"{description}\" no tiene importe. Una línea en cero no dice nada de ningún precio.",
+    "warning": {
+      "noRate": "No tengo tasa del {date} para {currency}, así que esa línea queda sin equivalente en {base}.",
+      "staleRate": "La tasa más cercana al {date} es de otro día.",
+      "rateIgnored": "{leg, select, to {tasa de destino} other {tasa}}: esa línea ya está en {base}, no hace falta tasa. La ignoré.",
+      "itemsNeedReview": "Hay productos que no reconocí del todo; queda para revisar.",
+      "itemsExceedTotal": "Los productos suman {amount}, más que el movimiento.",
+      "leftUnvalued": "Queda marcado para revisar hasta que tenga tasa."
+    },
+    "change": {
+      "account": "{leg, select, to {cuenta de destino} other {cuenta}} a {name}",
+      "amount": "{leg, select, to {monto recibido} other {monto}} a {amount}",
+      "rate": "{leg, select, to {tasa de destino} other {tasa}} a {rate}",
+      "valuation": "{leg, select, to {valuación de destino} other {valuación}} a la tasa {source, select, bcv {oficial} p2p {paralela} other {fijada a mano}}",
+      "category": "categoría a {name}",
+      "date": "fecha a {date}",
+      "itemsCleared": "desglose borrado",
+      "items": "desglose a {n, plural, one {# producto} other {# productos}}",
+      "description": "descripción",
+      "notes": "nota",
+      "reviewed": "marcado como revisado"
+    },
+    "summary": {
+      "nothingToChange": "No había nada que cambiar.",
+      "done": "Listo, corregí {changes}.",
+      "markedReviewed": "Marcado como revisado."
+    }
+  },
+  "financing": {
+    "missingRate": "No tengo tasa {source} del {date} para pasar el precio de {from} a {to}.",
+    "invalidInstallmentCount": "El número de cuotas tiene que ser un entero mayor que cero.",
+    "financierNotFound": "No encontré ninguna cuenta parecida a \"{input}\". Créala primero en Cuentas, como tarjeta de crédito o préstamo.",
+    "financierNotLiability": "{account} es una cuenta de activo, y quien te financia es a quien le debes. Cámbiale el tipo a tarjeta de crédito o préstamo en Cuentas.",
+    "downPaymentTooLarge": "La inicial no puede ser mayor que el total de la compra.",
+    "nothingToFinance": "Si la inicial cubre todo, no hay nada que financiar: regístralo como un gasto normal.",
+    "missingDownPaymentAccount": "Dime de qué cuenta salió la inicial.",
+    "defaultDescription": "Compra financiada",
+    "purchaseSummary": "{description}: {total} en {financier}{downPayment}. Quedan {n, plural, one {# cuota} other {# cuotas}} de {installment}, la primera el {firstDue}",
+    "downPaymentPart": ", {amount} de inicial",
+    "installmentNotFound": "No encontré esa cuota.",
+    "alreadyPaid": "La cuota {number} de {plan} ya estaba pagada.",
+    "unpayReason": "Se deshizo el pago de la cuota {number} · {plan}",
+    "unpaidWithVoid": "La cuota {number} vuelve a estar pendiente, y anulé la transferencia de {amount} que la pagaba. Sigue en el histórico, marcada.",
+    "unpaid": "La cuota {number} vuelve a estar pendiente.",
+    "accountNotFound": "No encontré esa cuenta.",
+    "profileNotLiability": "{account} es una cuenta de activo. Una financiadora es alguien a quien le debes, así que tiene que ser de tipo tarjeta de crédito o préstamo.",
+    "invalidPercent": "El porcentaje de inicial tiene que estar entre 0 y 99.",
+    "profileRemoved": "Sale de la lista de financiadoras. La cuenta sigue ahí.",
+    "planNotFound": "No encontré esa compra.",
+    "voidReason": "Compra a cuotas anulada",
+    "planVoided": "{description} anulada, con {n, plural, one {su movimiento} other {sus # movimientos}}. Siguen en el histórico, marcados.",
+    "financedNote": "Financiada en {n, plural, one {# cuota} other {# cuotas}}",
+    "downPaymentDescription": "Inicial · {description}",
+    "installmentDescription": "Cuota {number} · {plan}",
+    "installmentPaid": "Cuota {number} de {plan} pagada: {amount}.",
+    "profileSaved": "{account} guardada como financiadora."
+  },
+  "recurring": {
+    "missingRate": "No tengo tasa {source} del {date} para pasar de {from} a {to}.",
+    "announce": {
+      "recorded": "{n, plural, one {Registré una recurrencia} other {Registré # recurrencias}}",
+      "failed": "{n, plural, one {Una no pude registrarla} other {# no pude registrarlas}}"
+    },
+    "noDays": "Elige al menos un día del mes: el 5, el 20, el último…",
+    "missingName": "La recurrencia necesita un nombre.",
+    "noNextRun": "Con esos días no hay una próxima fecha.",
+    "ruleNotFound": "No encontré esa recurrencia.",
+    "corrected": "«{name}» corregida. La próxima, el {next}",
+    "created": "«{name}» queda registrada. La próxima, el {next}",
+    "resumed": "«{name}» reanudada. La próxima, el {next}",
+    "paused": "«{name}» pausada. No va a registrar nada hasta que la reanudes.",
+    "removed": "«{name}» eliminada. Lo que ya registró se queda en el histórico."
+  },
+  "manageAccounts": {
+    "missingName": "La cuenta necesita un nombre.",
+    "duplicateArchived": "Ya existe una cuenta archivada que se llama \"{name}\". Cámbiale el nombre a la nueva, o desarchiva aquella.",
+    "duplicateName": "Ya tienes una cuenta que se llama \"{name}\".",
+    "accountNotFound": "No encontré esa cuenta.",
+    "created": "Cuenta {name} creada{opening}.",
+    "createdWith": " con {amount}",
+    "createdEmpty": " en cero",
+    "currencyLocked": "{account} tiene {n, plural, one {# movimiento} other {# movimientos}} en {currency}, así que su moneda ya no se puede cambiar: los montos que hay dentro dejarían de significar lo que dicen. Crea otra cuenta en {wanted} y transfiere el saldo.",
+    "change": {
+      "name": "nombre",
+      "type": "tipo",
+      "currency": "moneda",
+      "openingBalance": "saldo inicial a {amount}",
+      "institution": "institución",
+      "aliases": "otros nombres"
+    },
+    "nothingToChange": "No había nada que cambiar.",
+    "done": "Listo, corregí {changes}.",
+    "alreadyArchived": "{account} ya estaba archivada.",
+    "notEmpty": "{account} tiene {amount}. Archivarla sacaría ese dinero del patrimonio sin que ningún movimiento lo explique. Transfiere el saldo a otra cuenta primero.",
+    "archived": "{account} archivada. Sus movimientos siguen ahí.",
+    "unarchived": "{account} vuelve a la lista."
+  },
+  "products": {
+    "noText": "La línea no tiene texto con el que identificar un producto",
+    "mergeWithItself": "No se puede fusionar un producto consigo mismo",
+    "oneNotFound": "No encontré uno de los dos productos",
+    "splitNoText": "Ese renglón no tiene texto con el que nombrar un producto",
+    "notFound": "No encontré ese producto",
+    "isTheName": "«{text}» es el nombre de este producto, no un renglón que se pueda sacar.",
+    "noMatchingLines": "Ninguna línea de {product} dice «{text}». Separa por el texto tal como salió en el recibo.",
+    "allItsLines": "«{text}» son todas sus líneas: separarlo dejaría {product} vacío. Eso es renombrarlo, no separarlo.",
+    "alreadyThis": "«{text}» ya es este mismo producto.",
+    "split": "{n, plural, one {# compra salió} other {# compras salieron}} de {from} a {to}."
+  },
+  "budgets": {
+    "categoryNotFound": "No encontré la categoría \"{input}\".",
+    "unknownPeriod": "Ese tipo de periodo no existe.",
+    "missingRange": "Dime desde qué día y hasta qué día va el presupuesto.",
+    "endBeforeStart": "La fecha de fin cae antes que la de inicio.",
+    "noneActive": "{category} no tiene ningún presupuesto activo.",
+    "removed": "{n, plural, one {Quité el presupuesto de {category}.} other {Quité los # presupuestos de {category}.}}",
+    "saved": "{category}: {amount} {period}.{change}",
+    "changedFrom": " Antes eran {amount}."
+  },
+  "rules": {
+    "missingPattern": "La regla necesita un texto que buscar.",
+    "categoryNotFound": "No encontré la categoría \"{input}\".",
+    "saved": "Listo: lo que contenga «{pattern}» se categorizará como {category}.",
+    "updated": "Regla actualizada: «{pattern}» va a {category}."
+  },
+  "installmentReminders": {
+    "overdue": "vencida el {date}",
+    "dueTomorrow": "vence mañana",
+    "line": "• {description} · cuota {number} · {amount} · {financier} · {when}",
+    "heading": "{n, plural, one {Tienes una cuota por pagar:} other {Tienes # cuotas por pagar:}}",
+    "total": "En total: {amount}"
+  },
+  "common": {
+    "noDescription": "Sin descripción",
+    "noCategory": "Sin categoría",
+    "entryNotFound": "No encontré ese movimiento"
+  },
+  "voidTransaction": {
+    "done": "Anulado."
+  },
+  "import": {
+    "unreadableDate": "Fecha ilegible: \"{value}\"",
+    "zeroAmount": "Monto cero"
+  },
+  "rates": {
+    "stillInUse": "Esa tasa ya valoró {n, plural, one {# movimiento} other {# movimientos}}, así que no se borra: quedarían con su equivalente calculado y sin decir de dónde salió. Fija otra para el mismo día y esta deja de usarse."
+  },
+  "session": {
+    "readOnly": "Esta cuenta es de solo lectura: no puede modificar nada."
+  },
+  "actions": {
+    "items": {
+      "unreadable": "No pude leer el desglose que mandó el formulario.",
+      "notAList": "El desglose tiene que ser una lista de líneas.",
+      "noTotal": "La línea {n} (\"{description}\") no tiene importe.",
+      "noDescription": "La línea {n} tiene importe pero no dice qué es."
+    },
+    "voidReason": "Anulado desde el panel",
+    "voided": "Anulado.",
+    "missingFinancierName": "Dime cómo se llama quien te financia.",
+    "rates": {
+      "noSources": "No hay ninguna fuente configurada: escribe la tasa del día abajo.",
+      "oneWithoutSource": "Actualizado. {source} no tiene fuente configurada: escríbela abajo.",
+      "bothBroken": "Ninguna de las dos fuentes respondió.",
+      "oneBroken": "Actualizado, pero {source} no respondió.",
+      "updated": "BCV y P2P actualizados.",
+      "manualSaved": "{slot, select, bcv {La oficial} other {La paralela}} del {date} queda en {rate} · los movimientos de ese día se valoran con ella.",
+      "removed": "Tasa borrada. Vuelve a mandar la de la fuente, si la hay.",
+      "alreadyGone": "Esa tasa ya no estaba."
+    },
+    "snapshotSaved": "Instantánea guardada.",
+    "missingAmount": "Falta el monto.",
+    "ruleRemoved": "Regla borrada. Lo que ya categorizó se queda como está.",
+    "ruleAlreadyGone": "Esa regla ya no estaba.",
+    "accountNotFound": "No encontré la cuenta \"{name}\".",
+    "importDone": "{imported} importadas, {skipped} omitidas{errors}.",
+    "importErrors": ", {n} con error",
+    "missingEntry": "Falta el movimiento a corregir.",
+    "missingAccount": "Falta la cuenta a corregir.",
+    "budgetSaved": "Presupuesto guardado. {summary}"
+  },
+  "amount": {
+    "head": "No pude interpretar el monto {input}: {reason}",
+    "notFinite": "no es un número finito",
+    "badExpression": "no es una operación que se pueda calcular",
+    "tooLarge": "excede el entero seguro de JavaScript",
+    "empty": "quedó vacío tras limpiarlo",
+    "badCharacters": "contiene caracteres que no son dígitos ni separadores",
+    "noDigits": "no tiene dígitos",
+    "notAnInteger": "los dígitos no forman un entero válido",
+    "rateHead": "No pude interpretar la tasa {input}: {reason}",
+    "rateEmpty": "está vacía",
+    "rateBadCharacters": "una tasa solo lleva dígitos y separadores",
+    "rateAmbiguous": "no sé si el punto separa miles o decimales. Escríbela con coma decimal ({suggestion}) o sin separador de miles",
+    "rateTooPrecise": "no cabe en la columna de tasas",
+    "rateZero": "una tasa no puede ser cero",
+    "rateTooHigh": "es demasiado alta para ser una tasa (más de {max})"
+  }
+}

@@ -1,0 +1,66 @@
+# The four gates, on every push and every pull request.
+#
+# They are the same four the project runs by hand — `tsc`, lint, tests, build —
+# and they run in that order for a reason: the first three fail in seconds and
+# the build takes a minute.
+#
+# The tests are the point. Nearly every one of them exists because a mistake in
+# this codebase does not fail: it returns a false figure. Without Postgres here,
+# `npm test` would still pass — the database tests skip themselves when there is
+# nothing to connect to, which is what a freshly cloned repo needs and exactly
+# the wrong thing for a pull request. Hence the service below.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # The same image, user and password as compose.yaml: the test harness
+        # pins its own connection string, and it points here without this
+        # workflow having to restate it.
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: planfly
+          POSTGRES_PASSWORD: planfly
+          POSTGRES_DB: planfly
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U planfly -d planfly"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        # Generated and thrown away: better-auth refuses to build with its
+        # default secret, and a fixed one written here would look like a real
+        # one to whoever reads this file.
+        run: npm run build
+        env:
+          BETTER_AUTH_SECRET: ${{ github.run_id }}-${{ github.run_attempt }}-ci-placeholder

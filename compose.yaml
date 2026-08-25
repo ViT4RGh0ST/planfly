@@ -1,0 +1,103 @@
+# planfly: the app and its database.
+#
+# Self-sufficient on purpose: `docker compose up -d` has to work on a freshly
+# cloned repo, without creating networks by hand or having any proxy installed.
+# The app lands on http://localhost:3000 and the database hangs off the internal
+# network only.
+#
+# To put it behind a proxy with a domain name, copy
+# `compose.override.yaml.example` to `compose.override.yaml`: Docker Compose
+# loads it on its own, with no flags to pass.
+# Written out and not taken from the folder's name: compose derives the project
+# from the directory, so a clone into `~/src/finance` would name the containers
+# and the volume after that instead. The name of what runs should not depend on
+# what someone called the folder they cloned into.
+name: planfly
+
+services:
+  app:
+    build: .
+    image: planfly:local
+    container_name: planfly
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # `db` is the service name: Docker DNS on the internal network.
+      DATABASE_URL: "postgresql://planfly:planfly@db:5432/planfly"
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?falta BETTER_AUTH_SECRET en .env}"
+      BETTER_AUTH_URL: "${BETTER_AUTH_URL:-http://localhost:3000}"
+      AUTH_TRUSTED_ORIGINS: "${AUTH_TRUSTED_ORIGINS:-}"
+      # Installment alerts. Optional on purpose: without them the app works the
+      # same, only quietly. The `:-` keeps compose from failing if they are absent.
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
+      TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID:-}"
+      # The household's. It matters more than it looks: a 21:00 expense recorded
+      # in another timezone lands on the following day.
+      TZ: "${TZ:-America/Caracas}"
+      # Which source fills each rate slot.
+      #
+      # An empty official one = it is written by hand in /rates. An empty parallel
+      # one uses a BUILT-IN reader that goes out to the internet on its own;
+      # `none` switches it off entirely.
+      RATES_PROVIDER_BCV: "${RATES_PROVIDER_BCV:-}"
+      RATES_PROVIDER_P2P: "${RATES_PROVIDER_P2P:-}"
+    volumes:
+      # Sources are plugged in at run time and do not go into the image:
+      # updating one does not force a rebuild, and whatever each person installs
+      # here does not end up inside a layer that could be published by mistake.
+      - ./providers:/app/providers:ro
+    ports:
+      # 127.0.0.1 on purpose: reaching it through localhost:3000 still works, but
+      # the port is not exposed to the LAN.
+      - "127.0.0.1:3000:3000"
+    networks:
+      - internal
+
+  db:
+    image: postgres:18-alpine
+    container_name: planfly-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: planfly
+      POSTGRES_PASSWORD: planfly
+      POSTGRES_DB: planfly
+      # Pins the collation so the indexes do not depend on the host's locale, and
+      # the server timezone.
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+      TZ: "${TZ:-America/Caracas}"
+    ports:
+      # Published on localhost only so migrations and drizzle-studio can be run
+      # from WSL. The app does not use it: it talks over the internal network.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      # A named volume and NOT a project folder.
+      #
+      # Postgres runs as root inside the container, so a `./pgdata` ends up with
+      # permissions your user cannot even list. Any tool walking the project — the
+      # bundler, a linter, a search — crashes into it with a permission denied and
+      # an error that does not mention the cause. It already broke `npm run build`
+      # once.
+      #
+      # Postgres 18+ expects the mount at /var/lib/postgresql (not at .../data):
+      # it places the data in a subdirectory per major version, so that
+      # `pg_upgrade --link` does not cross the mount point boundary.
+      - planfly-pgdata:/var/lib/postgresql
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U planfly -d planfly"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  # Docker manages it. To back it up there is scripts/backup-db.sh, which dumps
+  # with pg_dump: a dump restores on any installation, while copying the cluster
+  # files by hand only works with the same Postgres version.
+  planfly-pgdata:

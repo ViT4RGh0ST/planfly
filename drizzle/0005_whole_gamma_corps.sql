@@ -1,0 +1,2 @@
+ALTER TABLE "financing_plans" ADD COLUMN "down_payment_transaction_id" uuid;--> statement-breakpoint
+ALTER TABLE "financing_plans" ADD CONSTRAINT "financing_plans_down_payment_transaction_id_transactions_id_fk" FOREIGN KEY ("down_payment_transaction_id") REFERENCES "public"."transactions"("id") ON DELETE set null ON UPDATE no action;

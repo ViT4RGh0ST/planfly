@@ -1,0 +1,224 @@
+import { and, desc, eq, sql } from "drizzle-orm";
+
+import { RefreshRatesButton } from "@/components/refresh-rates-button";
+import { RatesChart } from "@/components/rates-chart";
+import { ManualRateForm } from "@/components/manual-rate-form";
+import { ManualRateList } from "@/components/manual-rate-list";
+import { db } from "@/db";
+import { exchangeRates } from "@/db/schema";
+import { requireSession } from "@/lib/session";
+import { formatPercent, formatRate } from "@/lib/money";
+import { formatDay, today } from "@/lib/dates";
+import { currentRates, manualRates, p2pTopOfDay } from "@/lib/rates/service";
+import { isSlotConfigured } from "@/lib/rates/load-provider";
+import { cn } from "@/lib/utils";
+import { getTranslations } from "next-intl/server";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * The two rates and their spread.
+ *
+ * They used to be three cards in a grid, and the detector flagged nested cards
+ * in each. Now it is a row of figures with the same hierarchy as the dashboard:
+ * the numbers carry the weight, the containers disappear.
+ */
+export default async function RatesPage() {
+  const ctx = await requireSession();
+  const t = await getTranslations();
+  const date = today(ctx.timezone);
+
+  const [current, history, fijadas, top] = await Promise.all([
+    currentRates(date),
+    db
+      .select({
+        source: exchangeRates.source,
+        variant: exchangeRates.variant,
+        rate: exchangeRates.rate,
+        effectiveOn: exchangeRates.effectiveOn,
+      })
+      .from(exchangeRates)
+      .where(and(eq(exchangeRates.baseCurrency, "USD"), eq(exchangeRates.quoteCurrency, "VES")))
+      // The hand-written one first within each day, or the chart contradicts
+      // the figures above, net worth and findStored, all of which prefer it.
+      //
+      // With a CASE and not with `asc(source)`: `source` is a Postgres enum and
+      // orders by its declaration order — bcv, p2p, manual — so asking for
+      // ascending puts the automatic one first, exactly the wrong way round.
+      // Ordering an enum by its name is a silent trap.
+      .orderBy(
+        desc(exchangeRates.effectiveOn),
+        sql`CASE WHEN ${exchangeRates.source} = 'manual' THEN 0 ELSE 1 END`,
+      )
+      // Two rows per day and box when there is a hand-written one, so the cap
+      // covers half the days it used to. 720 keeps the usual ~180.
+      .limit(720),
+    manualRates(8),
+    p2pTopOfDay(date),
+  ]);
+
+  // Grouped by date so the chart has one series per source.
+  const byDate = new Map<string, { date: string; bcv?: number; p2p?: number }>();
+  for (const row of history) {
+    const entry = byDate.get(row.effectiveOn) ?? { date: row.effectiveOn };
+    // The slot, not the source: a hand-set rate fills the same column as the
+    // automatic one, and if `source` were looked at here it would vanish from the
+    // history exactly on the days it had to be written by hand.
+    const slot = row.source === "manual" ? row.variant : row.source;
+    // The first to arrive rules, and the query order puts the manual one first.
+    if (slot === "bcv" && entry.bcv === undefined) entry.bcv = Number(row.rate);
+    if (slot === "p2p" && entry.p2p === undefined) entry.p2p = Number(row.rate);
+    byDate.set(row.effectiveOn, entry);
+  }
+  const series = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+
+  const spread =
+    current.bcv && current.p2p
+      ? (Number(current.p2p.rate) / Number(current.bcv.rate) - 1) * 100
+      : null;
+
+  const columns = [
+    {
+      key: "bcv",
+      label: t("ui.rates.official"),
+      value: current.bcv ? formatRate(current.bcv.rate) : null,
+      tone: "text-bcv",
+      note: current.bcv
+        ? current.bcv.manual
+          ? t("ui.rates.setByHandOn", { date: formatDay(current.bcv.effectiveOn, ctx.locale) })
+          : current.bcv.effectiveOn > date
+            ? t("ui.rates.valueDateAhead", { date: formatDay(current.bcv.effectiveOn, ctx.locale) })
+            : t("ui.rates.valueDate", { date: formatDay(current.bcv.effectiveOn, ctx.locale) })
+        : isSlotConfigured("bcv")
+          ? t("ui.rates.sourceSilent")
+          : t("ui.rates.noSource"),
+      stale: current.bcv ? current.bcv.effectiveOn < date : true,
+    },
+    {
+      key: "p2p",
+      label: t("ui.rates.parallel"),
+      value: current.p2p ? formatRate(current.p2p.rate) : null,
+      tone: "text-p2p",
+      note: current.p2p
+        ? current.p2p.manual
+          ? t("ui.rates.setByHandOn", { date: formatDay(current.p2p.effectiveOn, ctx.locale) })
+          : t("ui.rates.whatYoudBePaid", { date: formatDay(current.p2p.effectiveOn, ctx.locale) })
+        : isSlotConfigured("p2p")
+          ? t("ui.rates.sourceSilent")
+          : t("ui.rates.noSource"),
+      stale: current.p2p?.stale ?? true,
+    },
+    {
+      key: "spread",
+      label: t("ui.rates.spread"),
+      // One decimal is enough and the space before the % is the Spanish one.
+      value: spread == null ? null : `${formatPercent(spread, 1)} %`,
+      tone: "text-foreground",
+      note: t("ui.rates.spreadNote"),
+      stale: false,
+    },
+  ];
+
+  return (
+    <div className="mx-auto max-w-3xl px-6 py-10">
+      <header className="mb-10 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-medium tracking-tight">{t("ui.rates.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("ui.rates.subtitle", { date: formatDay(date, ctx.locale) })}
+          </p>
+        </div>
+        <RefreshRatesButton />
+      </header>
+
+      <div className="flex flex-wrap gap-x-14 gap-y-8">
+        {columns.map((column) => (
+          <div key={column.key}>
+            <p
+              className={cn("text-xs font-medium uppercase tracking-[0.12em]", column.tone)}
+            >
+              {column.label}
+            </p>
+            <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight">
+              {column.value ?? "—"}
+            </p>
+            <p
+              className={cn(
+                "mt-1 max-w-[24ch] text-xs",
+                column.stale ? "text-caution" : "text-muted-foreground",
+              )}
+            >
+              {column.note}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {top.length > 0 && (
+        <section aria-labelledby="quien-paga" className="mt-10">
+          <h2
+            id="quien-paga"
+            className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
+          >
+            {t("ui.rates.whoPays")}
+          </h2>
+          <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
+            {t("ui.rates.whoPaysHint")}
+          </p>
+          <ul className="mt-4 divide-y divide-border">
+            {/* `ad` and not `t`: `t` is the translator in this file. */}
+            {top.map((ad, i) => (
+              <li key={ad.nick} className="flex items-baseline justify-between gap-4 py-2">
+                <span className="min-w-0 truncate text-sm">
+                  <span className="mr-2 tabular-nums text-muted-foreground">{i + 1}</span>
+                  {ad.nick}
+                </span>
+                <span className="flex shrink-0 items-baseline gap-3">
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {t("ui.rates.orders", { n: ad.orders.toLocaleString("es-VE") })}
+                  </span>
+                  <span className="text-sm tabular-nums">{formatRate(String(ad.rate))}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <hr className="my-10 border-border" />
+
+      <section aria-labelledby="a-mano">
+        <h2
+          id="a-mano"
+          className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
+        >
+          {t("ui.rates.setByHand")}
+        </h2>
+        <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
+          {t("ui.rates.setByHandHint")}
+        </p>
+        <div className="mt-6">
+          <ManualRateForm today={date} />
+        </div>
+        <ManualRateList rows={fijadas} />
+      </section>
+
+      <hr className="my-10 border-border" />
+
+      <section aria-labelledby="historico">
+        <h2
+          id="historico"
+          className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
+        >
+          {t("ui.rates.history")}
+        </h2>
+        <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
+          {t("ui.rates.historyHint")}
+        </p>
+        <div className="mt-6">
+          <RatesChart data={series} />
+        </div>
+      </section>
+    </div>
+  );
+}

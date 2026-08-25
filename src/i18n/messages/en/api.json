@@ -1,0 +1,112 @@
+{
+  "unauthorized": "Missing, invalid or revoked token.",
+  "forbiddenScope": "This token does not have the \"{scope}\" permission.",
+  "forbiddenField": "The field \"{key}\" is not accepted from the API: identity is derived from the token, not from the body.",
+  "unknownField": {
+    "head": "I don't know the field \"{key}\".",
+    "suggestion": " Did you mean \"{suggestion}\"?",
+    "valid": " The ones I accept here are: {valid}."
+  },
+  "invalidBody": {
+    "head": "These fields are wrong: {parts}{tail}.{help}",
+    "missing": "{field} (missing)",
+    "invalid": "{field} (not valid)",
+    "body": "the body",
+    "more": ", and {n} more",
+    "itemsHelp": " Each line of the breakdown goes like this: '{' description: \"HARINA PAN 1KG\", total: 80 '}', and quantity and unit are optional."
+  },
+  "internal": "Something failed inside. The detail is in the server log.",
+  "accounts": {
+    "duplicate": "You already have an account answering to that name: \"{name}\".",
+    "maybeDuplicate": "You may already have this account: \"{name}\". If it really is a different one, call again with confirm=true.",
+    "notFound": "I found no account resembling \"{input}\"."
+  },
+  "products": {
+    "noneLike": "I have no product resembling \"{name}\". They appear on their own when a purchase brings its breakdown.",
+    "notFound": "I did not find \"{name}\".",
+    "same": "They are the same product.",
+    "none": "There are no products yet. They appear on their own when a purchase brings its breakdown.",
+    "line": "· {name} ({unit}): {price} · {change} · {n} purchases",
+    "firstTime": "first time",
+    "noPrices": "{product}: there are no purchases with a price yet.",
+    "head": "{product} — price per {unit}",
+    "rawTexts": "These line items from the receipt were joined here:",
+    "rawTextLine": "· {text} ({n})",
+    "splitHint": "If one of them is not this product, split it with action='split', copying its text exactly."
+  },
+  "rates": {
+    "none": "I have no rates stored yet.",
+    "line": "{source}: {rate} Bs/USD{stale}",
+    "staleFrom": " (from {date})",
+    "spread": "Gap: {percent}%"
+  },
+  "reports": {
+    "netWorth": {
+      "total": "Overall position ({valuation}): {amount}",
+      "assets": "Assets: {amount}",
+      "liabilities": "Liabilities: {amount}",
+      "line": "· {account}: {balance}{equivalent}",
+      "equivalent": " (≈ {amount})",
+      "bothRates": "At the BCV rate the total would be {bcv}; at P2P, {p2p}."
+    },
+    "spending": {
+      "head": "Spending in {period} by category ({valuation}) — total {amount}:",
+      "line": "· {category}: {amount} ({percent}%, {n} entries)"
+    },
+    "budgets": {
+      "none": "You have no budget in force.",
+      "head": "Budgets in force ({valuation}):",
+      "line": "· {category}: {spent} of {budget} ({percent}%, {state})",
+      "over": "OVER",
+      "left": "{amount} left"
+    },
+    "recent": {
+      "none": "There are no entries in that period.",
+      "line": "· {date} {description} — {amount} ({account}{category})",
+      "category": ", {name}"
+    },
+    "month": {
+      "head": "Summary of {period} ({valuation}):",
+      "income": "Income: {amount} ({n})",
+      "expense": "Spending: {amount} ({n})",
+      "balance": "Balance: {amount}",
+      "top": "\nWhere most of it went:",
+      "topLine": "· {category}: {amount}"
+    }
+  },
+  "transactions": {
+    "notEditable": "I did not find that entry among the ones I can correct (only the ones I recorded myself, from the last 7 days).",
+    "notVoidable": "I did not find that entry among the ones I can void.",
+    "noChanges": "I changed nothing: what you sent was already what the entry had. If you meant to correct something else, tell me which —amount, category, account or date—.",
+    "voidReason": "Voided from the chat"
+  },
+  "context": {
+    "accounts": "Accounts ({base} as the base currency):",
+    "accountLine": "· {name} — {type}, {currency}{balance}{liability}",
+    "accountBalance": ", balance {balance}",
+    "liability": " (liability)",
+    "expenseCategories": "Spending categories:",
+    "incomeCategories": "Income categories:",
+    "ratesToday": "Today's rates (Bs per dollar):",
+    "rateLine": "· {source} {rate}"
+  },
+  "budgets": {
+    "none": "There is no budget set.",
+    "line": "· {category}: {amount} {period} ({range})"
+  },
+  "financing": {
+    "none": "You have nothing on installments right now.",
+    "planLine": "{description} · {financier}: {pending} pending of {total} · plan {id}",
+    "installmentLine": "   installment {number}: {amount} · {state}",
+    "paid": "paid",
+    "dueOn": "due on {date}"
+  },
+  "recurring": {
+    "none": "There is no recurrence set up yet.",
+    "line": "· {name}: {amount}{currency}{rate}{account} — {state} · id {id}",
+    "atRate": " at the {source} rate",
+    "fromAccount": " from {account}",
+    "nextOn": "the next one on {date}",
+    "paused": "paused"
+  }
+}

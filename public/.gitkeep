@@ -1,0 +1,3 @@
+# public/ has to exist even when empty: the Dockerfile copies it into the image
+# and git does not version empty directories. Without this file, a clean clone
+# blows up on build. Images and files served as-is go here.

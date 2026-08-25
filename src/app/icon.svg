@@ -1,0 +1,18 @@
+<!--
+  The tab icon: the same two strokes as <BrandMark />, which are the two rates
+  parting from the same point. It replaces create-next-app's favicon, which was
+  Vercel's triangle and was being redistributed under AGPL without anyone having
+  decided so.
+
+  Fixed colours and not tokens: an icon is painted outside the document, where
+  the theme's CSS variables do not exist. A solid background so it reads at 16px
+  against any bar, light or dark.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
+  <rect width="24" height="24" rx="5" fill="#0b0b0c" />
+  <g fill="none" stroke-width="2.4" stroke-linecap="round">
+    <path d="M4.5 12h4.5" stroke="#e5e5e5" />
+    <path d="M9 12c4 0 6-5.5 10.5-5.5" stroke="#f5a524" />
+    <path d="M9 12c4 0 6 5.5 10.5 5.5" stroke="#3b82f6" />
+  </g>
+</svg>

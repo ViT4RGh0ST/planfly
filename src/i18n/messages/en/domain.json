@@ -1,0 +1,121 @@
+{
+  "unit": {
+    "perUnit": {
+      "kg": "per kilo",
+      "l": "per litre",
+      "unit": "per unit"
+    },
+    "bare": {
+      "kg": "kg",
+      "l": "L",
+      "unit": "ea"
+    }
+  },
+  "entryKind": {
+    "expense": "expense",
+    "income": "income",
+    "transfer": "transfer"
+  },
+  "rowStatus": {
+    "new": "new",
+    "duplicate": "already there",
+    "error": "with an error"
+  },
+  "rule": {
+    "field": {
+      "description": "the description",
+      "payee": "the payee"
+    },
+    "operator": {
+      "contains": "contains",
+      "equals": "is exactly",
+      "regex": "matches"
+    }
+  },
+  "accountType": {
+    "cash": {
+      "label": "Cash",
+      "hint": ""
+    },
+    "bank": {
+      "label": "Bank",
+      "hint": ""
+    },
+    "crypto": {
+      "label": "Crypto",
+      "hint": ""
+    },
+    "investment": {
+      "label": "Investment",
+      "hint": ""
+    },
+    "prepaid": {
+      "label": "Prepaid",
+      "hint": "you load it before spending"
+    },
+    "credit_card": {
+      "label": "Credit card",
+      "hint": "subtracts from net worth"
+    },
+    "loan": {
+      "label": "Loan",
+      "hint": "subtracts from net worth"
+    },
+    "other": {
+      "label": "Other",
+      "hint": ""
+    }
+  },
+  "cadence": {
+    "monthly": {
+      "label": "Monthly",
+      "hint": "on the 1st"
+    },
+    "biweekly": {
+      "label": "Fortnightly",
+      "hint": "the 15th and the last day"
+    },
+    "custom": {
+      "label": "Days you pick",
+      "hint": ""
+    }
+  },
+  "budgetPeriod": {
+    "monthly": "a month",
+    "biweekly": "a fortnight",
+    "yearly": "a year",
+    "custom": "for that range"
+  },
+  "period": {
+    "name": {
+      "today": "today",
+      "yesterday": "yesterday",
+      "week": "the last 7 days",
+      "month": "this month",
+      "last_month": "last month",
+      "year": "{year}",
+      "all": "the whole history",
+      "first_fortnight": "the first fortnight",
+      "second_fortnight": "the second fortnight",
+      "named_month": "{value}",
+      "day": "{value}",
+      "range": "{start} to {end}"
+    },
+    "option": {
+      "today": "Today",
+      "week": "Last 7 days",
+      "month": "This month",
+      "last_month": "Last month",
+      "year": "This year",
+      "all": "All"
+    }
+  },
+  "source": {
+    "telegram": "over Telegram",
+    "form": "by hand",
+    "csv": "imported from a CSV",
+    "ocr": "from a photo",
+    "api": "over the API",
+    "recurring": "recurring"
+  }
+}

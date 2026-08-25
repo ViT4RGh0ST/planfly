@@ -1,0 +1,16 @@
+node_modules
+# Rate sources are mounted at run time, not copied.
+providers
+.next
+.git
+.env
+.env.local
+.env.*.local
+pgdata
+pgdata.viejo*
+backups
+storage
+drizzle/meta
+*.log
+README.md
+

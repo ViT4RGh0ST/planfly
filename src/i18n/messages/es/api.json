@@ -1,0 +1,112 @@
+{
+  "unauthorized": "Token ausente, inválido o revocado.",
+  "forbiddenScope": "Este token no tiene el permiso \"{scope}\".",
+  "forbiddenField": "El campo \"{key}\" no se acepta desde la API: la identidad se deriva del token, no del cuerpo.",
+  "unknownField": {
+    "head": "No conozco el campo \"{key}\".",
+    "suggestion": " ¿Querías decir \"{suggestion}\"?",
+    "valid": " Los que acepto aquí son: {valid}."
+  },
+  "invalidBody": {
+    "head": "Estos campos están mal: {parts}{tail}.{help}",
+    "missing": "{field} (falta)",
+    "invalid": "{field} (no vale)",
+    "body": "el cuerpo",
+    "more": ", y {n} más",
+    "itemsHelp": " Cada línea del desglose va así: '{' description: \"HARINA PAN 1KG\", total: 80 '}', y quantity y unit son opcionales."
+  },
+  "internal": "Algo falló por dentro. El detalle quedó en el registro del servidor.",
+  "accounts": {
+    "duplicate": "Ya tienes una cuenta que responde a ese nombre: \"{name}\".",
+    "maybeDuplicate": "Puede que ya tengas esta cuenta: \"{name}\". Si de verdad es otra distinta, vuelve a llamar con confirm=true.",
+    "notFound": "No encontré ninguna cuenta parecida a \"{input}\"."
+  },
+  "products": {
+    "noneLike": "No tengo ningún producto parecido a \"{name}\". Aparecen solos cuando una compra trae su desglose.",
+    "notFound": "No encontré \"{name}\".",
+    "same": "Son el mismo producto.",
+    "none": "Todavía no hay productos. Aparecen solos cuando una compra trae su desglose.",
+    "line": "· {name} ({unit}): {price} · {change} · {n} compras",
+    "firstTime": "primera vez",
+    "noPrices": "{product}: todavía no hay compras con precio.",
+    "head": "{product} — precio por {unit}",
+    "rawTexts": "Se juntaron aquí estos renglones del recibo:",
+    "rawTextLine": "· {text} ({n})",
+    "splitHint": "Si alguno no es este producto, sepáralo con action='split' copiando su texto tal cual."
+  },
+  "rates": {
+    "none": "Todavía no tengo tasas guardadas.",
+    "line": "{source}: {rate} Bs/USD{stale}",
+    "staleFrom": " (del {date})",
+    "spread": "Brecha: {percent}%"
+  },
+  "reports": {
+    "netWorth": {
+      "total": "Posición global ({valuation}): {amount}",
+      "assets": "Activos: {amount}",
+      "liabilities": "Pasivos: {amount}",
+      "line": "· {account}: {balance}{equivalent}",
+      "equivalent": " (≈ {amount})",
+      "bothRates": "A tasa BCV el total sería {bcv}; a P2P, {p2p}."
+    },
+    "spending": {
+      "head": "Gastos de {period} por categoría ({valuation}) — total {amount}:",
+      "line": "· {category}: {amount} ({percent}%, {n} mov.)"
+    },
+    "budgets": {
+      "none": "No tienes ningún presupuesto vigente.",
+      "head": "Presupuestos vigentes ({valuation}):",
+      "line": "· {category}: {spent} de {budget} ({percent}%, {state})",
+      "over": "PASADO",
+      "left": "quedan {amount}"
+    },
+    "recent": {
+      "none": "No hay movimientos en ese periodo.",
+      "line": "· {date} {description} — {amount} ({account}{category})",
+      "category": ", {name}"
+    },
+    "month": {
+      "head": "Resumen de {period} ({valuation}):",
+      "income": "Ingresos: {amount} ({n})",
+      "expense": "Gastos: {amount} ({n})",
+      "balance": "Balance: {amount}",
+      "top": "\nDonde más se fue:",
+      "topLine": "· {category}: {amount}"
+    }
+  },
+  "transactions": {
+    "notEditable": "No encontré ese movimiento entre los que puedo corregir (solo los que registré yo, de los últimos 7 días).",
+    "notVoidable": "No encontré ese movimiento entre los que puedo anular.",
+    "noChanges": "No cambié nada: lo que mandaste ya era lo que tenía el movimiento. Si querías corregir otra cosa, dime cuál —monto, categoría, cuenta o fecha—.",
+    "voidReason": "Anulado desde el chat"
+  },
+  "context": {
+    "accounts": "Cuentas ({base} como moneda base):",
+    "accountLine": "· {name} — {type}, {currency}{balance}{liability}",
+    "accountBalance": ", saldo {balance}",
+    "liability": " (pasivo)",
+    "expenseCategories": "Categorías de gasto:",
+    "incomeCategories": "Categorías de ingreso:",
+    "ratesToday": "Tasas de hoy (Bs por dólar):",
+    "rateLine": "· {source} {rate}"
+  },
+  "budgets": {
+    "none": "No hay ningún presupuesto puesto.",
+    "line": "· {category}: {amount} {period} ({range})"
+  },
+  "financing": {
+    "none": "No tienes nada a cuotas ahora mismo.",
+    "planLine": "{description} · {financier}: {pending} pendientes de {total} · plan {id}",
+    "installmentLine": "   cuota {number}: {amount} · {state}",
+    "paid": "pagada",
+    "dueOn": "vence el {date}"
+  },
+  "recurring": {
+    "none": "No hay ninguna recurrente configurada todavía.",
+    "line": "· {name}: {amount}{currency}{rate}{account} — {state} · id {id}",
+    "atRate": " a tasa {source}",
+    "fromAccount": " de {account}",
+    "nextOn": "la próxima el {date}",
+    "paused": "pausada"
+  }
+}

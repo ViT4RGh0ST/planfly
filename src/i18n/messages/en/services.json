@@ -1,0 +1,268 @@
+{
+  "error": {
+    "generic": "I could not complete it. Check the server log: the detail is there."
+  },
+  "recordTransaction": {
+    "householdNotFound": "The household does not exist",
+    "accountNotFound": "I found no account resembling \"{input}\"",
+    "noAccounts": "The household has no account set up",
+    "defaultedAccount": "You did not say which account, so I charged it to {account}.",
+    "toAccountNotTransfer": {
+      "head": "\"to_account\" is the DESTINATION account of a transfer, and this is {kind, select, income {an income} other {an expense}}, not a transfer. ",
+      "hint": "If \"{sent}\" is the account the money {kind, select, income {came into} other {went out of}}, send it in \"account\". ",
+      "retry": "Repeat the call with account and without to_account or to_amount."
+    },
+    "transferNeedsDestination": "A transfer needs a destination account",
+    "sameAccount": "The transfer's origin and destination are the same account",
+    "categoryNotRecognised": "I did not recognise the category \"{input}\"; I left it uncategorised for you to review.",
+    "categoryUnsure": "I read \"{input}\" as {category}, but I am not sure.",
+    "noCategory": "You gave no category.",
+    "currencyMismatch": "The amount comes in {amountCurrency} but the account {account} carries {accountCurrency}. If you changed money from one currency to another, that is a transfer between accounts.",
+    "zeroAmount": "The amount cannot be zero",
+    "noRate": "I could not get the day's rate, so I saved it without the dollar equivalent. It is flagged for review.",
+    "staleRate": "I used the rate from {date} because there was none for today.",
+    "accountUnsure": "I read \"{input}\" as {account}, but I am not sure.",
+    "when": {
+      "justNow": "a moment ago",
+      "minutesAgo": "{n, plural, one {# minute} other {# minutes}} ago"
+    },
+    "duplicate": {
+      "head": "That is already recorded: «{description}» for {amount} in {account}, {when}. I did not duplicate it. ",
+      "noCent": "Shifting the amount by a few cents does not get past this, it lands here just the same. ",
+      "allow": "If it really is a different purchase, repeat the call with allow_duplicate: true. ",
+      "amend": "If what you want is to change the one that already exists — the account, the category, the amount — use planfly_amend with target: \"{id}\" and the new field in the same call.",
+      "warn": "Careful: {when} I recorded an identical entry in the same account ({description})."
+    },
+    "transferNeedsToAmount": "The transfer goes from {from} to {to}: tell me how much arrived in {account}.",
+    "itemsNeedReview": "There are products I did not fully recognise; they are left for review.",
+    "itemsExceedTotal": "The products add up to {amount}, more than the receipt's total.",
+    "summary": {
+      "dryRun": "(simulation, I did not save it)",
+      "transfer": "Transfer of {amount} from {from} to {to}",
+      "entry": "{kind, select, expense {Expense} income {Income} other {Adjustment}} of {amount}{equivalent}{category} {kind, select, income {to} other {from}} {account}",
+      "category": " in {name}",
+      "equivalent": " (≈ {base} {source})",
+      "items": "{n, plural, one {# product} other {# products}}{missing}",
+      "itemsMissing": ", {amount} still to break down",
+      "balance": "{account} balance: {amount}",
+      "alreadyStored": "I already had it recorded, I did not duplicate it. ",
+      "noDescription": "No description",
+      "transferDescription": "Transfer"
+    }
+  },
+  "updateTransaction": {
+    "householdNotFound": "The household does not exist",
+    "notFound": "I did not find that entry",
+    "voided": "That entry is voided, and a voided one is not edited: it stays in the history as a record of what happened. If you need it, record it again.",
+    "notEditable": "I did not find that entry among the ones I can correct (only the ones I recorded myself, from the last 7 days).",
+    "malformed": "That entry has no origin line",
+    "accountNotFound": "I found no account resembling \"{wanted}\"",
+    "accountCurrencyMismatch": "{account} carries {accountCurrency} and the line is in {legCurrency}. If it really was that account, tell me the amount in {accountCurrency} too: an account's balance cannot mix currencies.",
+    "notATransferAccount": "That entry is not a transfer, it has no destination account. If what you want is to change the account it came out of, send it in \"account\", not in \"to_account\".",
+    "sameAccount": "Origin and destination would end up being the same account: that is not a transfer.",
+    "zeroAmount": "The amount cannot be zero",
+    "notATransferAmount": "That entry is not a transfer: it has only one line, so there is no destination amount.",
+    "sameCurrencyAmounts": "Both accounts are in the same currency, so what goes out and what comes in have to be the same figure.",
+    "transferHasNoCategory": "That entry is a transfer between your own accounts, and those carry no category: it is not an expense, you only moved the money.",
+    "categoryNotFound": "I did not find the category \"{input}\".",
+    "notATransferRate": "That entry is not a transfer: there is no destination line to put a rate on.",
+    "itemsWithCurrencyChange": "I cannot change the currency and the breakdown at once: the prices on screen are in the previous currency. Change the currency, save, and correct the breakdown afterwards.",
+    "zeroItemTotal": "The line \"{description}\" has no amount. A line at zero says nothing about any price.",
+    "warning": {
+      "noRate": "I have no rate from {date} for {currency}, so that line is left with no equivalent in {base}.",
+      "staleRate": "The nearest rate to {date} is from another day.",
+      "rateIgnored": "{leg, select, to {destination rate} other {rate}}: that line is already in {base}, no rate is needed. I ignored it.",
+      "itemsNeedReview": "There are products I did not fully recognise; it is left for review.",
+      "itemsExceedTotal": "The products add up to {amount}, more than the entry.",
+      "leftUnvalued": "It stays flagged for review until it has a rate."
+    },
+    "change": {
+      "account": "{leg, select, to {destination account} other {account}} to {name}",
+      "amount": "{leg, select, to {amount received} other {amount}} to {amount}",
+      "rate": "{leg, select, to {destination rate} other {rate}} to {rate}",
+      "valuation": "{leg, select, to {destination valuation} other {valuation}} to the {source, select, bcv {official} p2p {parallel} other {manually set}} rate",
+      "category": "category to {name}",
+      "date": "date to {date}",
+      "itemsCleared": "breakdown cleared",
+      "items": "breakdown to {n, plural, one {# product} other {# products}}",
+      "description": "description",
+      "notes": "note",
+      "reviewed": "marked as reviewed"
+    },
+    "summary": {
+      "nothingToChange": "There was nothing to change.",
+      "done": "Done, I corrected {changes}.",
+      "markedReviewed": "Marked as reviewed."
+    }
+  },
+  "financing": {
+    "missingRate": "I have no {source} rate from {date} to turn the price from {from} into {to}.",
+    "invalidInstallmentCount": "The number of installments has to be a whole number greater than zero.",
+    "financierNotFound": "I found no account resembling \"{input}\". Create it first in Accounts, as a credit card or a loan.",
+    "financierNotLiability": "{account} is an asset account, and whoever finances you is who you owe. Change its type to credit card or loan in Accounts.",
+    "downPaymentTooLarge": "The deposit cannot be larger than the purchase's total.",
+    "nothingToFinance": "If the deposit covers everything, there is nothing to finance: record it as an ordinary expense.",
+    "missingDownPaymentAccount": "Tell me which account the deposit came out of.",
+    "defaultDescription": "Financed purchase",
+    "purchaseSummary": "{description}: {total} in {financier}{downPayment}. {n, plural, one {# installment} other {# installments}} of {installment} left, the first one on {firstDue}",
+    "downPaymentPart": ", {amount} as a deposit",
+    "installmentNotFound": "I did not find that installment.",
+    "alreadyPaid": "Installment {number} of {plan} was already paid.",
+    "unpayReason": "Payment of installment {number} · {plan} was undone",
+    "unpaidWithVoid": "Installment {number} is pending again, and I voided the transfer of {amount} that paid it. It stays in the history, flagged.",
+    "unpaid": "Installment {number} is pending again.",
+    "accountNotFound": "I did not find that account.",
+    "profileNotLiability": "{account} is an asset account. A financier is somebody you owe, so it has to be of type credit card or loan.",
+    "invalidPercent": "The deposit percentage has to be between 0 and 99.",
+    "profileRemoved": "It leaves the list of financiers. The account is still there.",
+    "planNotFound": "I did not find that purchase.",
+    "voidReason": "Installment purchase voided",
+    "planVoided": "{description} voided, along with {n, plural, one {its entry} other {its # entries}}. They stay in the history, flagged.",
+    "financedNote": "Financed over {n, plural, one {# installment} other {# installments}}",
+    "downPaymentDescription": "Deposit · {description}",
+    "installmentDescription": "Installment {number} · {plan}",
+    "installmentPaid": "Installment {number} of {plan} paid: {amount}.",
+    "profileSaved": "{account} saved as a financier."
+  },
+  "recurring": {
+    "missingRate": "I have no {source} rate from {date} to go from {from} to {to}.",
+    "announce": {
+      "recorded": "{n, plural, one {I recorded one recurrence} other {I recorded # recurrences}}",
+      "failed": "{n, plural, one {There is one I could not record} other {There are # I could not record}}"
+    },
+    "noDays": "Pick at least one day of the month: the 5th, the 20th, the last one…",
+    "missingName": "The recurrence needs a name.",
+    "noNextRun": "With those days there is no next date.",
+    "ruleNotFound": "I did not find that recurrence.",
+    "corrected": "«{name}» corrected. The next one, on {next}",
+    "created": "«{name}» is set up. The next one, on {next}",
+    "resumed": "«{name}» resumed. The next one, on {next}",
+    "paused": "«{name}» paused. It will record nothing until you resume it.",
+    "removed": "«{name}» deleted. What it already recorded stays in the history."
+  },
+  "manageAccounts": {
+    "missingName": "The account needs a name.",
+    "duplicateArchived": "There is already an archived account called \"{name}\". Rename the new one, or unarchive that one.",
+    "duplicateName": "You already have an account called \"{name}\".",
+    "accountNotFound": "I did not find that account.",
+    "created": "Account {name} created{opening}.",
+    "createdWith": " with {amount}",
+    "createdEmpty": " at zero",
+    "currencyLocked": "{account} has {n, plural, one {# entry} other {# entries}} in {currency}, so its currency can no longer be changed: the amounts inside would stop meaning what they say. Create another account in {wanted} and transfer the balance.",
+    "change": {
+      "name": "name",
+      "type": "type",
+      "currency": "currency",
+      "openingBalance": "opening balance to {amount}",
+      "institution": "institution",
+      "aliases": "other names"
+    },
+    "nothingToChange": "There was nothing to change.",
+    "done": "Done, I corrected {changes}.",
+    "alreadyArchived": "{account} was already archived.",
+    "notEmpty": "{account} has {amount}. Archiving it would take that money out of net worth with no entry to explain it. Transfer the balance to another account first.",
+    "archived": "{account} archived. Its entries are still there.",
+    "unarchived": "{account} is back in the list."
+  },
+  "products": {
+    "noText": "The line has no text to identify a product by",
+    "mergeWithItself": "A product cannot be merged with itself",
+    "oneNotFound": "I did not find one of the two products",
+    "splitNoText": "That line item has no text to name a product by",
+    "notFound": "I did not find that product",
+    "isTheName": "«{text}» is this product's name, not a line item that can be taken out of it.",
+    "noMatchingLines": "No line of {product} says «{text}». Split by the text exactly as it came out on the receipt.",
+    "allItsLines": "«{text}» is all of its lines: splitting it would leave {product} empty. That is renaming it, not splitting it.",
+    "alreadyThis": "«{text}» is already this same product.",
+    "split": "{n, plural, one {# purchase moved} other {# purchases moved}} from {from} to {to}."
+  },
+  "budgets": {
+    "categoryNotFound": "I did not find the category \"{input}\".",
+    "unknownPeriod": "That kind of period does not exist.",
+    "missingRange": "Tell me which day the budget runs from and which day it runs to.",
+    "endBeforeStart": "The end date falls before the start date.",
+    "noneActive": "{category} has no active budget.",
+    "removed": "{n, plural, one {I removed {category}'s budget.} other {I removed {category}'s # budgets.}}",
+    "saved": "{category}: {amount} {period}.{change}",
+    "changedFrom": " Before it was {amount}."
+  },
+  "rules": {
+    "missingPattern": "The rule needs some text to look for.",
+    "categoryNotFound": "I did not find the category \"{input}\".",
+    "saved": "Done: whatever contains «{pattern}» will be filed under {category}.",
+    "updated": "Rule updated: «{pattern}» goes to {category}."
+  },
+  "installmentReminders": {
+    "overdue": "overdue since {date}",
+    "dueTomorrow": "is due tomorrow",
+    "line": "• {description} · installment {number} · {amount} · {financier} · {when}",
+    "heading": "{n, plural, one {You have one installment to pay:} other {You have # installments to pay:}}",
+    "total": "In total: {amount}"
+  },
+  "common": {
+    "noDescription": "No description",
+    "noCategory": "No category",
+    "entryNotFound": "I did not find that entry"
+  },
+  "voidTransaction": {
+    "done": "Voided."
+  },
+  "import": {
+    "unreadableDate": "Unreadable date: \"{value}\"",
+    "zeroAmount": "Zero amount"
+  },
+  "rates": {
+    "stillInUse": "That rate has already valued {n, plural, one {# entry} other {# entries}}, so it is not deleted: they would be left with their equivalent computed and no way of saying where it came from. Set another one for the same day and this one stops being used."
+  },
+  "session": {
+    "readOnly": "This account is read-only: it cannot change anything."
+  },
+  "actions": {
+    "items": {
+      "unreadable": "I could not read the breakdown the form sent.",
+      "notAList": "The breakdown has to be a list of lines.",
+      "noTotal": "Line {n} (\"{description}\") has no amount.",
+      "noDescription": "Line {n} has an amount but does not say what it is."
+    },
+    "voidReason": "Voided from the dashboard",
+    "voided": "Voided.",
+    "missingFinancierName": "Tell me the name of whoever finances you.",
+    "rates": {
+      "noSources": "There is no source set up: write the day's rate below.",
+      "oneWithoutSource": "Updated. {source} has no source set up: write it below.",
+      "bothBroken": "Neither of the two sources answered.",
+      "oneBroken": "Updated, but {source} did not answer.",
+      "updated": "BCV and P2P updated.",
+      "manualSaved": "{slot, select, bcv {The official one} other {The parallel one}} for {date} is now {rate} · that day's entries are valued with it.",
+      "removed": "Rate deleted. Send the source's again, if there is one.",
+      "alreadyGone": "That rate was already gone."
+    },
+    "snapshotSaved": "Snapshot saved.",
+    "missingAmount": "The amount is missing.",
+    "ruleRemoved": "Rule deleted. What it already categorised stays as it is.",
+    "ruleAlreadyGone": "That rule was already gone.",
+    "accountNotFound": "I did not find the account \"{name}\".",
+    "importDone": "{imported} imported, {skipped} skipped{errors}.",
+    "importErrors": ", {n} with an error",
+    "missingEntry": "The entry to correct is missing.",
+    "missingAccount": "The account to correct is missing.",
+    "budgetSaved": "Budget saved. {summary}"
+  },
+  "amount": {
+    "head": "I could not read the amount {input}: {reason}",
+    "notFinite": "it is not a finite number",
+    "badExpression": "it is not a sum that can be worked out",
+    "tooLarge": "it exceeds JavaScript's safe integer",
+    "empty": "it came out empty once cleaned up",
+    "badCharacters": "it contains characters that are neither digits nor separators",
+    "noDigits": "it has no digits",
+    "notAnInteger": "the digits do not form a valid integer",
+    "rateHead": "I could not read the rate {input}: {reason}",
+    "rateEmpty": "it is empty",
+    "rateBadCharacters": "a rate carries only digits and separators",
+    "rateAmbiguous": "I cannot tell whether the dot separates thousands or decimals. Write it with a decimal comma ({suggestion}) or with no thousands separator",
+    "rateTooPrecise": "it does not fit the rates column",
+    "rateZero": "a rate cannot be zero",
+    "rateTooHigh": "it is too high to be a rate (more than {max})"
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "unit": {
+    "perUnit": {
+      "kg": "el kilo",
+      "l": "el litro",
+      "unit": "la unidad"
+    },
+    "bare": {
+      "kg": "kg",
+      "l": "l",
+      "unit": "u"
+    }
+  },
+  "entryKind": {
+    "expense": "gasto",
+    "income": "ingreso",
+    "transfer": "transferencia"
+  },
+  "rowStatus": {
+    "new": "nueva",
+    "duplicate": "ya estaba",
+    "error": "con error"
+  },
+  "rule": {
+    "field": {
+      "description": "la descripción",
+      "payee": "el comercio"
+    },
+    "operator": {
+      "contains": "contiene",
+      "equals": "es igual a",
+      "regex": "encaja con"
+    }
+  },
+  "accountType": {
+    "cash": {
+      "label": "Efectivo",
+      "hint": ""
+    },
+    "bank": {
+      "label": "Banco",
+      "hint": ""
+    },
+    "crypto": {
+      "label": "Cripto",
+      "hint": ""
+    },
+    "investment": {
+      "label": "Inversión",
+      "hint": ""
+    },
+    "prepaid": {
+      "label": "Prepagada",
+      "hint": "la recargas antes de gastar"
+    },
+    "credit_card": {
+      "label": "Tarjeta de crédito",
+      "hint": "resta del patrimonio"
+    },
+    "loan": {
+      "label": "Préstamo",
+      "hint": "resta del patrimonio"
+    },
+    "other": {
+      "label": "Otra",
+      "hint": ""
+    }
+  },
+  "cadence": {
+    "monthly": {
+      "label": "Al mes",
+      "hint": "el día 1"
+    },
+    "biweekly": {
+      "label": "Por quincena",
+      "hint": "el 15 y el último"
+    },
+    "custom": {
+      "label": "Los días que elijas",
+      "hint": ""
+    }
+  },
+  "budgetPeriod": {
+    "monthly": "al mes",
+    "biweekly": "por quincena",
+    "yearly": "al año",
+    "custom": "para ese rango"
+  },
+  "period": {
+    "name": {
+      "today": "hoy",
+      "yesterday": "ayer",
+      "week": "los últimos 7 días",
+      "month": "este mes",
+      "last_month": "el mes pasado",
+      "year": "{year}",
+      "all": "todo el histórico",
+      "first_fortnight": "la primera quincena",
+      "second_fortnight": "la segunda quincena",
+      "named_month": "{value}",
+      "day": "{value}",
+      "range": "{start} a {end}"
+    },
+    "option": {
+      "today": "Hoy",
+      "week": "Últimos 7 días",
+      "month": "Este mes",
+      "last_month": "Mes pasado",
+      "year": "Este año",
+      "all": "Todo"
+    }
+  },
+  "source": {
+    "telegram": "por Telegram",
+    "form": "a mano",
+    "csv": "importado de un CSV",
+    "ocr": "de una foto",
+    "api": "por la API",
+    "recurring": "recurrente"
+  }
+}

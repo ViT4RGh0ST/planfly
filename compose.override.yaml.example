@@ -1,0 +1,29 @@
+# Giving planfly a domain name, with Traefik.
+#
+#   cp compose.override.yaml.example compose.override.yaml
+#
+# Docker Compose loads `compose.override.yaml` on its own, with no flags. It is
+# outside the base compose because a freshly cloned repo has no proxy network
+# created, and `docker compose up` would die before starting anything.
+#
+# It requires an existing external network and a Traefik listening on it:
+#
+#   docker network create proxy_gateway
+services:
+  app:
+    networks:
+      - internal
+      - proxy_gateway
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_gateway"
+      # `planfly.localhost` works with nothing to configure: browsers resolve
+      # *.localhost to 127.0.0.1 on their own (RFC 6761). A domain of your own
+      # also needs its entry in the system hosts file.
+      - "traefik.http.routers.planfly.rule=Host(`planfly.localhost`)"
+      - "traefik.http.routers.planfly.entrypoints=web"
+      - "traefik.http.services.planfly.loadbalancer.server.port=3000"
+
+networks:
+  proxy_gateway:
+    external: true
