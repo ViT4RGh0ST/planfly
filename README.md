@@ -76,6 +76,22 @@ household id printed by the seed in `TELEGRAM_HOUSEHOLD_ID` (in `.env`). One app
 process sends alerts for only that household; this prevents a second household's
 financial information from reaching the same chat.
 
+### Or look at it with something in it
+
+A fresh installation is empty, which is the honest first screen for somebody
+about to keep their own accounts and the wrong one for deciding whether this is
+worth an afternoon. On a throwaway database:
+
+```bash
+npm run db:demo
+```
+
+Two months of rates, a household's wages and spending, a purchase in
+installments halfway through paying itself, budgets in all three of their
+states, and a couple of rows the bot did not fully understand. It refuses to run
+if the household already has entries — the one mistake it must never make is
+dropping invented purchases into real accounts.
+
 To **work on the code**, the development server on the same port:
 
 ```bash
