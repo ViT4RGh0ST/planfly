@@ -98,7 +98,7 @@ export async function sendDueInstallmentReminders(): Promise<number> {
         amount: `<b>${formatAmount(total, due[0].currency)}</b>`,
       });
 
-    if (await notify(text)) {
+    if (await notify(home.id, text)) {
       await db
         .update(installments)
         .set({ remindedOn: localToday })

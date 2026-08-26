@@ -31,6 +31,7 @@ describe("installment reminders", { skip: hasDb() ? false : "no Postgres availab
     // It is any installation's default case: nobody has set up a bot.
     delete process.env.TELEGRAM_BOT_TOKEN;
     delete process.env.TELEGRAM_CHAT_ID;
+    delete process.env.TELEGRAM_HOUSEHOLD_ID;
     assert.equal(await sendDueInstallmentReminders(), 0);
   });
 
@@ -61,6 +62,7 @@ describe("installment reminders", { skip: hasDb() ? false : "no Postgres availab
     const sent: string[] = [];
     process.env.TELEGRAM_BOT_TOKEN = "prueba:token";
     process.env.TELEGRAM_CHAT_ID = "1";
+    process.env.TELEGRAM_HOUSEHOLD_ID = e.home.id;
     globalThis.fetch = (async (_url: string, init?: { body?: string }) => {
       sent.push(JSON.parse(init?.body ?? "{}").text ?? "");
       return new Response("{}", { status: 200 });
@@ -71,6 +73,7 @@ describe("installment reminders", { skip: hasDb() ? false : "no Postgres availab
       globalThis.fetch = fetchReal;
       delete process.env.TELEGRAM_BOT_TOKEN;
       delete process.env.TELEGRAM_CHAT_ID;
+      delete process.env.TELEGRAM_HOUSEHOLD_ID;
     }
   }
 
