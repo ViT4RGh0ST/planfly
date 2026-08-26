@@ -1,8 +1,19 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { jwt } from "better-auth/plugins";
+import { cimd } from "@better-auth/cimd";
+import { fetchClientMetadataResource } from "@better-auth/cimd/node";
+import { mcp } from "@better-auth/mcp";
 
 import { db } from "@/db";
 import * as schema from "@/db/schema";
+import { mcpResource } from "@/lib/mcp/config";
+
+export const MCP_SCOPES = [
+  "context:read",
+  "reports:read",
+  "transactions:write",
+] as const;
 
 /**
  * Authenticating people.
@@ -64,6 +75,39 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 30, // 30 days — it is a personal tool
     updateAge: 60 * 60 * 24,
   },
+  plugins: [
+    // OAuth access tokens are signed and audience-bound to precisely this MCP
+    // endpoint. This is separate from Planfly's revocable machine tokens.
+    jwt(),
+    mcp({
+      loginPage: "/login",
+      consentPage: "/mcp/consent",
+      resource: mcpResource,
+      scopes: ["openid", "profile", "email", "offline_access", ...MCP_SCOPES],
+      accessTokenExpiresIn: 15 * 60,
+      refreshTokenExpiresIn: 30 * 24 * 60 * 60,
+      codeExpiresIn: 5 * 60,
+      enforcePerClientResources: true,
+      resources: [
+        {
+          identifier: mcpResource,
+          name: "Planfly MCP",
+          allowedScopes: [...MCP_SCOPES],
+        },
+      ],
+      clientRegistrationDefaultResources: [mcpResource],
+    }),
+    cimd({
+      fetchClientMetadataResource,
+      metadataProfile: "mcp-2026-07-28",
+      metadataFetchPolicy: {
+        maximumConcurrentFetches: 8,
+        maximumConcurrentFetchesPerOrigin: 2,
+        maximumFetchesPerMinute: 60,
+        maximumFetchesPerOriginPerMinute: 10,
+      },
+    }),
+  ],
 });
 
 export type Sesion = typeof auth.$Infer.Session;

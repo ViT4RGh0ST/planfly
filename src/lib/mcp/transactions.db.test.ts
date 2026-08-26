@@ -60,4 +60,29 @@ describe("MCP transaction confirmation against the database", { skip: hasDb() ? 
       userId: principal.userId,
     });
   });
+
+  it("claims a confirmation before writing so concurrent confirms create one ledger row", async () => {
+    const principal = await authenticateToken(`Bearer ${token}`);
+    assert.ok(principal, "the fixture must create a usable scoped token");
+    const draft = await previewMcpTransaction(principal, {
+      kind: "expense",
+      amount: "90,00",
+      currency: "VES",
+      account: "efectivo",
+      category: "mercado",
+      occurred_on: DATE,
+    });
+
+    const attempts = await Promise.allSettled([
+      confirmMcpTransaction(principal, draft.confirmationId),
+      confirmMcpTransaction(principal, draft.confirmationId),
+    ]);
+    assert.equal(attempts.filter((attempt) => attempt.status === "fulfilled").length, 1);
+    assert.equal(attempts.filter((attempt) => attempt.status === "rejected").length, 1);
+    assert.equal(
+      (await db.select().from(transactions).where(eq(transactions.sourceRef, draft.confirmationId))).length,
+      1,
+      "the confirmation id is an idempotency boundary, not merely a UI prompt",
+    );
+  });
 });

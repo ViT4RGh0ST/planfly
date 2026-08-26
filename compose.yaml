@@ -29,6 +29,11 @@ services:
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?falta BETTER_AUTH_SECRET en .env}"
       BETTER_AUTH_URL: "${BETTER_AUTH_URL:-http://localhost:3000}"
       AUTH_TRUSTED_ORIGINS: "${AUTH_TRUSTED_ORIGINS:-}"
+      # Canonical public address for RFC 9728 resource discovery. Set this when
+      # publishing through a proxy; it must be the URL MCP clients connect to.
+      MCP_PUBLIC_URL: "${MCP_PUBLIC_URL:-}"
+      # Extra browser origins permitted to make MCP POST requests, comma-separated.
+      MCP_ALLOWED_ORIGINS: "${MCP_ALLOWED_ORIGINS:-}"
       # Installment alerts. Optional on purpose: without them the app works the
       # same, only quietly. The `:-` keeps compose from failing if they are absent.
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"

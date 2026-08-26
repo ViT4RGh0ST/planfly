@@ -9,6 +9,7 @@
  * The environment is loaded by `tsx --env-file=.env.local` (see package.json).
  */
 import { and, eq } from "drizzle-orm";
+import { createLocalAccountIssuer } from "@better-auth/core/db";
 
 import { db, pool } from "../src/db";
 import {
@@ -178,10 +179,11 @@ async function createUser(email: string, password: string, name: string) {
     email,
     name,
     emailVerified: false,
-  });
+  }, { method: "email-password" });
   await ctx.internalAdapter.linkAccount({
     userId: created.id,
     providerId: "credential",
+    issuer: createLocalAccountIssuer("credential"),
     accountId: created.id,
     password: await ctx.password.hash(password),
   });

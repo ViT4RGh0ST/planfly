@@ -11,14 +11,25 @@ let scenario: Scenario;
 let token: string;
 
 function mcpRequest(tokenValue: string, body: unknown) {
+  const request = body as { method?: string; params?: { name?: string; _meta?: Record<string, unknown> } };
+  const method = request.method ?? "tools/list";
+  request.params ??= {};
+  request.params._meta = {
+    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+    "io.modelcontextprotocol/clientCapabilities": {},
+    ...request.params._meta,
+  };
   return new NextRequest("http://planfly.test/api/mcp", {
     method: "POST",
     body: JSON.stringify(body),
     headers: {
       Authorization: `Bearer ${tokenValue}`,
+      Host: "localhost:3000",
       Accept: "application/json, text/event-stream",
       "Content-Type": "application/json",
-      "MCP-Protocol-Version": "2025-11-25",
+      "MCP-Protocol-Version": "2026-07-28",
+      "MCP-Method": method,
+      ...(request.params.name ? { "MCP-Name": request.params.name } : {}),
     },
   });
 }
@@ -46,7 +57,7 @@ describe("the HTTP MCP route against the database", { skip: hasDb() ? false : "n
     const { POST } = await import("./route");
     const noMcpScope = await tokenFor(scenario.home, ["context:read"]);
     const denied = await POST(
-      mcpRequest(noMcpScope, { jsonrpc: "2.0", id: 1, method: "initialize", params: {} }),
+      mcpRequest(noMcpScope, { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
     );
     assert.equal(denied.status, 401);
 

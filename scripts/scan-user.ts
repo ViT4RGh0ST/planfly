@@ -18,6 +18,7 @@
  * The password is generated here and printed once, to be copied into `.env.local`.
  */
 import { randomBytes } from "node:crypto";
+import { createLocalAccountIssuer } from "@better-auth/core/db";
 import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -42,10 +43,11 @@ async function createUser(email: string, password: string, name: string) {
     email,
     name,
     emailVerified: false,
-  });
+  }, { method: "email-password" });
   await ctx.internalAdapter.linkAccount({
     userId: created.id,
     providerId: "credential",
+    issuer: createLocalAccountIssuer("credential"),
     accountId: created.id,
     password: await ctx.password.hash(password),
   });

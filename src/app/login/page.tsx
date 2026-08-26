@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,9 +10,10 @@ import { Label } from "@/components/ui/label";
 import { signIn } from "@/lib/auth-client";
 import { useTranslations } from "next-intl";
 
-export default function LoginPage() {
+function LoginForm() {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -23,13 +24,22 @@ export default function LoginPage() {
     setPending(true);
     setError(null);
 
-    const result = await signIn.email({ email, password });
+    const oauthQuery = searchParams.toString();
+    const result = await signIn.email({
+      email,
+      password,
+      // The OAuth provider verifies this signed value before restoring the
+      // authorization request; it is not a client-controlled redirect URL.
+      ...(oauthQuery ? { oauth_query: oauthQuery } : {}),
+    } as never);
     if (result.error) {
       setError(t("ui.login.wrong"));
       setPending(false);
       return;
     }
-    router.push("/");
+    // A successful OAuth login is redirected by Better Auth to the consent
+    // screen or client callback. Normal interactive login stays at the app.
+    if (!oauthQuery) router.push("/");
     router.refresh();
   }
 
@@ -72,5 +82,13 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className="min-h-svh" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

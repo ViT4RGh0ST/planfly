@@ -134,6 +134,27 @@
       "when": 1787715456815,
       "tag": "0018_wakeful_supernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787725820638,
+      "tag": "0019_lonely_stingray",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787725909580,
+      "tag": "0020_productive_paibok",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787726018060,
+      "tag": "0021_real_karnak",
+      "breakpoints": true
     }
   ]
 }

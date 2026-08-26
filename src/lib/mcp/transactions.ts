@@ -58,7 +58,7 @@ function toRecordInput(
     source: "mcp" as const,
     sourceRef: confirmationId,
     createdByUserId: principal.userId,
-    createdViaTokenId: principal.tokenId,
+    createdViaTokenId: principal.tokenId ?? undefined,
     createdByAgent: "mcp",
     idempotencyKey: `mcp:${confirmationId}`,
     dryRun,
@@ -135,6 +135,7 @@ export async function previewMcpTransaction(
       householdId: principal.householdId,
       userId: principal.userId,
       tokenId: principal.tokenId,
+      credentialId: principal.credentialId,
       operation: "record_transaction",
       payload: { input } satisfies PendingTransaction,
       preview: {},
@@ -167,7 +168,7 @@ export async function confirmMcpTransaction(
         eq(mcpPendingOperations.id, confirmationId),
         eq(mcpPendingOperations.householdId, principal.householdId),
         eq(mcpPendingOperations.userId, principal.userId),
-        eq(mcpPendingOperations.tokenId, principal.tokenId),
+        eq(mcpPendingOperations.credentialId, principal.credentialId),
       ),
     )
     .limit(1);
@@ -212,12 +213,21 @@ export async function confirmMcpTransaction(
     );
   }
 
-  const result = await recordTransaction(toRecordInput(principal, pending.id, payload.input, false));
+  /*
+   * Claim before writing. The previous order wrote first and only then marked
+   * the confirmation consumed, which made concurrent confirms race through the
+   * ledger path. The conditional update makes one caller the sole writer.
+   */
+  const claimedAt = new Date();
   const [confirmed] = await db
     .update(mcpPendingOperations)
-    .set({ confirmedAt: new Date() })
+    .set({ confirmedAt: claimedAt })
     .where(
-      and(eq(mcpPendingOperations.id, pending.id), isNull(mcpPendingOperations.confirmedAt)),
+      and(
+        eq(mcpPendingOperations.id, pending.id),
+        isNull(mcpPendingOperations.confirmedAt),
+        gt(mcpPendingOperations.expiresAt, claimedAt),
+      ),
     )
     .returning({ id: mcpPendingOperations.id });
 
@@ -228,5 +238,20 @@ export async function confirmMcpTransaction(
     throw new McpConfirmationError("Confirmation was already used.", "already_confirmed");
   }
 
-  return result;
+  try {
+    return await recordTransaction(toRecordInput(principal, pending.id, payload.input, false));
+  } catch (error) {
+    // Do not strand an approval if the write failed before the service could
+    // commit. The idempotency key still prevents duplicate ledger rows.
+    await db
+      .update(mcpPendingOperations)
+      .set({ confirmedAt: null })
+      .where(
+        and(
+          eq(mcpPendingOperations.id, pending.id),
+          eq(mcpPendingOperations.confirmedAt, claimedAt),
+        ),
+      );
+    throw error;
+  }
 }
