@@ -611,5 +611,15 @@
     "wrong": "Wrong email or password.",
     "signingIn": "Signing in…",
     "signIn": "Sign in"
+  },
+  "mcpConsent": {
+    "title": "Connect MCP client",
+    "unknownClient": "this MCP client",
+    "description": "{client} is requesting access to your Planfly household. Approve only a client you recognize.",
+    "permissions": "Requested permissions",
+    "noPermissions": "No permissions were requested.",
+    "allow": "Allow",
+    "deny": "Deny",
+    "error": "Planfly could not process this authorization request."
   }
 }

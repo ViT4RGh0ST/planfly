@@ -611,5 +611,15 @@
     "wrong": "Correo o contraseña incorrectos.",
     "signingIn": "Entrando…",
     "signIn": "Entrar"
+  },
+  "mcpConsent": {
+    "title": "Conectar cliente MCP",
+    "unknownClient": "este cliente MCP",
+    "description": "{client} solicita acceso a tu hogar de Planfly. Aprueba solo un cliente que reconozcas.",
+    "permissions": "Permisos solicitados",
+    "noPermissions": "No se solicitó ningún permiso.",
+    "allow": "Permitir",
+    "deny": "Denegar",
+    "error": "Planfly no pudo procesar esta solicitud de autorización."
   }
 }
