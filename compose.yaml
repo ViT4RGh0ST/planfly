@@ -33,6 +33,10 @@ services:
       # same, only quietly. The `:-` keeps compose from failing if they are absent.
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
       TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID:-}"
+      # The chat belongs to this household only. It is required whenever the
+      # Telegram credentials are configured, so another household's financial
+      # alerts cannot be delivered to it.
+      TELEGRAM_HOUSEHOLD_ID: "${TELEGRAM_HOUSEHOLD_ID:-}"
       # The household's. It matters more than it looks: a 21:00 expense recorded
       # in another timezone lands on the following day.
       TZ: "${TZ:-America/Caracas}"

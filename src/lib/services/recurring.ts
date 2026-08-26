@@ -98,6 +98,7 @@ export async function listRecurringRules(householdId: string): Promise<Recurring
  * is worth nothing.
  */
 export type RecurringRun = {
+  householdId: string;
   ruleName: string;
   occurredOn: string;
   summary: string;
@@ -154,6 +155,7 @@ export async function runDueRecurrences(): Promise<RecurringRun[]> {
           // A retry returns `duplicate`: it was already there, and that is not a failure.
           if (!result.duplicate) {
             done.push({
+              householdId: home.id,
               ruleName: rule.name,
               occurredOn: date,
               summary: result.summary,
@@ -170,6 +172,7 @@ export async function runDueRecurrences(): Promise<RecurringRun[]> {
            * into spam.
            */
           done.push({
+            householdId: home.id,
             ruleName: rule.name,
             occurredOn: date,
             summary: (err as Error).message,
@@ -303,40 +306,37 @@ async function homeOf(householdId: string) {
 /**
  * The Telegram alert.
  *
- * One single message with everything from the pass, not one per entry: turning
- * the machine on after a week could produce six, and six messages in a row read
- * as a bot malfunction. What failed goes separately and with its reason, because
- * it is the only part asking you to do something.
+ * One message per household and pass, not one per entry: turning the machine on
+ * after a week could produce six, and six messages in a row read as a bot
+ * malfunction. What failed goes separately and with its reason, because it is
+ * the only part asking you to do something.
  */
 async function announce(runs: RecurringRun[]): Promise<void> {
   if (runs.length === 0 || !notificationsEnabled()) return;
 
-  const ok = runs.filter((r) => r.ok);
-  const bad = runs.filter((r) => !r.ok);
-  const lines: string[] = [];
+  const byHousehold = Map.groupBy(runs, (run) => run.householdId);
+  for (const [householdId, householdRuns] of byHousehold) {
+    const ok = householdRuns.filter((r) => r.ok);
+    const bad = householdRuns.filter((r) => !r.ok);
+    const lines: string[] = [];
 
-  /*
-   * The heading takes the language of the first run in its group.
-   *
-   * The heartbeat can fire rules from several households in the same pass, and
-   * the notification goes to one chat. There is no right answer for a mixed
-   * batch, and inventing a rule for it would be inventing a case that a
-   * self-hosted install does not have: one machine, one household.
-   */
-  if (ok.length > 0) {
-    const t = getTranslator(normalizeLocale(ok[0].locale));
-    // `<b>` outside the message: ICU would read it as a rich-text tag.
-    lines.push(`<b>${t("services.recurring.announce.recorded", { n: ok.length })}</b>`);
-    for (const r of ok) lines.push(`· ${formatDay(r.occurredOn, r.locale)} — ${r.summary}`);
-  }
-  if (bad.length > 0) {
-    const t = getTranslator(normalizeLocale(bad[0].locale));
-    if (lines.length > 0) lines.push("");
-    lines.push(`<b>${t("services.recurring.announce.failed", { n: bad.length })}</b>`);
-    for (const r of bad) lines.push(`· ${r.ruleName} (${formatDay(r.occurredOn, r.locale)}): ${r.summary}`);
-  }
+    if (ok.length > 0) {
+      const t = getTranslator(normalizeLocale(ok[0].locale));
+      // `<b>` outside the message: ICU would read it as a rich-text tag.
+      lines.push(`<b>${t("services.recurring.announce.recorded", { n: ok.length })}</b>`);
+      for (const r of ok) lines.push(`· ${formatDay(r.occurredOn, r.locale)} — ${r.summary}`);
+    }
+    if (bad.length > 0) {
+      const t = getTranslator(normalizeLocale(bad[0].locale));
+      if (lines.length > 0) lines.push("");
+      lines.push(`<b>${t("services.recurring.announce.failed", { n: bad.length })}</b>`);
+      for (const r of bad) {
+        lines.push(`· ${r.ruleName} (${formatDay(r.occurredOn, r.locale)}): ${r.summary}`);
+      }
+    }
 
-  await notify(lines.join("\n"));
+    await notify(householdId, lines.join("\n"));
+  }
 }
 
 export type SaveRecurringInput = {

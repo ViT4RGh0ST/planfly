@@ -71,6 +71,11 @@ npm run db:seed
 The seed prints the bot's API token **once only**. After that,
 `http://localhost:3000`.
 
+Telegram reminders are optional. If you enable them, bind the bot chat to the
+household id printed by the seed in `TELEGRAM_HOUSEHOLD_ID` (in `.env`). One app
+process sends alerts for only that household; this prevents a second household's
+financial information from reaching the same chat.
+
 To **work on the code**, the development server on the same port:
 
 ```bash

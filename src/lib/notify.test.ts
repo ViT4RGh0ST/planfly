@@ -25,6 +25,7 @@ afterEach(() => {
   globalThis.fetch = real;
   delete process.env.TELEGRAM_BOT_TOKEN;
   delete process.env.TELEGRAM_CHAT_ID;
+  delete process.env.TELEGRAM_HOUSEHOLD_ID;
 });
 
 describe("alerting over Telegram", () => {
@@ -32,9 +33,12 @@ describe("alerting over Telegram", () => {
     assert.equal(notificationsEnabled(), false);
   });
 
-  it("with both set, it does", () => {
+  it("exists only when credentials are bound to a household", () => {
     process.env.TELEGRAM_BOT_TOKEN = "t";
     process.env.TELEGRAM_CHAT_ID = "1";
+    assert.equal(notificationsEnabled(), false);
+
+    process.env.TELEGRAM_HOUSEHOLD_ID = "home-a";
     assert.equal(notificationsEnabled(), true);
   });
 
@@ -44,22 +48,38 @@ describe("alerting over Telegram", () => {
       called = true;
       return new Response("{}", { status: 200 });
     });
-    assert.equal(await notify("hola"), false);
+    assert.equal(await notify("home-a", "hola"), false);
     assert.equal(called, false, "ni siquiera sale a la red");
+  });
+
+  it("never delivers one household's alert to another household's chat", async () => {
+    process.env.TELEGRAM_BOT_TOKEN = "t";
+    process.env.TELEGRAM_CHAT_ID = "1";
+    process.env.TELEGRAM_HOUSEHOLD_ID = "home-a";
+    let called = false;
+    withResponse(async () => {
+      called = true;
+      return new Response("{}", { status: 200 });
+    });
+
+    assert.equal(await notify("home-b", "cuota de mañana"), false);
+    assert.equal(called, false);
   });
 
   it("a delivered alert says so", async () => {
     process.env.TELEGRAM_BOT_TOKEN = "t";
     process.env.TELEGRAM_CHAT_ID = "1";
+    process.env.TELEGRAM_HOUSEHOLD_ID = "home-a";
     withResponse(async () => new Response("{}", { status: 200 }));
-    assert.equal(await notify("cuota de mañana"), true);
+    assert.equal(await notify("home-a", "cuota de mañana"), true);
   });
 
   it("Telegram answering 403 is not an exception, it's a false", async () => {
     process.env.TELEGRAM_BOT_TOKEN = "t";
     process.env.TELEGRAM_CHAT_ID = "1";
+    process.env.TELEGRAM_HOUSEHOLD_ID = "home-a";
     withResponse(async () => new Response("bot bloqueado", { status: 403 }));
-    assert.equal(await notify("hola"), false);
+    assert.equal(await notify("home-a", "hola"), false);
   });
 
   it("and neither is the network going down", async () => {
@@ -67,9 +87,10 @@ describe("alerting over Telegram", () => {
     // kill the whole heartbeat and with it the day's recurrences.
     process.env.TELEGRAM_BOT_TOKEN = "t";
     process.env.TELEGRAM_CHAT_ID = "1";
+    process.env.TELEGRAM_HOUSEHOLD_ID = "home-a";
     globalThis.fetch = (async () => {
       throw new Error("getaddrinfo ENOTFOUND api.telegram.org");
     }) as unknown as typeof fetch;
-    assert.equal(await notify("hola"), false);
+    assert.equal(await notify("home-a", "hola"), false);
   });
 });
