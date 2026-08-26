@@ -31,6 +31,8 @@ const SCOPES = [
   "budgets:write",
   "financing:write",
   "recurring:write",
+  /** Gates the MCP HTTP endpoint itself; it is not implied by another scope. */
+  "mcp:access",
 ] as const;
 
 function requestedScopes(): string[] {

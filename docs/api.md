@@ -4,9 +4,9 @@ It is the surface anything that is not the web connects through: a bot, a script
 an assistant. It speaks HTTP and JSON, authenticates with a token, and is the
 **same write path** the form uses — there is no back door with fewer checks.
 
-The repository ships a reference adapter for [openclaw](../openclaw/), but you do
-not have to use it: any framework capable of making an HTTP request will do. If
-you use another, this is everything you need.
+MCP-compatible AI clients should use the first-class
+[MCP HTTP endpoint](mcp.md). This REST surface remains the right option for
+scripts and bespoke integrations.
 
 ## The token
 
@@ -33,6 +33,7 @@ Every token carries its **scopes**, and a request outside them is rejected with
 | `budgets:write` | Setting and removing budgets |
 | `financing:write` | Installment purchases and their payments |
 | `recurring:write` | Operations that repeat on their own |
+| `mcp:access` | Entering `/api/mcp`; individual MCP tools still require their own read or write scope |
 
 The household **does not travel in the body**: it comes from the token. Sending
 `household_id`, `user_id` or any other identity field is rejected with 400. It is
@@ -198,17 +199,16 @@ them in `raw_texts`, and that is where they are copied from.
 Splitting leaves the new product named exactly like the line item, so the next
 purchase matches it exactly and no longer lands where it was.
 
-## If your framework is openclaw
+## Legacy OpenClaw adapter
 
-There is a ready-made plugin in
-[`openclaw/planfly-plugin/`](../openclaw/planfly-plugin/), with ten tools and a
-`SKILL.md` that teaches the model when to use each one. It is installed by
-copying, and the [openclaw README](../openclaw/README.md) explains it.
+The direct OpenClaw plugin is deprecated in favor of MCP. It remains temporary
+compatibility code while the MCP surface reaches feature parity. New agent
+integrations should not build on it.
 
-## If it is another
+## Custom REST clients
 
-Wrap the routes above as your framework's tools. What is worth taking from the
-reference adapter, because it costs dearly to discover:
+For a client that does not speak MCP, use the routes above directly. The same
+operational guidance still applies:
 
 - **Send everything in one call.** Recording halfway to correct it later is where
   the chains of duplicates come from.

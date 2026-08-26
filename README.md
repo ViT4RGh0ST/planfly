@@ -199,10 +199,11 @@ npm run db:studio
 npm run db:seed
 npm run rates:snapshot   # force a capture right now
 npm run rates:check      # do the configured sources answer? (writes nothing)
-npm run token:create     # rotate the openclaw token
+npm run token:create     # create a scoped, revocable API credential
+npm run mcp:token        # create the local MCP credential
 ```
 
-## Connecting a bot
+## Connecting an AI client
 
 The way to record without opening the web is a messaging bot, and planfly does
 not marry any of them: it exposes an **HTTP API with a token**, the same one the
@@ -216,6 +217,11 @@ npm run token:create     # printed once only
 scopes, the example of recording an expense and the four rules that save an
 afternoon of debugging.
 
+For MCP-compatible clients, use the HTTP endpoint in
+[**`docs/mcp.md`**](docs/mcp.md). It is the first-class agent integration: the
+client connects to `http://localhost:3000/api/mcp` and receives Planfly's tool
+schemas, instructions and server-backed transaction confirmation flow.
+
 Two things that make the integration far easier than it looks:
 
 - **Accounts and categories go by name**, never by identifier. «provincial», «el
@@ -225,11 +231,11 @@ Two things that make the integration far easier than it looks:
   formatted, to be repeated verbatim. Your bot has to do no arithmetic and no
   currency formatting — which is exactly where it gets things wrong.
 
-### With openclaw
+### OpenClaw is deprecated
 
-There is a ready-made plugin in [`openclaw/planfly-plugin/`](openclaw/), with ten
-tools and a `SKILL.md` teaching the model when to use each one and how to read an
-invoice. It is installed by copying it to the gateway's extensions directory:
+The direct plugin in [`openclaw/planfly-plugin/`](openclaw/) is transitional. It
+will be removed after MCP reaches parity for its remaining tools. New integrations
+should use MCP rather than installing a host-specific plugin.
 
 ```bash
 npm run openclaw:install
@@ -238,12 +244,11 @@ npm run openclaw:install
 And you have to **restart the gateway** afterwards: editing the repository
 changes nothing until the installed copy changes.
 
-### With any other
+### HTTP API
 
-Wrap the routes in `docs/api.md` as your framework's tools. The openclaw plugin
-serves as a reference for what to wrap and how to describe it, even if you do not
-use it: the tool names and their descriptions are written from watching a model
-get them wrong.
+The REST API remains available for scripts and bespoke integrations; its full
+reference is in [`docs/api.md`](docs/api.md). It is not necessary to wrap that
+API into ad-hoc tools when the client speaks MCP.
 
 ## Typeface
 

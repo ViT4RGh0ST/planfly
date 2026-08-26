@@ -41,7 +41,7 @@ import {
  */
 
 export type TransactionKind = "expense" | "income" | "transfer" | "adjustment";
-export type EntrySource = "telegram" | "form" | "csv" | "ocr" | "api" | "recurring";
+export type EntrySource = "telegram" | "form" | "csv" | "ocr" | "mcp" | "api" | "recurring";
 
 export type PaymentMethod =
   | "cash"

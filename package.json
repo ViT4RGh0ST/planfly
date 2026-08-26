@@ -24,15 +24,18 @@
     "auth:reset": "tsx --env-file-if-exists=.env.local scripts/reset-password.ts",
     "scan:user": "tsx --env-file-if-exists=.env.local scripts/scan-user.ts",
     "rates:check": "tsx --env-file-if-exists=.env.local scripts/check-rates.ts",
+    "mcp:token": "tsx --env-file-if-exists=.env.local scripts/create-token.ts mcp 'mcp:access,context:read,reports:read,transactions:write'",
     "openclaw:install": "rsync -a --delete openclaw/planfly-plugin/ ~/.openclaw/extensions/planfly/ && echo \"Installed. Now restart the openclaw gateway so it picks it up.\"",
     "openclaw:capture": "rsync -a --delete ~/.openclaw/extensions/planfly/ openclaw/planfly-plugin/ && echo \"Pulled into the repo. Review the diff before committing.\""
   },
   "dependencies": {
     "better-auth": "^1.6.26",
+    "@modelcontextprotocol/server": "2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "0.45.2",
     "lucide-react": "^1.30.0",
+    "mcp-handler": "2.1.1",
     "next": "16.3.0",
     "next-intl": "^4.13.7",
     "nuqs": "^2.9.5",

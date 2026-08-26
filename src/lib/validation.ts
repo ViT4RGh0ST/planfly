@@ -11,7 +11,7 @@ import { z } from "zod";
 export const amountSchema = z.union([z.string().min(1), z.number()]);
 
 export const transactionKindSchema = z.enum(["expense", "income", "transfer", "adjustment"]);
-export const entrySourceSchema = z.enum(["telegram", "form", "csv", "ocr", "api", "recurring"]);
+export const entrySourceSchema = z.enum(["telegram", "form", "csv", "ocr", "mcp", "api", "recurring"]);
 export const paymentMethodSchema = z.enum([
   "cash",
   "card",
@@ -81,6 +81,16 @@ export const createTransactionSchema = z.object({
 });
 
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
+
+/**
+ * The agent supplies financial facts, never audit provenance. The MCP adapter
+ * stamps source, token, user and confirmation id after this schema validates.
+ */
+export const mcpTransactionDraftSchema = createTransactionSchema
+  .omit({ source: true, source_ref: true, agent: true, dry_run: true })
+  .strict();
+
+export type McpTransactionDraftInput = z.infer<typeof mcpTransactionDraftSchema>;
 
 export const updateTransactionSchema = z.object({
   amount: amountSchema.optional(),
