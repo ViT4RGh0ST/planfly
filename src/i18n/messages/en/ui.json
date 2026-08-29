@@ -448,7 +448,8 @@
       "sharedTaxId": "Yes — it is another branch of that same company. Keep both.",
       "create": "Create place",
       "coordinates": "Location",
-      "coordinatesHelp": "Paste the two numbers, or the whole link from a map. There is no lookup: your addresses stay here."
+      "coordinatesHelp": "Paste the two numbers, or the whole link from a map. There is no lookup: your addresses stay here.",
+      "thisPlace": "This place"
     },
     "branchNeedsAddress": "a branch needs its address",
     "mapOff": "{n, plural, one {One place knows} other {# places know}} where they are, and there is no map to draw them on: a map tile is a request to somebody else's server carrying the coordinates of where you shop, so it stays off until you name the tile source in MAP_TILES_URL.",
@@ -462,7 +463,10 @@
     "unplacedChoose": "Place for «{description}»",
     "unplacedAssign": "Assign",
     "unplacedMore": "There are {n, plural, one {# more group} other {# more groups}} below these; they appear as these are cleared.",
-    "unplacedCreate": "Create as a place"
+    "unplacedCreate": "Create as a place",
+    "mapOffPick": "There is no map to point at: a tile is a request to somebody else's server carrying where you shop, so it stays off until you name the source in MAP_TILES_URL. The two numbers can still be pasted above.",
+    "mapPickLabel": "Click the map to set where this place is",
+    "mapFailed": "The map could not load."
   },
   "budgets": {
     "title": "Budgets",

@@ -32,6 +32,7 @@ services:
       # The tile source for the places map. Empty means no map, on purpose: a
       # tile is an outbound request carrying where you shop.
       MAP_TILES_URL: "${MAP_TILES_URL:-}"
+      MAP_TILES_ATTRIBUTION: "${MAP_TILES_ATTRIBUTION:-}"
       # Installment alerts. Optional on purpose: without them the app works the
       # same, only quietly. The `:-` keeps compose from failing if they are absent.
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"

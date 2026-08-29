@@ -29,6 +29,8 @@ import {
   type ActionState,
   type EditablePayee,
 } from "@/app/(app)/actions";
+import { PlaceMap } from "@/components/place-map";
+import { formatCoordinates, parseCoordinates } from "@/lib/coordinates";
 import { formatTaxId } from "@/lib/tax-id";
 
 /** A place that can be a brand: top level and unarchived. */
@@ -52,6 +54,8 @@ export function PayeeForm({
   categories,
   payeeId,
   defaultName,
+  tiles,
+  attribution,
   open,
   onOpenChange,
 }: {
@@ -68,6 +72,9 @@ export function PayeeForm({
    * list of forty.
    */
   defaultName?: string;
+  /** The tile source, so the picker can draw something to click on. */
+  tiles: string | null;
+  attribution: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -78,6 +85,14 @@ export function PayeeForm({
 
   const [parentId, setParentId] = useState<string>(NONE);
   const [categoryId, setCategoryId] = useState<string>(NONE);
+  /*
+   * The point, held here rather than left to the input alone.
+   *
+   * It is written from two places — clicking the map and typing in the field —
+   * and they have to agree: clicking has to fill the field, and pasting a link
+   * has to move the pin. One value, two ways in.
+   */
+  const [coordinates, setCoordinates] = useState("");
 
   const [state, action, pending] = useActionState(
     async (prev: ActionState, form: FormData) => {
@@ -106,6 +121,7 @@ export function PayeeForm({
         setData(result);
         setParentId(result.parentId ?? NONE);
         setCategoryId(result.defaultCategoryId ?? NONE);
+        setCoordinates(result.coordinates);
       })
       .catch(() => alive && setFailed(true));
     return () => {
@@ -125,6 +141,9 @@ export function PayeeForm({
   const sharedTaxId = state?.code === "duplicate_tax_id";
 
   const available = brands.filter((brand) => brand.id !== payeeId);
+  // Whatever is in the field right now, if it is a point at all: that is what
+  // the pin shows, so typing and clicking never disagree.
+  const pinned = parseCoordinates(coordinates);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,7 +270,8 @@ export function PayeeForm({
                 <Input
                   id="payee-coordinates"
                   name="coordinates"
-                  defaultValue={data?.coordinates}
+                  value={coordinates}
+                  onChange={(e) => setCoordinates(e.target.value)}
                   placeholder="10.4806, -66.9036"
                   aria-describedby="payee-coordinates-help"
                 />
@@ -260,6 +280,18 @@ export function PayeeForm({
                 </p>
               </div>
             </div>
+
+            {/* Click the map and the field fills; paste into the field and the
+                pin moves. Nobody knows their shop's latitude, but everybody can
+                point at where it is. */}
+            <PlaceMap
+              points={pinned ? [{ id: "pin", name: t("ui.places.form.thisPlace"), ...pinned }] : []}
+              tiles={tiles}
+              attribution={attribution}
+              height={200}
+              pick
+              onPick={(lat, lon) => setCoordinates(formatCoordinates(lat, lon))}
+            />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid min-w-0 gap-2">

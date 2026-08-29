@@ -64,8 +64,8 @@ export function parseCoordinates(input: string | undefined | null): Coordinates 
 
 /** Back into the field, in the shape it is pasted from. */
 export function formatCoordinates(
-  lat: string | null | undefined,
-  lon: string | null | undefined,
+  lat: string | number | null | undefined,
+  lon: string | number | null | undefined,
 ): string {
   if (!lat || !lon) return "";
   return `${Number(lat)}, ${Number(lon)}`;

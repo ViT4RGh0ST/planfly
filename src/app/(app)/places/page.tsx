@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { AddPayee, UnarchivePayee } from "@/components/payee-actions";
 import { PayeeList } from "@/components/payee-list";
-import { PlacesMap } from "@/components/places-map";
+import { PlaceMap } from "@/components/place-map";
 import { UnplacedGroups } from "@/components/unplaced-groups";
 import { db } from "@/db";
 import { categories as categoriesTable } from "@/db/schema";
@@ -63,6 +63,11 @@ export default async function PlacesPage() {
     .filter((node) => node.lat && node.lon)
     .map((node) => ({ id: node.id, name: node.name, lat: node.lat!, lon: node.lon! }));
 
+  // The tile source is a server setting; the map that draws it runs in the
+  // browser. It travels as a prop rather than being read twice.
+  const tiles = process.env.MAP_TILES_URL?.trim() || null;
+  const attribution = process.env.MAP_TILES_ATTRIBUTION?.trim() || null;
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
       <header className="mb-10 flex items-start justify-between gap-4">
@@ -70,12 +75,27 @@ export default async function PlacesPage() {
           <h1 className="text-lg font-medium tracking-tight">{t("ui.places.title")}</h1>
           <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">{t("ui.places.hint")}</p>
         </div>
-        <AddPayee brands={brands} categories={categories} />
+        <AddPayee
+          brands={brands}
+          categories={categories}
+          tiles={tiles}
+          attribution={attribution}
+        />
       </header>
 
-      <PlacesMap points={points} />
+      {points.length > 0 && (
+        <div className="mb-8">
+          <PlaceMap points={points} tiles={tiles} attribution={attribution} />
+        </div>
+      )}
 
-      <PayeeList payees={tree} brands={brands} categories={categories} />
+      <PayeeList
+        payees={tree}
+        brands={brands}
+        categories={categories}
+        tiles={tiles}
+        attribution={attribution}
+      />
 
       {/* What was bought somewhere nobody wrote down. It goes under the list and
           not on a screen of its own: the answer to «which shop was that» is the
@@ -89,6 +109,8 @@ export default async function PlacesPage() {
         }))}
         brands={brands}
         categories={categories}
+        tiles={tiles}
+        attribution={attribution}
       />
 
       {/* Archiving does not delete. With nowhere to see them, a place archived by

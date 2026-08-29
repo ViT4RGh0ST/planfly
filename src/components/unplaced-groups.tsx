@@ -35,6 +35,8 @@ export function UnplacedGroups({
   places,
   brands,
   categories,
+  tiles,
+  attribution,
 }: {
   groups: UnplacedGroup[];
   /** How many there are in all, so a cut list never reads as the whole list. */
@@ -43,6 +45,8 @@ export function UnplacedGroups({
   places: { id: string; name: string }[];
   brands: BrandOption[];
   categories: CategoryOption[];
+  tiles: string | null;
+  attribution: string | null;
 }) {
   const t = useTranslations();
   /*
@@ -76,6 +80,8 @@ export function UnplacedGroups({
             places={places}
             brands={brands}
             categories={categories}
+          tiles={tiles}
+          attribution={attribution}
           />
         ))}
       </ul>
@@ -88,11 +94,15 @@ function Group({
   places,
   brands,
   categories,
+  tiles,
+  attribution,
 }: {
   group: UnplacedGroup;
   places: { id: string; name: string }[];
   brands: BrandOption[];
   categories: CategoryOption[];
+  tiles: string | null;
+  attribution: string | null;
 }) {
   const t = useTranslations();
   const [pending, startTransition] = useTransition();
@@ -163,6 +173,8 @@ function Group({
         <PayeeForm
           brands={brands}
           categories={categories}
+          tiles={tiles}
+          attribution={attribution}
           // The group's own text: the shop's name is what is being grouped by.
           defaultName={group.description}
           open={creating}

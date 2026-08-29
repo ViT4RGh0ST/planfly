@@ -25,9 +25,13 @@ import { archivePayeeAction, unarchivePayeeAction } from "@/app/(app)/actions";
 export function AddPayee({
   brands,
   categories,
+  tiles,
+  attribution,
 }: {
   brands: BrandOption[];
   categories: CategoryOption[];
+  tiles: string | null;
+  attribution: string | null;
 }) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
@@ -39,7 +43,9 @@ export function AddPayee({
         {t("ui.places.add")}
       </Button>
       {open && (
-        <PayeeForm brands={brands} categories={categories} open={open} onOpenChange={setOpen} />
+        <PayeeForm brands={brands} categories={categories}
+          tiles={tiles}
+          attribution={attribution} open={open} onOpenChange={setOpen} />
       )}
     </>
   );
@@ -51,11 +57,15 @@ export function PayeeActions({
   name,
   brands,
   categories,
+  tiles,
+  attribution,
 }: {
   id: string;
   name: string;
   brands: BrandOption[];
   categories: CategoryOption[];
+  tiles: string | null;
+  attribution: string | null;
 }) {
   const t = useTranslations();
   const [editing, setEditing] = useState(false);
@@ -97,6 +107,8 @@ export function PayeeActions({
         <PayeeForm
           brands={brands}
           categories={categories}
+          tiles={tiles}
+          attribution={attribution}
           payeeId={id}
           open={editing}
           onOpenChange={setEditing}

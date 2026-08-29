@@ -22,10 +22,14 @@ export function PayeeList({
   payees,
   brands,
   categories,
+  tiles,
+  attribution,
 }: {
   payees: PayeeNode[];
   brands: BrandOption[];
   categories: CategoryOption[];
+  tiles: string | null;
+  attribution: string | null;
 }) {
   const t = useTranslations();
 
@@ -37,12 +41,16 @@ export function PayeeList({
     <ul className="divide-y divide-border">
       {payees.map((payee) => (
         <li key={payee.id}>
-          <Row payee={payee} brands={brands} categories={categories} />
+          <Row payee={payee} brands={brands} categories={categories}
+          tiles={tiles}
+          attribution={attribution} />
           {payee.branches.length > 0 && (
             <ul className="mb-1 ml-3 border-l border-border pl-4">
               {payee.branches.map((branch) => (
                 <li key={branch.id}>
-                  <Row payee={branch} brands={brands} categories={categories} nested />
+                  <Row payee={branch} brands={brands} categories={categories}
+          tiles={tiles}
+          attribution={attribution} nested />
                 </li>
               ))}
             </ul>
@@ -57,11 +65,15 @@ function Row({
   payee,
   brands,
   categories,
+  tiles,
+  attribution,
   nested = false,
 }: {
   payee: PayeeNode;
   brands: BrandOption[];
   categories: CategoryOption[];
+  tiles: string | null;
+  attribution: string | null;
   nested?: boolean;
 }) {
   const t = useTranslations();
@@ -115,7 +127,9 @@ function Row({
             </p>
           )}
         </div>
-        <PayeeActions id={payee.id} name={payee.name} brands={brands} categories={categories} />
+        <PayeeActions id={payee.id} name={payee.name} brands={brands} categories={categories}
+          tiles={tiles}
+          attribution={attribution} />
       </div>
     </div>
   );

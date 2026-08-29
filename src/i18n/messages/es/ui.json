@@ -448,7 +448,8 @@
       "sharedTaxId": "Sí — es otra sucursal de esa misma empresa. Guarda las dos.",
       "create": "Crear sitio",
       "coordinates": "Ubicación",
-      "coordinatesHelp": "Pega los dos números, o el enlace entero de un mapa. No hay búsqueda: tus direcciones se quedan aquí."
+      "coordinatesHelp": "Pega los dos números, o el enlace entero de un mapa. No hay búsqueda: tus direcciones se quedan aquí.",
+      "thisPlace": "Este sitio"
     },
     "branchNeedsAddress": "una sucursal necesita su dirección",
     "mapOff": "{n, plural, one {Un sitio sabe} other {# sitios saben}} dónde están, y no hay mapa donde dibujarlos: un tile es una petición al servidor de otro llevando las coordenadas de dónde compras, así que queda apagado hasta que digas de dónde salen en MAP_TILES_URL.",
@@ -462,7 +463,10 @@
     "unplacedChoose": "Sitio para «{description}»",
     "unplacedAssign": "Asignar",
     "unplacedMore": "Hay {n, plural, one {# grupo más} other {# grupos más}} debajo de estos; van apareciendo a medida que resuelvas estos.",
-    "unplacedCreate": "Crear como sitio"
+    "unplacedCreate": "Crear como sitio",
+    "mapOffPick": "No hay mapa al que apuntar: un tile es una petición al servidor de otro llevando dónde compras, así que queda apagado hasta que digas de dónde salen en MAP_TILES_URL. Los dos números se pueden pegar arriba igual.",
+    "mapPickLabel": "Haz clic en el mapa para poner dónde está este sitio",
+    "mapFailed": "No se pudo cargar el mapa."
   },
   "budgets": {
     "title": "Presupuestos",
