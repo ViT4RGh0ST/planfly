@@ -71,6 +71,14 @@ function Row({
   const unused = entries === 0;
 
   const details = [formatTaxId(payee.taxId), payee.address, payee.defaultCategory].filter(Boolean);
+  /*
+   * A branch IS a location.
+   *
+   * Two branches of one chain with no address between them are the same row
+   * twice as far as anybody reading can tell — including whoever is about to
+   * write the third one.
+   */
+  const placeless = nested && !payee.address;
 
   return (
     <div className={cn("flex items-start justify-between gap-4 py-3", nested && "py-2")}>
@@ -78,6 +86,12 @@ function Row({
         <p className={cn("truncate text-sm", unused && "text-muted-foreground")}>{payee.name}</p>
         <p className="truncate text-xs text-muted-foreground">
           {details.length > 0 ? details.join(" · ") : t("ui.places.noDetails")}
+          {placeless && (
+            <span className="text-caution/80">
+              {details.length > 0 ? " · " : ""}
+              {t("ui.places.branchNeedsAddress")}
+            </span>
+          )}
         </p>
         {payee.aliases.length > 0 && (
           <p className="truncate text-xs text-muted-foreground/70">{payee.aliases.join(" · ")}</p>

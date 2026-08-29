@@ -445,7 +445,8 @@
       "aliasesHelp": "Comma separated. They are the words the bot finds this place by on a receipt. No two places may share one: it would have to choose between them.",
       "sharedTaxId": "Yes — it is another branch of that same company. Keep both.",
       "create": "Create place"
-    }
+    },
+    "branchNeedsAddress": "a branch needs its address"
   },
   "budgets": {
     "title": "Budgets",

@@ -199,7 +199,6 @@
     "duplicateArchived": "Ya existe un sitio archivado que se llama \"{name}\". Cámbiale el nombre al nuevo, o desarchiva aquel.",
     "duplicateName": "Ya tienes un sitio que se llama \"{name}\".",
     "duplicateAlias": "\"{alias}\" ya es otro nombre de {name}. Que dos sitios respondan a la misma palabra hace que el bot elija entre ellos por orden alfabético, y el historial de precios de una tienda quedaría partido en dos.",
-    "taxIdTaken": "{name} ya lleva el RIF {taxId}. Si esto es otra sucursal de esa misma empresa, dilo y guardo las dos; si es la tienda que ya tienes, usa esa — una segunda fila le parte los precios a la mitad.",
     "taxIdArchived": "{name} lleva el RIF {taxId} y está archivado. Desarchívalo en vez de escribirlo otra vez, o sus compras quedarían bajo dos nombres.",
     "payeeNotFound": "No encontré ese sitio.",
     "categoryNotFound": "No encontré esa categoría.",
@@ -224,7 +223,9 @@
     "done": "Listo, corregí {changes}.",
     "alreadyArchived": "{name} ya estaba archivado.",
     "archived": "{name} archivado. Sus compras y sus precios siguen ahí.",
-    "unarchived": "{name} vuelve a la lista."
+    "unarchived": "{name} vuelve a la lista.",
+    "taxIdSameSpot": "{name} ya lleva el RIF {taxId} en esa misma dirección. Es la tienda que ya tienes: una segunda fila le parte el historial de precios a la mitad, y ninguna de las dos te diría cuánto cuesta nada.",
+    "taxIdOtherSpot": "{name} lleva el RIF {taxId}, en otra dirección. Eso se lee como una segunda sucursal de la misma empresa, que es algo que pasa — dilo y guardo las dos, y cuelga esta de su marca para que sus totales sigan sumando juntos."
   },
   "products": {
     "noText": "La línea no tiene texto con el que identificar un producto",

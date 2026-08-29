@@ -122,27 +122,47 @@ async function assertAliasesFree(
 async function assertTaxIdFree(
   householdId: string,
   taxId: string | null,
+  address: string | null,
   locale: Locale,
   opts: { exceptId?: string; allowShared?: boolean } = {},
 ) {
   if (!taxId || opts.allowShared) return taxId;
 
-  const [clash] = await db
-    .select({ id: payees.id, name: payees.name, archivedAt: payees.archivedAt })
+  const rows = await db
+    .select({
+      id: payees.id,
+      name: payees.name,
+      address: payees.address,
+      archivedAt: payees.archivedAt,
+    })
     .from(payees)
-    .where(and(eq(payees.householdId, householdId), eq(payees.taxId, taxId)))
-    .limit(1);
+    .where(and(eq(payees.householdId, householdId), eq(payees.taxId, taxId)));
 
-  if (clash && clash.id !== opts.exceptId) {
-    throw new InvalidTransactionError(
-      getTranslator(locale)(
-        clash.archivedAt ? "services.managePayees.taxIdArchived" : "services.managePayees.taxIdTaken",
-        { name: clash.name, taxId },
-      ),
-      "duplicate_tax_id",
-    );
-  }
-  return taxId;
+  const others = rows.filter((row) => row.id !== opts.exceptId);
+  if (others.length === 0) return taxId;
+
+  /*
+   * What tells the two cases apart is the address.
+   *
+   * A branch IS a location: two shops of one company at one address are the
+   * same shop written twice, and two at different addresses are two branches.
+   * So the message says which of the two this looks like rather than asking the
+   * same vague question for both — and it is compared normalised, because
+   * «Av. Ppal Santa Fe» and «av ppal santa fe» are one place.
+   */
+  const here = normalize(address ?? "");
+  const sameSpot = others.find((row) => normalize(row.address ?? "") === here);
+  const clash = sameSpot ?? others[0];
+
+  const t = getTranslator(locale);
+  throw new InvalidTransactionError(
+    clash.archivedAt
+      ? t("services.managePayees.taxIdArchived", { name: clash.name, taxId })
+      : sameSpot
+        ? t("services.managePayees.taxIdSameSpot", { name: clash.name, taxId })
+        : t("services.managePayees.taxIdOtherSpot", { name: clash.name, taxId }),
+    "duplicate_tax_id",
+  );
 }
 
 /**
@@ -264,9 +284,14 @@ export async function createPayee(input: CreatePayeeInput) {
   const name = input.name.trim();
   const slug = await assertNameFree(input.householdId, name, locale);
   const aliases = await assertAliasesFree(input.householdId, parseAliases(input.aliases), locale);
-  const taxId = await assertTaxIdFree(input.householdId, normalizeTaxId(input.taxId), locale, {
-    allowShared: input.allowSharedTaxId,
-  });
+  const address = input.address?.trim() || null;
+  const taxId = await assertTaxIdFree(
+    input.householdId,
+    normalizeTaxId(input.taxId),
+    address,
+    locale,
+    { allowShared: input.allowSharedTaxId },
+  );
   const parent = await resolveParent(input.householdId, input.parentId ?? null, locale);
   const category = await resolveDefaultCategory(
     input.householdId,
@@ -281,7 +306,7 @@ export async function createPayee(input: CreatePayeeInput) {
       name,
       slug,
       taxId,
-      address: input.address?.trim() || null,
+      address,
       parentId: parent?.id ?? null,
       defaultCategoryId: category?.id ?? null,
       aliases,
@@ -327,21 +352,23 @@ export async function updatePayee(input: UpdatePayeeInput) {
     changes.push(t("services.managePayees.change.name"));
   }
 
+  // The address is read first: it is what tells «the same shop twice» from
+  // «another branch», so the fiscal id has to be judged against the new one.
+  const address = input.address != null ? input.address.trim() || null : payee.address;
+  if (input.address != null && address !== payee.address) {
+    patch.address = address;
+    changes.push(t("services.managePayees.change.address"));
+  }
+
   if (input.taxId != null) {
     const taxId = normalizeTaxId(input.taxId);
     if (taxId !== payee.taxId) {
-      patch.taxId = await assertTaxIdFree(input.householdId, taxId, locale, {
+      patch.taxId = await assertTaxIdFree(input.householdId, taxId, address, locale, {
         exceptId: payee.id,
         allowShared: input.allowSharedTaxId,
       });
       changes.push(t("services.managePayees.change.taxId"));
     }
-  }
-
-  const address = input.address?.trim() || null;
-  if (input.address != null && address !== payee.address) {
-    patch.address = address;
-    changes.push(t("services.managePayees.change.address"));
   }
 
   if (input.parentId !== undefined && (input.parentId || null) !== payee.parentId) {
@@ -421,7 +448,7 @@ export async function unarchivePayee(householdId: string, payeeId: string) {
   // place may have taken one, and bringing it back would make the resolver
   // choose between the two alphabetically.
   await assertAliasesFree(householdId, payee.aliases, locale, payee.id);
-  await assertTaxIdFree(householdId, payee.taxId, locale, { exceptId: payee.id });
+  await assertTaxIdFree(householdId, payee.taxId, payee.address, locale, { exceptId: payee.id });
 
   await db.update(payees).set({ archivedAt: null }).where(eq(payees.id, payee.id));
   return {

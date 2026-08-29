@@ -73,6 +73,40 @@ describe("managing places", { skip: hasDb() ? false : "no Postgres available" },
     assert.ok(second.id);
   });
 
+  it("the address is what tells one shop written twice from two branches", async () => {
+    /*
+     * A branch IS a location. Same company at the same address is the row you
+     * already have — writing it again halves its price history. Same company at
+     * another address is a second branch, which is ordinary. The two need
+     * different words, because the thing to do about them is different.
+     */
+    const home = (await seedScenario({ date: DATE })).home;
+    await createPayee({
+      householdId: home.id, locale: "es",
+      name: "Excelsior Gama Plus", taxId: "J-00099887-1", address: "Av. Andrés Bello, Caracas",
+    });
+
+    await assert.rejects(
+      () =>
+        createPayee({
+          householdId: home.id, locale: "es",
+          name: "Gama Plus Bello", taxId: "J000998871", address: "av andres bello, caracas",
+        }),
+      /es la tienda que ya tienes/i,
+      "the same address, however it was typed, is the same shop",
+    );
+
+    await assert.rejects(
+      () =>
+        createPayee({
+          householdId: home.id, locale: "es",
+          name: "Excelsior Gama Santa Eduvigis", taxId: "J000998871", address: "Av. Santa Eduvigis",
+        }),
+      /segunda sucursal/i,
+      "another address of the same company reads as a branch, and says so",
+    );
+  });
+
   it("two branches are two places and still one total", async () => {
     const home = (await seedScenario({ date: DATE, bcvRate: "780.0000000000", p2pRate: "900.0000000000" })).home;
     const brand = await createPayee({ householdId: home.id, locale: "es", name: "Central Madeirense" });

@@ -445,7 +445,8 @@
       "aliasesHelp": "Separados por comas. Son las palabras con las que el bot encuentra este sitio en una factura. Dos sitios no pueden compartir uno: tendría que elegir entre ellos.",
       "sharedTaxId": "Sí — es otra sucursal de esa misma empresa. Guarda las dos.",
       "create": "Crear sitio"
-    }
+    },
+    "branchNeedsAddress": "una sucursal necesita su dirección"
   },
   "budgets": {
     "title": "Presupuestos",
