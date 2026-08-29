@@ -763,7 +763,15 @@ export async function budgetUsage(householdId: string, date: string, valuation: 
            (SELECT (-SUM(${valued(column)}))::text
               FROM transaction_entries e
               JOIN transactions t ON t.id = e.transaction_id
-             WHERE e.category_id = b.category_id
+             -- A budget covers the category AND its children. Setting one on
+             -- «Comida» while every expense lands on «Mercado» or «Comida
+             -- callejera» read 0% used for the whole month: not an error, a
+             -- calm figure saying the opposite of the truth. The hierarchy is
+             -- two levels deep by construction (see manage-categories.ts),
+             -- so one step down is the whole tree.
+             WHERE (e.category_id = b.category_id
+                    OR e.category_id IN (SELECT id FROM categories
+                                          WHERE parent_id = b.category_id))
                AND t.household_id = ${householdId} AND t.kind = 'expense' AND t.voided_at IS NULL
                AND t.occurred_on >= b.period_start AND t.occurred_on < b.period_end
            ) AS spent_minor

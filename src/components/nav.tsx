@@ -14,6 +14,7 @@ import {
   Repeat,
   Receipt,
   TrendingUp,
+  Tags,
   Upload,
   Wallet,
 } from "lucide-react";
@@ -67,6 +68,7 @@ const GROUPS = [
     items: [
       { href: "/review", key: "review", icon: ClipboardCheck, showBadge: true },
       { href: "/import", key: "import", icon: Upload },
+      { href: "/categories", key: "categories", icon: Tags },
     ],
   },
 ];

@@ -164,6 +164,36 @@
     "archived": "{account} archived. Its entries are still there.",
     "unarchived": "{account} is back in the list."
   },
+  "manageCategories": {
+    "missingName": "The category needs a name.",
+    "duplicateArchived": "There is already an archived category called \"{name}\". Rename the new one, or unarchive that one.",
+    "duplicateName": "You already have a category called \"{name}\".",
+    "duplicateAlias": "\"{alias}\" is already another name for {name}. Two categories answering to the same word makes the bot choose between them alphabetically, and the expenses would land in whichever sorts first.",
+    "categoryNotFound": "I did not find that category.",
+    "ownParent": "A category cannot hang from itself.",
+    "parentOtherKind": "{parent} is a {kind} category, so nothing of another kind can hang from it: its total would add up two different things.",
+    "parentIsChild": "{parent} already hangs from another category. Categories go two levels deep and no more, because that is as far as a budget looks.",
+    "parentArchived": "{parent} is archived. Unarchive it first, or the category would hang off something that is not on the list.",
+    "hasChildren": "{name} has categories hanging from it, so it cannot hang from another one: that would make a third level, which no budget looks at.",
+    "created": "Category {name} created.",
+    "createdUnder": "Category {name} created under {parent}.",
+    "kindLocked": "{name} carries {n, plural, one {# entry} other {# entries}} as a {kind} category, so that can no longer be changed: all of them would leave the month's total at a stroke, with nothing on screen to say where they went.",
+    "change": {
+      "name": "name",
+      "kind": "kind",
+      "parent": "now under {parent}",
+      "noParent": "now on its own",
+      "color": "colour",
+      "aliases": "other names"
+    },
+    "nothingToChange": "There was nothing to change.",
+    "done": "Done, I corrected {changes}.",
+    "alreadyArchived": "{name} was already archived.",
+    "hasActiveChildren": "{name} has {n, plural, one {# category} other {# categories}} hanging from it. Archive those first, or they would hang off something that is not on the list.",
+    "hasBudget": "{name} has a budget in force. Remove it first, or it would keep counting against a category you can no longer see.",
+    "archived": "{name} archived. Its entries are still there.",
+    "unarchived": "{name} is back in the list."
+  },
   "products": {
     "noText": "The line has no text to identify a product by",
     "mergeWithItself": "A product cannot be merged with itself",
@@ -246,6 +276,7 @@
     "importErrors": ", {n} with an error",
     "missingEntry": "The entry to correct is missing.",
     "missingAccount": "The account to correct is missing.",
+    "missingCategory": "The category to correct is missing.",
     "budgetSaved": "Budget saved. {summary}"
   },
   "amount": {
