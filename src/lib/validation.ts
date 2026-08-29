@@ -11,6 +11,7 @@ import { z } from "zod";
 export const amountSchema = z.union([z.string().min(1), z.number()]);
 
 export const transactionKindSchema = z.enum(["expense", "income", "transfer", "adjustment"]);
+export const categoryKindSchema = z.enum(["expense", "income"]);
 export const entrySourceSchema = z.enum(["telegram", "form", "csv", "ocr", "api", "recurring"]);
 export const paymentMethodSchema = z.enum([
   "cash",
@@ -154,6 +155,28 @@ export const createAccountSchema = z.object({
 });
 
 export const updateAccountSchema = createAccountSchema.partial().extend({
+  id: z.string().uuid(),
+});
+
+/**
+ * A category as the screen sends it.
+ *
+ * `kind` and `parent_id` are the two that decide figures: a category of the
+ * wrong kind leaves the month's total, and a parent is what a budget looks one
+ * level down from. Both are validated here and checked against the household in
+ * `manage-categories.ts`, which is the only place that can see the tree.
+ */
+export const createCategorySchema = z.object({
+  name: z.string().min(1).max(80),
+  kind: categoryKindSchema,
+  /** Empty string from a `<select>` means «no parent», which is a real choice. */
+  parent_id: z.union([z.string().uuid(), z.literal("")]).optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  /** Comma-separated: they are the hints the bot finds the category by. */
+  aliases: z.string().max(400).optional(),
+});
+
+export const updateCategorySchema = createCategorySchema.partial().extend({
   id: z.string().uuid(),
 });
 

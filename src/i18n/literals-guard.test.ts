@@ -61,6 +61,14 @@ const ALLOWED: Array<{ file: string; because: string }> = [
     file: "src/test/fixtures.ts",
     because: "test data: real Venezuelan receipt text, which the fuzzy matching is calibrated on",
   },
+  {
+    file: "openclaw/planfly-plugin/src/budget-tool.js",
+    because:
+      "the phrases a person types, quoted inside a tool description the model reads: " +
+      "«ponme 250 al mes en mercado», «quítame el de comida callejera». They are input " +
+      "examples, not something the bot says, and translating them would teach it to " +
+      "expect a sentence nobody writes here",
+  },
 ];
 
 /**

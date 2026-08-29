@@ -57,6 +57,7 @@
     "rates": "Rates",
     "review": "Review",
     "import": "Import",
+    "categories": "Categories",
     "signOut": "Sign out",
     "pendingReview": "{n, plural, one { pending review} other { pending review}}",
     "language": "Language",
@@ -370,6 +371,39 @@
       "aliasesPlaceholder": "mercantil, pago movil",
       "aliasesHelp": "Comma separated. They are the words the bot finds the account by when you write «gasté 200 en el mercantil».",
       "create": "Create account"
+    }
+  },
+  "categories": {
+    "title": "Categories",
+    "hint": "Where each expense lands is decided here — above all by the other names, which is what the bot matches on.",
+    "expense": "Spending",
+    "income": "Income",
+    "archived": "Archived",
+    "empty": "There are no categories yet. Nothing can be recorded without one.",
+    "add": "Add category",
+    "menu": "Actions on {name}",
+    "correct": "Correct…",
+    "archive": "Archive",
+    "unarchive": "Restore",
+    "noAliases": "no other names",
+    "entries": "{n, plural, one {# entry} other {# entries}}",
+    "form": {
+      "titleEdit": "Correct category",
+      "titleNew": "Add category",
+      "help": "A category inside another one is covered by its budget: a cap on Food counts what goes to Groceries too.",
+      "failed": "I could not load that category.",
+      "name": "Name",
+      "namePlaceholder": "Groceries",
+      "color": "Colour",
+      "kind": "Kind",
+      "kindLocked": "It already carries {n, plural, one {# entry} other {# entries}}.",
+      "parent": "Inside",
+      "noParent": "On its own",
+      "parentLocked": "It has categories hanging from it.",
+      "aliases": "Other names",
+      "aliasesPlaceholder": "super, market, corner shop",
+      "aliasesHelp": "Comma separated. They are the words the bot finds this category by when you write «I spent 300 at the super». No two categories may share one: it would have to choose between them.",
+      "create": "Create category"
     }
   },
   "budgets": {

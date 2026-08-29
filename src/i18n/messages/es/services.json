@@ -164,6 +164,36 @@
     "archived": "{account} archivada. Sus movimientos siguen ahí.",
     "unarchived": "{account} vuelve a la lista."
   },
+  "manageCategories": {
+    "missingName": "La categoría necesita un nombre.",
+    "duplicateArchived": "Ya existe una categoría archivada que se llama \"{name}\". Cámbiale el nombre a la nueva, o desarchiva aquella.",
+    "duplicateName": "Ya tienes una categoría que se llama \"{name}\".",
+    "duplicateAlias": "\"{alias}\" ya es otro nombre de {name}. Que dos categorías respondan a la misma palabra hace que el bot elija entre ellas por orden alfabético, y los gastos caerían en la que quede primero.",
+    "categoryNotFound": "No encontré esa categoría.",
+    "ownParent": "Una categoría no puede colgar de sí misma.",
+    "parentOtherKind": "{parent} es una categoría de {kind}, así que no puede colgarle nada de otro tipo: su total sumaría dos cosas distintas.",
+    "parentIsChild": "{parent} ya cuelga de otra categoría. Las categorías van dos niveles y no más, porque hasta ahí mira un presupuesto.",
+    "parentArchived": "{parent} está archivada. Desarchívala primero, o la categoría colgaría de algo que no está en la lista.",
+    "hasChildren": "{name} tiene categorías colgando, así que no puede colgar de otra: eso haría un tercer nivel, que ningún presupuesto mira.",
+    "created": "Categoría {name} creada.",
+    "createdUnder": "Categoría {name} creada dentro de {parent}.",
+    "kindLocked": "{name} lleva {n, plural, one {# movimiento} other {# movimientos}} como categoría de {kind}, así que eso ya no se puede cambiar: todos saldrían del total del mes de golpe, sin que nada en pantalla diga adónde se fueron.",
+    "change": {
+      "name": "nombre",
+      "kind": "tipo",
+      "parent": "ahora dentro de {parent}",
+      "noParent": "ahora por su cuenta",
+      "color": "color",
+      "aliases": "otros nombres"
+    },
+    "nothingToChange": "No había nada que cambiar.",
+    "done": "Listo, corregí {changes}.",
+    "alreadyArchived": "{name} ya estaba archivada.",
+    "hasActiveChildren": "{name} tiene {n, plural, one {# categoría} other {# categorías}} colgando. Archiva esas primero, o quedarían colgando de algo que no está en la lista.",
+    "hasBudget": "{name} tiene un presupuesto vigente. Quítalo primero, o seguiría contando contra una categoría que ya no puedes ver.",
+    "archived": "{name} archivada. Sus movimientos siguen ahí.",
+    "unarchived": "{name} vuelve a la lista."
+  },
   "products": {
     "noText": "La línea no tiene texto con el que identificar un producto",
     "mergeWithItself": "No se puede fusionar un producto consigo mismo",
@@ -246,6 +276,7 @@
     "importErrors": ", {n} con error",
     "missingEntry": "Falta el movimiento a corregir.",
     "missingAccount": "Falta la cuenta a corregir.",
+    "missingCategory": "Falta la categoría a corregir.",
     "budgetSaved": "Presupuesto guardado. {summary}"
   },
   "amount": {

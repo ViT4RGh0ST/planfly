@@ -43,6 +43,13 @@ import {
   type AccountType,
 } from "@/lib/services/manage-accounts";
 import {
+  archiveCategory,
+  createCategory,
+  unarchiveCategory,
+  updateCategory,
+  type CategoryKind,
+} from "@/lib/services/manage-categories";
+import {
   payInstallment,
   planForTransaction,
   recordFinancedPurchase,
@@ -53,7 +60,11 @@ import {
 } from "@/lib/services/financing";
 import { itemsOfTransaction, mergeProducts, splitProduct } from "@/lib/services/products";
 import { netWorth } from "@/lib/services/reports";
-import { createAccountSchema, manualRateSchema } from "@/lib/validation";
+import {
+  createAccountSchema,
+  createCategorySchema,
+  manualRateSchema,
+} from "@/lib/validation";
 
 /**
  * Form actions.
@@ -225,6 +236,54 @@ export type EditableAccount = {
   /** The currency can only be changed while the account is empty. */
   currencyLocked: boolean;
 };
+
+export type EditableCategory = {
+  id: string;
+  name: string;
+  kind: "expense" | "income";
+  parentId: string | null;
+  color: string;
+  aliases: string;
+  /** How many entries carry it. The kind can only change while it has none. */
+  entries: number;
+  /** True once it has entries: turning it into income would empty the month's total. */
+  kindLocked: boolean;
+  /** True if categories hang from it, in which case it cannot hang from another. */
+  hasChildren: boolean;
+};
+
+/** Loads a category for the correction dialog. */
+export async function categoryForEdit(id: string): Promise<EditableCategory | null> {
+  const ctx = await requireSession();
+
+  const [row] = await db
+    .select()
+    .from(categories)
+    .where(and(eq(categories.id, id), eq(categories.householdId, ctx.householdId)))
+    .limit(1);
+
+  if (!row) return null;
+
+  const { rows: counts } = await db.execute<{ entries: string; children: string }>(sql`
+    SELECT (SELECT count(*) FROM transaction_entries WHERE category_id = ${id})::text AS entries,
+           (SELECT count(*) FROM categories WHERE parent_id = ${id})::text AS children
+  `);
+
+  const entries = Number(counts[0]?.entries ?? 0);
+
+  return {
+    id: row.id,
+    name: row.name,
+    kind: row.kind,
+    parentId: row.parentId,
+    color: row.color,
+    // Back as they are typed, comma separated: it is what `parseAliases` reads.
+    aliases: row.aliases.join(", "),
+    entries,
+    kindLocked: entries > 0,
+    hasChildren: Number(counts[0]?.children ?? 0) > 0,
+  };
+}
 
 /** Loads an account for the correction dialog. */
 export async function accountForEdit(id: string): Promise<EditableAccount | null> {
@@ -594,6 +653,109 @@ export async function unarchiveAccountAction(id: string): Promise<ActionState> {
   const ctx = await requireWriter();
   try {
     const result = await unarchiveAccount(ctx.householdId, id);
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
+  }
+}
+
+/**
+ * Categories.
+ *
+ * Same shape as the accounts above, and for the same reason: the screen sends
+ * text, `manage-categories.ts` decides. What it decides here is not cosmetic —
+ * the aliases are what the bot matches an expense by, and the parent is what a
+ * budget looks one level down from.
+ */
+export async function createCategoryAction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const ctx = await requireWriter();
+  const text = (name: string) => {
+    const value = form.get(name);
+    return value == null ? undefined : String(value).trim() || undefined;
+  };
+
+  try {
+    const input = createCategorySchema.parse({
+      name: text("name") ?? "",
+      kind: text("kind") ?? "expense",
+      parent_id: form.get("parent_id") == null ? undefined : String(form.get("parent_id")),
+      color: text("color"),
+      aliases: text("aliases"),
+    });
+
+    const result = await createCategory({
+      householdId: ctx.householdId,
+      locale: ctx.locale,
+      name: input.name,
+      kind: input.kind,
+      parentId: input.parent_id || null,
+      color: input.color,
+      aliases: input.aliases,
+    });
+
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
+  }
+}
+
+export async function editCategoryAction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const ctx = await requireWriter();
+  const t = getTranslator(normalizeLocale(ctx.locale));
+  const id = String(form.get("id") ?? "");
+  if (!id) return { ok: false, message: t("services.actions.missingCategory") };
+
+  // Aliases admit empty: clearing them is a legitimate edit. The parent too —
+  // an empty `<select>` means «lift it to the top level», which is a choice and
+  // not a missing field.
+  const raw = (name: string) => {
+    const value = form.get(name);
+    return value == null ? undefined : String(value);
+  };
+  const text = (name: string) => raw(name)?.trim() || undefined;
+
+  try {
+    const result = await updateCategory({
+      householdId: ctx.householdId,
+      categoryId: id,
+      locale: ctx.locale,
+      name: text("name"),
+      kind: text("kind") as CategoryKind | undefined,
+      parentId: raw("parent_id") === undefined ? undefined : raw("parent_id") || null,
+      color: text("color"),
+      aliases: raw("aliases"),
+    });
+
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
+  }
+}
+
+export async function archiveCategoryAction(id: string): Promise<ActionState> {
+  const ctx = await requireWriter();
+  try {
+    const result = await archiveCategory(ctx.householdId, id);
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
+  }
+}
+
+export async function unarchiveCategoryAction(id: string): Promise<ActionState> {
+  const ctx = await requireWriter();
+  try {
+    const result = await unarchiveCategory(ctx.householdId, id);
     revalidatePath("/", "layout");
     return { ok: true, message: result.summary };
   } catch (err) {

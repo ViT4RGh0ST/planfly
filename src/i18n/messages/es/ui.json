@@ -57,6 +57,7 @@
     "rates": "Tasas",
     "review": "Revisar",
     "import": "Importar",
+    "categories": "Categorías",
     "signOut": "Salir",
     "pendingReview": "{n, plural, one { pendiente de revisar} other { pendientes de revisar}}",
     "language": "Idioma",
@@ -370,6 +371,39 @@
       "aliasesPlaceholder": "mercantil, pago movil",
       "aliasesHelp": "Separados por comas. Son las palabras con las que el bot encuentra la cuenta cuando le escribes «gasté 200 en el mercantil».",
       "create": "Crear cuenta"
+    }
+  },
+  "categories": {
+    "title": "Categorías",
+    "hint": "Aquí se decide dónde cae cada gasto — sobre todo por los otros nombres, que son con los que empareja el bot.",
+    "expense": "Gastos",
+    "income": "Ingresos",
+    "archived": "Archivadas",
+    "empty": "Todavía no hay categorías. Sin una no se puede registrar nada.",
+    "add": "Añadir categoría",
+    "menu": "Acciones sobre {name}",
+    "correct": "Corregir…",
+    "archive": "Archivar",
+    "unarchive": "Recuperar",
+    "noAliases": "sin otros nombres",
+    "entries": "{n, plural, one {# movimiento} other {# movimientos}}",
+    "form": {
+      "titleEdit": "Corregir categoría",
+      "titleNew": "Añadir categoría",
+      "help": "Una categoría dentro de otra entra en su presupuesto: un tope en Comida cuenta también lo que va a Mercado.",
+      "failed": "No pude cargar esa categoría.",
+      "name": "Nombre",
+      "namePlaceholder": "Mercado",
+      "color": "Color",
+      "kind": "Tipo",
+      "kindLocked": "Ya lleva {n, plural, one {# movimiento} other {# movimientos}}.",
+      "parent": "Dentro de",
+      "noParent": "Por su cuenta",
+      "parentLocked": "Tiene categorías colgando.",
+      "aliases": "Otros nombres",
+      "aliasesPlaceholder": "super, mercadito, abasto",
+      "aliasesHelp": "Separados por comas. Son las palabras con las que el bot encuentra esta categoría cuando le escribes «gasté 300 en el super». Dos categorías no pueden compartir uno: tendría que elegir entre ellas.",
+      "create": "Crear categoría"
     }
   },
   "budgets": {
