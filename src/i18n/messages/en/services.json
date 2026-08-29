@@ -48,7 +48,8 @@
       "alreadyStored": "I already had it recorded, I did not duplicate it. ",
       "noDescription": "No description",
       "transferDescription": "Transfer"
-    }
+    },
+    "payeeNotRecognised": "I do not know the place «{input}». The entry is recorded and waiting in the review tray for you to say which shop it was."
   },
   "updateTransaction": {
     "householdNotFound": "The household does not exist",
@@ -87,13 +88,16 @@
       "items": "breakdown to {n, plural, one {# product} other {# products}}",
       "description": "description",
       "notes": "note",
-      "reviewed": "marked as reviewed"
+      "reviewed": "marked as reviewed",
+      "payee": "place to {name}",
+      "noPayee": "place removed"
     },
     "summary": {
       "nothingToChange": "There was nothing to change.",
       "done": "Done, I corrected {changes}.",
       "markedReviewed": "Marked as reviewed."
-    }
+    },
+    "payeeNotFound": "I do not know the place «{input}». Add it in Places first, or leave it empty."
   },
   "financing": {
     "missingRate": "I have no {source} rate from {date} to turn the price from {from} into {to}.",
@@ -227,7 +231,8 @@
     "archived": "{name} archived. Its purchases and their prices are still there.",
     "unarchived": "{name} is back in the list.",
     "taxIdSameSpot": "{name} already carries the fiscal id {taxId} at that same address. It is the shop you already have: a second row would split its price history in half, and neither half would tell you what anything costs.",
-    "taxIdOtherSpot": "{name} carries the fiscal id {taxId}, at another address. That reads like a second branch of the same company, which is a thing that happens — say so and I will keep both, and hang this one off its brand so their totals still add up together."
+    "taxIdOtherSpot": "{name} carries the fiscal id {taxId}, at another address. That reads like a second branch of the same company, which is a thing that happens — say so and I will keep both, and hang this one off its brand so their totals still add up together.",
+    "placed": "{n, plural, one {# entry} other {# entries}} now bought at {name}."
   },
   "products": {
     "noText": "The line has no text to identify a product by",

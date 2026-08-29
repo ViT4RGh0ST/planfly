@@ -58,6 +58,7 @@ import {
 import {
   archivePayee,
   createPayee,
+  placeUnplaced,
   unarchivePayee,
   updatePayee,
 } from "@/lib/services/manage-payees";
@@ -144,6 +145,8 @@ export type EditableTransaction = {
   kind: string;
   occurredOn: string;
   description: string;
+  /** The shop's name, so the dialog can offer it selected. Empty when it has none. */
+  payee: string;
   notes: string;
   baseCurrency: string;
   /** The two rates of the day: the correction dialog converts as well. */
@@ -184,10 +187,12 @@ export async function transactionForEdit(id: string): Promise<EditableTransactio
       kind: transactions.kind,
       occurredOn: transactions.occurredOn,
       description: transactions.description,
+      payee: payees.name,
       notes: transactions.notes,
       voidedAt: transactions.voidedAt,
     })
     .from(transactions)
+    .leftJoin(payees, eq(payees.id, transactions.payeeId))
     .where(and(eq(transactions.id, id), eq(transactions.householdId, ctx.householdId)))
     .limit(1);
 
@@ -216,6 +221,7 @@ export async function transactionForEdit(id: string): Promise<EditableTransactio
     kind: header.kind,
     occurredOn: header.occurredOn,
     description: header.description,
+    payee: header.payee ?? "",
     notes: header.notes ?? "",
     baseCurrency: ctx.baseCurrency,
     rates,
@@ -454,6 +460,14 @@ export async function editTransaction(
       account: field("account"),
       toAccount: field("to_account"),
       category: field("category"),
+      // «—» is how the dialog says «nowhere»; the empty string takes the place
+      // off, and undefined leaves it alone.
+      payee:
+        form.get("payee") == null
+          ? undefined
+          : String(form.get("payee")) === "—"
+            ? ""
+            : String(form.get("payee")),
       description: field("description"),
       occurredOn: field("occurred_on"),
       // Notes do admit empty: clearing them is a legitimate edit.
@@ -880,6 +894,27 @@ export async function editPayeeAction(
       message: messageForScreen(err, ctx.locale),
       code: err instanceof InvalidTransactionError ? err.code : undefined,
     };
+  }
+}
+
+/**
+ * Puts a place on every entry that carries one description.
+ *
+ * It writes `payee_id` and nothing else — no amount, no rate, no account — so it
+ * does not go through `updateTransaction`. What it changes is a label on rows
+ * that were never labelled.
+ */
+export async function placeUnplacedAction(
+  description: string,
+  payeeId: string,
+): Promise<ActionState> {
+  const ctx = await requireWriter();
+  try {
+    const result = await placeUnplaced(ctx.householdId, description, payeeId);
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
   }
 }
 

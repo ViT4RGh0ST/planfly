@@ -4,8 +4,8 @@ import { db } from "@/db";
 import { normalizeLocale, type Locale } from "@/i18n/config";
 import { getTranslator } from "@/i18n/translator";
 import { localeOf } from "./household-locale";
-import { categories, payees } from "@/db/schema";
-import { normalize, toSlug } from "./resolve-entities";
+import { categories, payees, transactions } from "@/db/schema";
+import { normalize, resolveIn, toSlug } from "./resolve-entities";
 import { normalizeTaxId } from "@/lib/tax-id";
 import { parseCoordinates } from "@/lib/coordinates";
 import { InvalidTransactionError } from "./record-transaction";
@@ -585,4 +585,136 @@ export async function archivedPayees(householdId: string) {
     .from(payees)
     .where(and(eq(payees.householdId, householdId), isNotNull(payees.archivedAt)))
     .orderBy(asc(payees.name));
+}
+
+export type UnplacedGroup = {
+  /** The repeated text itself, which is also the key the assignment is made by. */
+  description: string;
+  entries: number;
+  /** Priced line items riding on those entries: what the place would gain. */
+  items: number;
+  firstOn: string;
+  lastOn: string;
+  /** The place its words already point at, if any. A proposal, never applied. */
+  suggestion: { id: string; name: string; score: number } | null;
+};
+
+/**
+ * What was bought somewhere nobody wrote down.
+ *
+ * For months no door could set a place: the form never asked, the correction
+ * dialog could not, and the v1 route resolved a name against an empty table and
+ * dropped it in silence. So the shop is where it always was — inside the
+ * description, «Compra en MI SUPER, C.A», forty times over.
+ *
+ * This does not repair anything. It groups by the repeated text and counts what
+ * each group is worth, so a person can look at one line and decide for forty
+ * entries at once. Grouping is the whole value: one by one this is an afternoon.
+ *
+ * **Expenses only.** A salary, a withdrawal, a transfer between your own
+ * accounts, an installment paid to a financier: none of them happens at a shop.
+ * Offering them here asks thirty pointless questions to reach the three that
+ * matter, and a list that is mostly noise is a list nobody finishes.
+ */
+export async function unplacedGroups(
+  householdId: string,
+  limit = 40,
+): Promise<{ groups: UnplacedGroup[]; total: number }> {
+  const { rows } = await db.execute<{
+    description: string;
+    entries: string;
+    items: string;
+    first_on: string;
+    last_on: string;
+    total: string;
+  }>(sql`
+    SELECT t.description,
+           count(*)::text AS entries,
+           (SELECT count(*) FROM transaction_items i
+             WHERE i.transaction_id IN (
+               SELECT id FROM transactions t2
+                WHERE t2.household_id = t.household_id
+                  AND t2.description = t.description
+                  AND t2.kind = 'expense'
+                  AND t2.payee_id IS NULL
+                  AND t2.voided_at IS NULL
+             ))::text AS items,
+           min(t.occurred_on)::text AS first_on,
+           max(t.occurred_on)::text AS last_on,
+           count(*) OVER ()::text AS total
+      FROM transactions t
+     WHERE t.household_id = ${householdId}
+       AND t.kind = 'expense'
+       AND t.payee_id IS NULL
+       AND t.voided_at IS NULL
+       AND t.description IS NOT NULL
+       AND btrim(t.description) <> ''
+     GROUP BY t.household_id, t.description
+     ORDER BY count(*) DESC, max(t.occurred_on) DESC
+     LIMIT ${limit}
+  `);
+
+  // The suggestion goes through the same resolver the bot uses, so what it
+  // proposes here is exactly what would have matched had the place existed.
+  const groups = await Promise.all(
+    rows.map(async (r) => {
+      const match = await resolveIn("payees", householdId, r.description);
+      return {
+        description: r.description,
+        entries: Number(r.entries),
+        items: Number(r.items),
+        firstOn: r.first_on,
+        lastOn: r.last_on,
+        suggestion: match ? { id: match.id, name: match.name, score: match.score } : null,
+      };
+    }),
+  );
+
+  // The count BEFORE the cut, so the screen can say what it is not showing. A
+  // list that quietly stops at forty reads as «that was all of it».
+  return { groups, total: Number(rows[0]?.total ?? 0) };
+}
+
+/**
+ * Puts a place on every entry that carries exactly this description.
+ *
+ * It writes `payee_id` and nothing else, which is why it does not go through
+ * `updateTransaction`: no amount, no rate, no account, no date — nothing that
+ * could move a figure. What it changes is a label, and running the whole
+ * recalculation over forty rows to set one column would risk far more than it
+ * protects.
+ *
+ * Matched by the description EXACTLY as it was grouped, so what gets written is
+ * the set that was counted on screen and not a wider one that a fuzzy match
+ * would have swept in.
+ */
+export async function placeUnplaced(
+  householdId: string,
+  description: string,
+  payeeId: string,
+) {
+  const locale = await localeOf(householdId);
+  const payee = await loadPayee(householdId, payeeId, locale);
+
+  const done = await db
+    .update(transactions)
+    .set({ payeeId: payee.id })
+    .where(
+      and(
+        eq(transactions.householdId, householdId),
+        eq(transactions.description, description),
+        eq(transactions.kind, "expense"),
+        isNull(transactions.payeeId),
+        isNull(transactions.voidedAt),
+      ),
+    )
+    .returning({ id: transactions.id });
+
+  return {
+    n: done.length,
+    summary: getTranslator(locale)("services.managePayees.placed", {
+      n: done.length,
+      name: payee.name,
+    }),
+  };
 }

@@ -273,7 +273,8 @@
     "unconvertible": "There is no rate to value {currency} in {base}: this entry will be saved without an equivalent. Only the {base}/VES pair is solved.",
     "breakDown": "Break down products",
     "saving": "Saving…",
-    "save": "Save"
+    "save": "Save",
+    "place": "Place"
   },
   "rowActions": {
     "menu": "Actions on {description}",
@@ -317,7 +318,8 @@
     "toRate": "Destination rate",
     "ratePlaceholder": "Empty: the day's one",
     "breakdown": "Breakdown",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "noPlace": "Nowhere in particular"
   },
   "review": {
     "title": "Review tray",
@@ -451,7 +453,15 @@
     "branchNeedsAddress": "a branch needs its address",
     "mapOff": "{n, plural, one {One place knows} other {# places know}} where they are, and there is no map to draw them on: a map tile is a request to somebody else's server carrying the coordinates of where you shop, so it stays off until you name the tile source in MAP_TILES_URL.",
     "mapLabel": "{n, plural, one {# place} other {# places}} on the map",
-    "mapCredit": "Tiles from {host}, which sees these coordinates."
+    "mapCredit": "Tiles from {host}, which sees these coordinates.",
+    "unplacedTitle": "Bought somewhere nobody wrote down",
+    "unplacedHint": "For months no way in could set a place, so the shop stayed inside the description. Pick which one each of these was, and every entry that says the same thing gets it at once.",
+    "unplacedCount": "{n, plural, one {# entry} other {# entries}}",
+    "unplacedItems": "{n, plural, one {# priced item} other {# priced items}}",
+    "unplacedPick": "Which place?",
+    "unplacedChoose": "Place for «{description}»",
+    "unplacedAssign": "Assign",
+    "unplacedMore": "There are {n, plural, one {# more group} other {# more groups}} below these; they appear as these are cleared."
   },
   "budgets": {
     "title": "Budgets",

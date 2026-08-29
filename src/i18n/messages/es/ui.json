@@ -273,7 +273,8 @@
     "unconvertible": "No hay tasa para valorar {currency} en {base}: este movimiento se va a guardar sin equivalente. Solo está resuelto el par {base}/VES.",
     "breakDown": "Desglosar productos",
     "saving": "Guardando…",
-    "save": "Guardar"
+    "save": "Guardar",
+    "place": "Sitio"
   },
   "rowActions": {
     "menu": "Acciones sobre {description}",
@@ -317,7 +318,8 @@
     "toRate": "Tasa de destino",
     "ratePlaceholder": "Vacío: la del día",
     "breakdown": "Desglose",
-    "saveChanges": "Guardar cambios"
+    "saveChanges": "Guardar cambios",
+    "noPlace": "En ningún sitio"
   },
   "review": {
     "title": "Bandeja de revisión",
@@ -451,7 +453,15 @@
     "branchNeedsAddress": "una sucursal necesita su dirección",
     "mapOff": "{n, plural, one {Un sitio sabe} other {# sitios saben}} dónde están, y no hay mapa donde dibujarlos: un tile es una petición al servidor de otro llevando las coordenadas de dónde compras, así que queda apagado hasta que digas de dónde salen en MAP_TILES_URL.",
     "mapLabel": "{n, plural, one {# sitio} other {# sitios}} en el mapa",
-    "mapCredit": "Tiles de {host}, que ve estas coordenadas."
+    "mapCredit": "Tiles de {host}, que ve estas coordenadas.",
+    "unplacedTitle": "Comprado en un sitio que nadie anotó",
+    "unplacedHint": "Durante meses ninguna vía podía poner el sitio, así que la tienda se quedó dentro de la descripción. Di cuál era cada uno y todos los movimientos que dicen lo mismo lo reciben de una vez.",
+    "unplacedCount": "{n, plural, one {# movimiento} other {# movimientos}}",
+    "unplacedItems": "{n, plural, one {# ítem con precio} other {# ítems con precio}}",
+    "unplacedPick": "¿Cuál sitio?",
+    "unplacedChoose": "Sitio para «{description}»",
+    "unplacedAssign": "Asignar",
+    "unplacedMore": "Hay {n, plural, one {# grupo más} other {# grupos más}} debajo de estos; van apareciendo a medida que resuelvas estos."
   },
   "budgets": {
     "title": "Presupuestos",

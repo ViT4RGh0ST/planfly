@@ -4,10 +4,11 @@ import { getTranslations } from "next-intl/server";
 import { AddPayee, UnarchivePayee } from "@/components/payee-actions";
 import { PayeeList } from "@/components/payee-list";
 import { PlacesMap } from "@/components/places-map";
+import { UnplacedGroups } from "@/components/unplaced-groups";
 import { db } from "@/db";
 import { categories as categoriesTable } from "@/db/schema";
 import { requireSession } from "@/lib/session";
-import { archivedPayees, payeeTree } from "@/lib/services/manage-payees";
+import { archivedPayees, payeeTree, unplacedGroups } from "@/lib/services/manage-payees";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +36,10 @@ export default async function PlacesPage() {
   const ctx = await requireSession();
   const t = await getTranslations();
 
-  const [tree, archived, categories] = await Promise.all([
+  const [tree, archived, unplaced, categories] = await Promise.all([
     payeeTree(ctx.householdId),
     archivedPayees(ctx.householdId),
+    unplacedGroups(ctx.householdId),
     db
       .select({ id: categoriesTable.id, name: categoriesTable.name })
       .from(categoriesTable)
@@ -74,6 +76,18 @@ export default async function PlacesPage() {
       <PlacesMap points={points} />
 
       <PayeeList payees={tree} brands={brands} categories={categories} />
+
+      {/* What was bought somewhere nobody wrote down. It goes under the list and
+          not on a screen of its own: the answer to «which shop was that» is the
+          list right above it. */}
+      <UnplacedGroups
+        groups={unplaced.groups}
+        total={unplaced.total}
+        places={[...tree, ...tree.flatMap((node) => node.branches)].map((node) => ({
+          id: node.id,
+          name: node.name,
+        }))}
+      />
 
       {/* Archiving does not delete. With nowhere to see them, a place archived by
           mistake could only be recovered from psql. */}

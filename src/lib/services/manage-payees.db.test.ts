@@ -8,7 +8,9 @@ import {
   archivePayee,
   createPayee,
   payeeTree,
+  placeUnplaced,
   unarchivePayee,
+  unplacedGroups,
   updatePayee,
 } from "./manage-payees";
 import { formatTaxId, normalizeTaxId } from "@/lib/tax-id";
@@ -217,5 +219,51 @@ describe("managing places", { skip: hasDb() ? false : "no Postgres available" },
     await unarchivePayee(home.id, shop.id);
     const back = (await payeeTree(home.id)).find((p) => p.id === shop.id);
     assert.equal(back?.entries, 1, "its purchase was never touched");
+  });
+
+  it("gives a place to every entry that says the same thing, and to no other", async () => {
+    /*
+     * The repair for months of entries whose shop only ever existed inside the
+     * description. It groups so a person decides once for forty rows — and the
+     * risk of that is the whole reason it is written by exact description: one
+     * shop's prices landing under another does not fail, it just draws a curve
+     * that is wrong and looks fine.
+     */
+    const home = (await seedScenario({ date: DATE, bcvRate: "780.0000000000", p2pRate: "900.0000000000" })).home;
+    const shop = await createPayee({ householdId: home.id, locale: "es", name: "Mi Super, C.A" });
+
+    for (const [description, on] of [
+      ["Compra en MI SUPER, C.A", "2026-08-17"],
+      ["Compra en MI SUPER, C.A", "2026-08-21"],
+      ["Compra en OTRO SITIO", "2026-08-21"],
+    ] as [string, string][]) {
+      await recordTransaction({
+        householdId: home.id, kind: "expense", amount: "100,00", currency: "VES",
+        account: "efectivo", category: "mercado", description, occurredOn: on, source: "ocr",
+      });
+    }
+
+    const { groups } = await unplacedGroups(home.id);
+    const mine = groups.find((g) => g.description === "Compra en MI SUPER, C.A");
+    assert.equal(mine?.entries, 2, "the two that say the same thing are one decision");
+    assert.ok(
+      groups.some((g) => g.description === "Compra en OTRO SITIO"),
+      "and the other one is its own",
+    );
+
+    const done = await placeUnplaced(home.id, "Compra en MI SUPER, C.A", shop.id);
+    assert.equal(done.n, 2);
+
+    const { groups: after } = await unplacedGroups(home.id);
+    assert.equal(
+      after.find((g) => g.description === "Compra en MI SUPER, C.A"),
+      undefined,
+      "what was placed leaves the list",
+    );
+    assert.ok(
+      after.some((g) => g.description === "Compra en OTRO SITIO"),
+      "and what was not is untouched: an exact description, never a resemblance",
+    );
+    assert.equal((await payeeTree(home.id)).find((p) => p.id === shop.id)?.entries, 2);
   });
 });

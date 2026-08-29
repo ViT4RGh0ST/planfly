@@ -4,7 +4,6 @@ import { withToken, rejectIdentityKeys, rejectUnknownKeys } from "@/lib/api/hand
 import { createTransactionSchema } from "@/lib/validation";
 import { recordTransaction } from "@/lib/services/record-transaction";
 import { recentTransactions } from "@/lib/services/reports";
-import { resolvePayee } from "@/lib/services/resolve-entities";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +21,6 @@ export const POST = withToken("transactions:write", async ({ principal, req }) =
 
   const idempotencyKey = req.headers.get("x-planfly-idempotency-key") ?? undefined;
 
-  const payee = input.payee ? await resolvePayee(principal.householdId, input.payee) : null;
-
   const result = await recordTransaction({
     householdId: principal.householdId,
     kind: input.kind,
@@ -34,7 +31,7 @@ export const POST = withToken("transactions:write", async ({ principal, req }) =
     toAmount: input.to_amount,
     category: input.category,
     description: input.description,
-    payeeId: payee?.id,
+    payee: input.payee,
     occurredOn: input.occurred_on,
     notes: input.notes,
     rate: input.rate,
