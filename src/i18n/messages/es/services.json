@@ -217,7 +217,9 @@
       "noParent": "ya no es sucursal",
       "category": "categoría por defecto a {category}",
       "noCategory": "sin categoría por defecto",
-      "aliases": "otros nombres"
+      "aliases": "otros nombres",
+      "coordinates": "ubicación",
+      "noCoordinates": "ubicación quitada"
     },
     "nothingToChange": "No había nada que cambiar.",
     "done": "Listo, corregí {changes}.",

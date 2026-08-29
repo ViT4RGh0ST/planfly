@@ -444,9 +444,14 @@
       "aliasesPlaceholder": "farmatodo trinidad, farma trinidad",
       "aliasesHelp": "Comma separated. They are the words the bot finds this place by on a receipt. No two places may share one: it would have to choose between them.",
       "sharedTaxId": "Yes — it is another branch of that same company. Keep both.",
-      "create": "Create place"
+      "create": "Create place",
+      "coordinates": "Location",
+      "coordinatesHelp": "Paste the two numbers, or the whole link from a map. There is no lookup: your addresses stay here."
     },
-    "branchNeedsAddress": "a branch needs its address"
+    "branchNeedsAddress": "a branch needs its address",
+    "mapOff": "{n, plural, one {One place knows} other {# places know}} where they are, and there is no map to draw them on: a map tile is a request to somebody else's server carrying the coordinates of where you shop, so it stays off until you name the tile source in MAP_TILES_URL.",
+    "mapLabel": "{n, plural, one {# place} other {# places}} on the map",
+    "mapCredit": "Tiles from {host}, which sees these coordinates."
   },
   "budgets": {
     "title": "Budgets",

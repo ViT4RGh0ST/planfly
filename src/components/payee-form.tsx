@@ -215,17 +215,40 @@ export function PayeeForm({
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="payee-address">
-                {t("ui.places.form.address")}{" "}
-                <span className="text-muted-foreground">{t("ui.form.optional")}</span>
-              </Label>
-              <Input
-                id="payee-address"
-                name="address"
-                defaultValue={data?.address}
-                placeholder={t("ui.places.form.addressPlaceholder")}
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid min-w-0 gap-2">
+                <Label htmlFor="payee-address">
+                  {t("ui.places.form.address")}{" "}
+                  <span className="text-muted-foreground">{t("ui.form.optional")}</span>
+                </Label>
+                <Input
+                  id="payee-address"
+                  name="address"
+                  defaultValue={data?.address}
+                  placeholder={t("ui.places.form.addressPlaceholder")}
+                />
+              </div>
+
+              {/* Nobody knows their shop's latitude. What they do is open a map,
+                  find the branch and copy — so this takes the numbers or the
+                  whole URL, and there is no geocoding: turning an address into a
+                  point would mean sending every shop you visit to a stranger. */}
+              <div className="grid min-w-0 gap-2">
+                <Label htmlFor="payee-coordinates">
+                  {t("ui.places.form.coordinates")}{" "}
+                  <span className="text-muted-foreground">{t("ui.form.optional")}</span>
+                </Label>
+                <Input
+                  id="payee-coordinates"
+                  name="coordinates"
+                  defaultValue={data?.coordinates}
+                  placeholder="10.4806, -66.9036"
+                  aria-describedby="payee-coordinates-help"
+                />
+                <p id="payee-coordinates-help" className="text-xs text-muted-foreground">
+                  {t("ui.places.form.coordinatesHelp")}
+                </p>
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

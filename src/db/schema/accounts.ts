@@ -6,6 +6,7 @@ import {
   date,
   index,
   integer,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -135,6 +136,17 @@ export const payees = pgTable(
     taxId: text("tax_id"),
     /** As the receipt prints it. Text, because an address is not data to compute with. */
     address: text("address"),
+    /**
+     * Where it is, when somebody has bothered to say so.
+     *
+     * They arrive now and not with the address because until there was a map to
+     * draw them on they would have been two fields that look like they do
+     * something and do not. `numeric` and not `double`: the same reason as the
+     * rates — a coordinate is written down and read back, never operated on, and
+     * a float would return a different number than the one that was typed.
+     */
+    lat: numeric("lat", { precision: 9, scale: 6 }),
+    lon: numeric("lon", { precision: 9, scale: 6 }),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

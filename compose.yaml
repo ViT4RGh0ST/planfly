@@ -29,6 +29,9 @@ services:
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?falta BETTER_AUTH_SECRET en .env}"
       BETTER_AUTH_URL: "${BETTER_AUTH_URL:-http://localhost:3000}"
       AUTH_TRUSTED_ORIGINS: "${AUTH_TRUSTED_ORIGINS:-}"
+      # The tile source for the places map. Empty means no map, on purpose: a
+      # tile is an outbound request carrying where you shop.
+      MAP_TILES_URL: "${MAP_TILES_URL:-}"
       # Installment alerts. Optional on purpose: without them the app works the
       # same, only quietly. The `:-` keeps compose from failing if they are absent.
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"

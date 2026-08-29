@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { AddPayee, UnarchivePayee } from "@/components/payee-actions";
 import { PayeeList } from "@/components/payee-list";
+import { PlacesMap } from "@/components/places-map";
 import { db } from "@/db";
 import { categories as categoriesTable } from "@/db/schema";
 import { requireSession } from "@/lib/session";
@@ -54,6 +55,12 @@ export default async function PlacesPage() {
   // the whole tree one step down.
   const brands = tree.map((node) => ({ id: node.id, name: node.name }));
 
+  // Every place that knows where it is, branches included. A brand with branches
+  // is not itself a point on a map: its shops are.
+  const points = [...tree, ...tree.flatMap((node) => node.branches)]
+    .filter((node) => node.lat && node.lon)
+    .map((node) => ({ id: node.id, name: node.name, lat: node.lat!, lon: node.lon! }));
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
       <header className="mb-10 flex items-start justify-between gap-4">
@@ -63,6 +70,8 @@ export default async function PlacesPage() {
         </div>
         <AddPayee brands={brands} categories={categories} />
       </header>
+
+      <PlacesMap points={points} />
 
       <PayeeList payees={tree} brands={brands} categories={categories} />
 

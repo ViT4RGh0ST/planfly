@@ -217,7 +217,9 @@
       "noParent": "no longer a branch",
       "category": "default category to {category}",
       "noCategory": "no default category",
-      "aliases": "other names"
+      "aliases": "other names",
+      "coordinates": "location",
+      "noCoordinates": "location removed"
     },
     "nothingToChange": "There was nothing to change.",
     "done": "Done, I corrected {changes}.",

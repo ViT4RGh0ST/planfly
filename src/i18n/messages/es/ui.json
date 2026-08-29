@@ -444,9 +444,14 @@
       "aliasesPlaceholder": "farmatodo trinidad, farma trinidad",
       "aliasesHelp": "Separados por comas. Son las palabras con las que el bot encuentra este sitio en una factura. Dos sitios no pueden compartir uno: tendría que elegir entre ellos.",
       "sharedTaxId": "Sí — es otra sucursal de esa misma empresa. Guarda las dos.",
-      "create": "Crear sitio"
+      "create": "Crear sitio",
+      "coordinates": "Ubicación",
+      "coordinatesHelp": "Pega los dos números, o el enlace entero de un mapa. No hay búsqueda: tus direcciones se quedan aquí."
     },
-    "branchNeedsAddress": "una sucursal necesita su dirección"
+    "branchNeedsAddress": "una sucursal necesita su dirección",
+    "mapOff": "{n, plural, one {Un sitio sabe} other {# sitios saben}} dónde están, y no hay mapa donde dibujarlos: un tile es una petición al servidor de otro llevando las coordenadas de dónde compras, así que queda apagado hasta que digas de dónde salen en MAP_TILES_URL.",
+    "mapLabel": "{n, plural, one {# sitio} other {# sitios}} en el mapa",
+    "mapCredit": "Tiles de {host}, que ve estas coordenadas."
   },
   "budgets": {
     "title": "Presupuestos",

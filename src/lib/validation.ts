@@ -195,6 +195,8 @@ export const createPayeeSchema = z.object({
   /** Empty string from a `<select>` means «not a branch», which is a real choice. */
   parent_id: z.union([z.string().uuid(), z.literal("")]).optional(),
   default_category_id: z.union([z.string().uuid(), z.literal("")]).optional(),
+  /** A pasted pair of numbers or a map URL. Parsed, never validated into an error. */
+  coordinates: z.string().max(500).optional(),
   /** Comma-separated: they are the hints the bot finds the place by. */
   aliases: z.string().max(400).optional(),
   /** «Yes, it really is another branch of that same company.» */

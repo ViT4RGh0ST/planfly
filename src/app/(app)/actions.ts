@@ -15,6 +15,7 @@ import {
 } from "@/db/schema";
 import { requireSession, requireWriter } from "@/lib/session";
 import { amountErrorMessage, messageForScreen } from "@/lib/user-error";
+import { formatCoordinates } from "@/lib/coordinates";
 import { normalizeLocale, type Locale } from "@/i18n/config";
 import { getTranslator } from "@/i18n/translator";
 import { formatAmount, formatRate, parseRate, InvalidAmountError } from "@/lib/money";
@@ -809,6 +810,7 @@ export async function createPayeeAction(
       parent_id: form.get("parent_id") == null ? undefined : String(form.get("parent_id")),
       default_category_id:
         form.get("default_category_id") == null ? undefined : String(form.get("default_category_id")),
+      coordinates: text("coordinates"),
       aliases: text("aliases"),
       allow_shared_tax_id: form.get("allow_shared_tax_id") === "on",
     });
@@ -820,6 +822,7 @@ export async function createPayeeAction(
       taxId: input.tax_id,
       address: input.address,
       parentId: input.parent_id || null,
+      coordinates: input.coordinates,
       defaultCategoryId: input.default_category_id || null,
       aliases: input.aliases,
       allowSharedTaxId: input.allow_shared_tax_id,
@@ -862,6 +865,7 @@ export async function editPayeeAction(
       taxId: raw("tax_id"),
       address: raw("address"),
       parentId: raw("parent_id") === undefined ? undefined : raw("parent_id") || null,
+      coordinates: raw("coordinates"),
       defaultCategoryId:
         raw("default_category_id") === undefined ? undefined : raw("default_category_id") || null,
       aliases: raw("aliases"),
@@ -907,6 +911,8 @@ export type EditablePayee = {
   taxId: string;
   address: string;
   parentId: string | null;
+  /** As it goes back into the field: "10.4806, -66.9036". */
+  coordinates: string;
   defaultCategoryId: string | null;
   aliases: string;
   /** True if branches hang off it, in which case it cannot become one. */
@@ -937,6 +943,7 @@ export async function payeeForEdit(id: string): Promise<EditablePayee | null> {
     taxId: row.taxId ?? "",
     address: row.address ?? "",
     parentId: row.parentId,
+    coordinates: formatCoordinates(row.lat, row.lon),
     defaultCategoryId: row.defaultCategoryId,
     // Back as they are typed, comma separated: it is what `parseAliases` reads.
     aliases: row.aliases.join(", "),

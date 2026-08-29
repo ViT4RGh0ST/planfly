@@ -7,6 +7,7 @@ import { localeOf } from "./household-locale";
 import { categories, payees } from "@/db/schema";
 import { normalize, toSlug } from "./resolve-entities";
 import { normalizeTaxId } from "@/lib/tax-id";
+import { parseCoordinates } from "@/lib/coordinates";
 import { InvalidTransactionError } from "./record-transaction";
 
 /**
@@ -22,6 +23,18 @@ import { InvalidTransactionError } from "./record-transaction";
  * fiscal id and the address are only ever filled for the first kind, and that
  * is why both are nullable and neither is asked for.
  */
+
+/**
+ * The point, or nothing at all.
+ *
+ * Unparseable input clears it rather than being refused: what arrives here is
+ * pasted from a map, and half-pasting a URL is not a mistake worth stopping a
+ * whole form for. A place with no point simply does not appear on the map.
+ */
+function coordinatesOf(input: string | undefined): { lat: string | null; lon: string | null } {
+  const point = parseCoordinates(input);
+  return { lat: point?.lat ?? null, lon: point?.lon ?? null };
+}
 
 /** "central madeirense, madeirense" -> ["central madeirense","madeirense"] */
 export function parseAliases(input: string | undefined): string[] {
@@ -272,6 +285,8 @@ export type CreatePayeeInput = {
   address?: string;
   /** The brand this is a branch of. A shop that is nobody's branch has none. */
   parentId?: string | null;
+  /** A pasted pair of numbers or a map URL; anything else is ignored, not rejected. */
+  coordinates?: string;
   defaultCategoryId?: string | null;
   aliases?: string;
   /** «Yes, it really is another branch of that same company.» */
@@ -308,6 +323,7 @@ export async function createPayee(input: CreatePayeeInput) {
       taxId,
       address,
       parentId: parent?.id ?? null,
+      ...coordinatesOf(input.coordinates),
       defaultCategoryId: category?.id ?? null,
       aliases,
     })
@@ -333,6 +349,8 @@ export type UpdatePayeeInput = {
   address?: string;
   /** `null` lifts it out of its brand; `undefined` leaves it where it is. */
   parentId?: string | null;
+  /** Empty clears the point; `undefined` leaves it alone. */
+  coordinates?: string;
   /** `null` clears it; `undefined` leaves it alone. */
   defaultCategoryId?: string | null;
   aliases?: string;
@@ -393,6 +411,18 @@ export async function updatePayee(input: UpdatePayeeInput) {
         category
           ? t("services.managePayees.change.category", { category: category.name })
           : t("services.managePayees.change.noCategory"),
+      );
+    }
+  }
+
+  if (input.coordinates !== undefined) {
+    const point = coordinatesOf(input.coordinates);
+    if (point.lat !== payee.lat || point.lon !== payee.lon) {
+      Object.assign(patch, point);
+      changes.push(
+        point.lat
+          ? t("services.managePayees.change.coordinates")
+          : t("services.managePayees.change.noCoordinates"),
       );
     }
   }
@@ -464,6 +494,8 @@ export type PayeeNode = {
   address: string | null;
   aliases: string[];
   parentId: string | null;
+  lat: string | null;
+  lon: string | null;
   defaultCategory: string | null;
   /** How many entries were bought there. */
   entries: number;
@@ -491,11 +523,14 @@ export async function payeeTree(householdId: string): Promise<PayeeNode[]> {
     address: string | null;
     aliases: string[];
     parent_id: string | null;
+    lat: string | null;
+    lon: string | null;
     category: string | null;
     entries: string;
     items: string;
   }>(sql`
-    SELECT p.id, p.name, p.tax_id, p.address, p.aliases, p.parent_id, c.name AS category,
+    SELECT p.id, p.name, p.tax_id, p.address, p.aliases, p.parent_id, p.lat, p.lon,
+           c.name AS category,
            (SELECT count(*) FROM transactions t
              WHERE t.payee_id = p.id AND t.voided_at IS NULL)::text AS entries,
            (SELECT count(*) FROM transaction_items i
@@ -518,6 +553,8 @@ export async function payeeTree(householdId: string): Promise<PayeeNode[]> {
       address: r.address,
       aliases: r.aliases,
       parentId: r.parent_id,
+      lat: r.lat,
+      lon: r.lon,
       defaultCategory: r.category,
       entries,
       entriesInTree: entries,
