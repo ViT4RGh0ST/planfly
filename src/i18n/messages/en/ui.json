@@ -38,7 +38,9 @@
       "price": "Price",
       "change": "Change"
     },
-    "firstTime": "first time"
+    "firstTime": "first time",
+    "cheapestAt": "Cheapest at {place}, {amount}.",
+    "dearestAt": "Dearest at {place}, {amount}."
   },
   "nav": {
     "sections": "Sections",
@@ -58,6 +60,7 @@
     "review": "Review",
     "import": "Import",
     "categories": "Categories",
+    "places": "Places",
     "signOut": "Sign out",
     "pendingReview": "{n, plural, one { pending review} other { pending review}}",
     "language": "Language",
@@ -404,6 +407,44 @@
       "aliasesPlaceholder": "super, market, corner shop",
       "aliasesHelp": "Comma separated. They are the words the bot finds this category by when you write «I spent 300 at the super». No two categories may share one: it would have to choose between them.",
       "create": "Create category"
+    }
+  },
+  "places": {
+    "title": "Places",
+    "hint": "Where you buy. Two branches of one chain are two places, because they do not price the same — and they still add up together.",
+    "archived": "Archived",
+    "empty": "No places yet. One is born the first time the bot reads a shop's name off a receipt.",
+    "add": "Add place",
+    "menu": "Actions on {name}",
+    "correct": "Correct…",
+    "archive": "Archive",
+    "unarchive": "Restore",
+    "noDetails": "no fiscal id, no address",
+    "noItems": "no itemised receipt",
+    "entries": "{n, plural, one {# purchase} other {# purchases}}",
+    "items": "{n, plural, one {# priced item} other {# priced items}}",
+    "form": {
+      "titleEdit": "Correct place",
+      "titleNew": "Add place",
+      "help": "A branch hangs off its brand: they price differently, and their totals still add up together.",
+      "failed": "I could not load that place.",
+      "name": "Name",
+      "namePlaceholder": "Farmatodo La Trinidad",
+      "taxId": "Fiscal id",
+      "taxIdHelp": "The one thing about a shop that does not change. Every invoice carries it.",
+      "brand": "Branch of",
+      "noBrand": "Not a branch",
+      "brandHelp": "For a chain, so its branches add up together.",
+      "brandLocked": "It has branches of its own.",
+      "address": "Address",
+      "addressPlaceholder": "Av. La Trinidad, Caracas",
+      "category": "Files under",
+      "noCategory": "No default",
+      "aliases": "Other names",
+      "aliasesPlaceholder": "farmatodo trinidad, farma trinidad",
+      "aliasesHelp": "Comma separated. They are the words the bot finds this place by on a receipt. No two places may share one: it would have to choose between them.",
+      "sharedTaxId": "Yes — it is another branch of that same company. Keep both.",
+      "create": "Create place"
     }
   },
   "budgets": {

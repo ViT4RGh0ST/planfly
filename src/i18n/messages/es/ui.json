@@ -38,7 +38,9 @@
       "price": "Precio",
       "change": "Cambio"
     },
-    "firstTime": "primera vez"
+    "firstTime": "primera vez",
+    "cheapestAt": "Más barato en {place}, {amount}.",
+    "dearestAt": "Más caro en {place}, {amount}."
   },
   "nav": {
     "sections": "Secciones",
@@ -58,6 +60,7 @@
     "review": "Revisar",
     "import": "Importar",
     "categories": "Categorías",
+    "places": "Sitios",
     "signOut": "Salir",
     "pendingReview": "{n, plural, one { pendiente de revisar} other { pendientes de revisar}}",
     "language": "Idioma",
@@ -404,6 +407,44 @@
       "aliasesPlaceholder": "super, mercadito, abasto",
       "aliasesHelp": "Separados por comas. Son las palabras con las que el bot encuentra esta categoría cuando le escribes «gasté 300 en el super». Dos categorías no pueden compartir uno: tendría que elegir entre ellas.",
       "create": "Crear categoría"
+    }
+  },
+  "places": {
+    "title": "Sitios",
+    "hint": "Dónde compras. Dos sucursales de una cadena son dos sitios, porque no cobran igual — y aun así suman juntas.",
+    "archived": "Archivados",
+    "empty": "Todavía no hay sitios. Nace uno la primera vez que el bot lee el nombre de una tienda en una factura.",
+    "add": "Añadir sitio",
+    "menu": "Acciones sobre {name}",
+    "correct": "Corregir…",
+    "archive": "Archivar",
+    "unarchive": "Recuperar",
+    "noDetails": "sin RIF, sin dirección",
+    "noItems": "sin factura desglosada",
+    "entries": "{n, plural, one {# compra} other {# compras}}",
+    "items": "{n, plural, one {# ítem con precio} other {# ítems con precio}}",
+    "form": {
+      "titleEdit": "Corregir sitio",
+      "titleNew": "Añadir sitio",
+      "help": "Una sucursal cuelga de su marca: cobran distinto, y sus totales siguen sumando juntos.",
+      "failed": "No pude cargar ese sitio.",
+      "name": "Nombre",
+      "namePlaceholder": "Farmatodo La Trinidad",
+      "taxId": "RIF",
+      "taxIdHelp": "Lo único de una tienda que no cambia. Toda factura lo trae.",
+      "brand": "Sucursal de",
+      "noBrand": "No es sucursal",
+      "brandHelp": "Para una cadena, para que sus sucursales sumen juntas.",
+      "brandLocked": "Tiene sucursales propias.",
+      "address": "Dirección",
+      "addressPlaceholder": "Av. La Trinidad, Caracas",
+      "category": "Cae en",
+      "noCategory": "Sin categoría fija",
+      "aliases": "Otros nombres",
+      "aliasesPlaceholder": "farmatodo trinidad, farma trinidad",
+      "aliasesHelp": "Separados por comas. Son las palabras con las que el bot encuentra este sitio en una factura. Dos sitios no pueden compartir uno: tendría que elegir entre ellos.",
+      "sharedTaxId": "Sí — es otra sucursal de esa misma empresa. Guarda las dos.",
+      "create": "Crear sitio"
     }
   },
   "budgets": {

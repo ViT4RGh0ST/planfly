@@ -65,8 +65,7 @@ export async function resolveIn(
   const slug = toSlug(input);
 
   const tableSql = sql.raw(table);
-  // `archived_at` exists on accounts, categories and products; payees lacks it.
-  const archivedFilter = table === "payees" ? sql`` : sql`AND archived_at IS NULL`;
+  const archivedFilter = sql`AND archived_at IS NULL`;
 
   const { rows } = await db.execute<{
     id: string;

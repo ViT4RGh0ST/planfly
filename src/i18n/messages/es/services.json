@@ -194,6 +194,38 @@
     "archived": "{name} archivada. Sus movimientos siguen ahí.",
     "unarchived": "{name} vuelve a la lista."
   },
+  "managePayees": {
+    "missingName": "El sitio necesita un nombre.",
+    "duplicateArchived": "Ya existe un sitio archivado que se llama \"{name}\". Cámbiale el nombre al nuevo, o desarchiva aquel.",
+    "duplicateName": "Ya tienes un sitio que se llama \"{name}\".",
+    "duplicateAlias": "\"{alias}\" ya es otro nombre de {name}. Que dos sitios respondan a la misma palabra hace que el bot elija entre ellos por orden alfabético, y el historial de precios de una tienda quedaría partido en dos.",
+    "taxIdTaken": "{name} ya lleva el RIF {taxId}. Si esto es otra sucursal de esa misma empresa, dilo y guardo las dos; si es la tienda que ya tienes, usa esa — una segunda fila le parte los precios a la mitad.",
+    "taxIdArchived": "{name} lleva el RIF {taxId} y está archivado. Desarchívalo en vez de escribirlo otra vez, o sus compras quedarían bajo dos nombres.",
+    "payeeNotFound": "No encontré ese sitio.",
+    "categoryNotFound": "No encontré esa categoría.",
+    "ownParent": "Un sitio no puede ser sucursal de sí mismo.",
+    "parentIsBranch": "{parent} ya es sucursal de otro sitio. Una cadena va dos niveles y no más, porque hasta ahí mira su total.",
+    "parentArchived": "{parent} está archivado. Desarchívalo primero, o la sucursal colgaría de algo que no está en la lista.",
+    "hasBranches": "{name} tiene sucursales propias, así que no puede volverse una: eso haría un tercer nivel, que ningún total mira.",
+    "created": "Sitio {name} creado.",
+    "createdWithCategory": "Sitio {name} creado, con {category} como categoría por defecto.",
+    "createdBranch": "Sitio {name} creado como sucursal de {parent}.",
+    "change": {
+      "name": "nombre",
+      "taxId": "RIF",
+      "address": "dirección",
+      "parent": "ahora sucursal de {parent}",
+      "noParent": "ya no es sucursal",
+      "category": "categoría por defecto a {category}",
+      "noCategory": "sin categoría por defecto",
+      "aliases": "otros nombres"
+    },
+    "nothingToChange": "No había nada que cambiar.",
+    "done": "Listo, corregí {changes}.",
+    "alreadyArchived": "{name} ya estaba archivado.",
+    "archived": "{name} archivado. Sus compras y sus precios siguen ahí.",
+    "unarchived": "{name} vuelve a la lista."
+  },
   "products": {
     "noText": "La línea no tiene texto con el que identificar un producto",
     "mergeWithItself": "No se puede fusionar un producto consigo mismo",
@@ -277,7 +309,8 @@
     "missingEntry": "Falta el movimiento a corregir.",
     "missingAccount": "Falta la cuenta a corregir.",
     "missingCategory": "Falta la categoría a corregir.",
-    "budgetSaved": "Presupuesto guardado. {summary}"
+    "budgetSaved": "Presupuesto guardado. {summary}",
+    "missingPayee": "Falta el sitio a corregir."
   },
   "amount": {
     "head": "No pude interpretar el monto {input}: {reason}",

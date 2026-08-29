@@ -22,6 +22,7 @@ const READ_ONLY = new Set([
   "transactionForEdit",
   "accountForEdit",
   "categoryForEdit",
+  "payeeForEdit",
   // Reads the CSV and shows what is about to be imported. It does not write: that is commit.
   "previewImportAction",
 ]);
