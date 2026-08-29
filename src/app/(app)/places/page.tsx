@@ -87,6 +87,8 @@ export default async function PlacesPage() {
           id: node.id,
           name: node.name,
         }))}
+        brands={brands}
+        categories={categories}
       />
 
       {/* Archiving does not delete. With nowhere to see them, a place archived by

@@ -461,7 +461,8 @@
     "unplacedPick": "Which place?",
     "unplacedChoose": "Place for «{description}»",
     "unplacedAssign": "Assign",
-    "unplacedMore": "There are {n, plural, one {# more group} other {# more groups}} below these; they appear as these are cleared."
+    "unplacedMore": "There are {n, plural, one {# more group} other {# more groups}} below these; they appear as these are cleared.",
+    "unplacedCreate": "Create as a place"
   },
   "budgets": {
     "title": "Budgets",

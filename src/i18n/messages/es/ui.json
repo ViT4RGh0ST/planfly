@@ -461,7 +461,8 @@
     "unplacedPick": "¿Cuál sitio?",
     "unplacedChoose": "Sitio para «{description}»",
     "unplacedAssign": "Asignar",
-    "unplacedMore": "Hay {n, plural, one {# grupo más} other {# grupos más}} debajo de estos; van apareciendo a medida que resuelvas estos."
+    "unplacedMore": "Hay {n, plural, one {# grupo más} other {# grupos más}} debajo de estos; van apareciendo a medida que resuelvas estos.",
+    "unplacedCreate": "Crear como sitio"
   },
   "budgets": {
     "title": "Presupuestos",

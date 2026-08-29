@@ -51,6 +51,7 @@ export function PayeeForm({
   brands,
   categories,
   payeeId,
+  defaultName,
   open,
   onOpenChange,
 }: {
@@ -58,6 +59,15 @@ export function PayeeForm({
   categories: CategoryOption[];
   /** If given, that place is edited; if not, a new one is created. */
   payeeId?: string;
+  /**
+   * The name to start from.
+   *
+   * It comes from the reconciliation list, where the shop's name is the very
+   * text being grouped: «Compra en MI SUPER, C.A». Retyping what is already on
+   * screen is the kind of small friction that stops somebody halfway down a
+   * list of forty.
+   */
+  defaultName?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -151,7 +161,7 @@ export function PayeeForm({
               <Input
                 id="payee-name"
                 name="name"
-                defaultValue={data?.name}
+                defaultValue={data?.name ?? defaultName}
                 placeholder={t("ui.places.form.namePlaceholder")}
                 required
                 autoFocus={!editing}
