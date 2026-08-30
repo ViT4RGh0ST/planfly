@@ -33,6 +33,8 @@ services:
       # tile is an outbound request carrying where you shop.
       MAP_TILES_URL: "${MAP_TILES_URL:-}"
       MAP_TILES_ATTRIBUTION: "${MAP_TILES_ATTRIBUTION:-}"
+      # Address <-> point. Empty means the address stays plain text.
+      GEOCODER_URL: "${GEOCODER_URL:-}"
       # Installment alerts. Optional on purpose: without them the app works the
       # same, only quietly. The `:-` keeps compose from failing if they are absent.
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"

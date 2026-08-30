@@ -27,11 +27,13 @@ export function AddPayee({
   categories,
   tiles,
   attribution,
+  geocoder,
 }: {
   brands: BrandOption[];
   categories: CategoryOption[];
   tiles: string | null;
   attribution: string | null;
+  geocoder: boolean;
 }) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
@@ -45,7 +47,9 @@ export function AddPayee({
       {open && (
         <PayeeForm brands={brands} categories={categories}
           tiles={tiles}
-          attribution={attribution} open={open} onOpenChange={setOpen} />
+          attribution={attribution}
+        geocoder={geocoder}
+           open={open} onOpenChange={setOpen} />
       )}
     </>
   );
@@ -59,6 +63,7 @@ export function PayeeActions({
   categories,
   tiles,
   attribution,
+  geocoder,
 }: {
   id: string;
   name: string;
@@ -66,6 +71,7 @@ export function PayeeActions({
   categories: CategoryOption[];
   tiles: string | null;
   attribution: string | null;
+  geocoder: boolean;
 }) {
   const t = useTranslations();
   const [editing, setEditing] = useState(false);
@@ -109,6 +115,8 @@ export function PayeeActions({
           categories={categories}
           tiles={tiles}
           attribution={attribution}
+        geocoder={geocoder}
+          
           payeeId={id}
           open={editing}
           onOpenChange={setEditing}

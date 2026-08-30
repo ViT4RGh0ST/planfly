@@ -24,12 +24,14 @@ export function PayeeList({
   categories,
   tiles,
   attribution,
+  geocoder,
 }: {
   payees: PayeeNode[];
   brands: BrandOption[];
   categories: CategoryOption[];
   tiles: string | null;
   attribution: string | null;
+  geocoder: boolean;
 }) {
   const t = useTranslations();
 
@@ -43,14 +45,18 @@ export function PayeeList({
         <li key={payee.id}>
           <Row payee={payee} brands={brands} categories={categories}
           tiles={tiles}
-          attribution={attribution} />
+          attribution={attribution}
+        geocoder={geocoder}
+           />
           {payee.branches.length > 0 && (
             <ul className="mb-1 ml-3 border-l border-border pl-4">
               {payee.branches.map((branch) => (
                 <li key={branch.id}>
                   <Row payee={branch} brands={brands} categories={categories}
           tiles={tiles}
-          attribution={attribution} nested />
+          attribution={attribution}
+        geocoder={geocoder}
+           nested />
                 </li>
               ))}
             </ul>
@@ -67,6 +73,7 @@ function Row({
   categories,
   tiles,
   attribution,
+  geocoder,
   nested = false,
 }: {
   payee: PayeeNode;
@@ -74,6 +81,7 @@ function Row({
   categories: CategoryOption[];
   tiles: string | null;
   attribution: string | null;
+  geocoder: boolean;
   nested?: boolean;
 }) {
   const t = useTranslations();
@@ -129,7 +137,9 @@ function Row({
         </div>
         <PayeeActions id={payee.id} name={payee.name} brands={brands} categories={categories}
           tiles={tiles}
-          attribution={attribution} />
+          attribution={attribution}
+        geocoder={geocoder}
+           />
       </div>
     </div>
   );

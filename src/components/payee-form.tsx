@@ -56,6 +56,7 @@ export function PayeeForm({
   defaultName,
   tiles,
   attribution,
+  geocoder,
   open,
   onOpenChange,
 }: {
@@ -75,6 +76,8 @@ export function PayeeForm({
   /** The tile source, so the picker can draw something to click on. */
   tiles: string | null;
   attribution: string | null;
+  /** True when a geocoding service was configured. It is off by default. */
+  geocoder: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -93,6 +96,8 @@ export function PayeeForm({
    * has to move the pin. One value, two ways in.
    */
   const [coordinates, setCoordinates] = useState("");
+  const [address, setAddress] = useState("");
+  const [looking, setLooking] = useState(false);
 
   const [state, action, pending] = useActionState(
     async (prev: ActionState, form: FormData) => {
@@ -122,6 +127,7 @@ export function PayeeForm({
         setParentId(result.parentId ?? NONE);
         setCategoryId(result.defaultCategoryId ?? NONE);
         setCoordinates(result.coordinates);
+        setAddress(result.address);
       })
       .catch(() => alive && setFailed(true));
     return () => {
@@ -144,6 +150,43 @@ export function PayeeForm({
   // Whatever is in the field right now, if it is a point at all: that is what
   // the pin shows, so typing and clicking never disagree.
   const pinned = parseCoordinates(coordinates);
+
+  /*
+   * The third side of the triangle, and the only one that asks a stranger.
+   *
+   * The map and the two numbers move each other for free — it is the same fact
+   * written two ways. An address is not: turning «Av. La Trinidad» into a point,
+   * or a point back into a street, is a question for somebody else's server. So
+   * it is never automatic and never on by default: it happens when this button
+   * is pressed, and the button only exists where a service was configured.
+   */
+  async function lookUp(from: "address" | "point") {
+    setLooking(true);
+    try {
+      const params = new URLSearchParams(
+        from === "address" ? { q: address } : { at: coordinates },
+      );
+      const response = await fetch(`/api/geocode?${params}`);
+      const body = (await response.json()) as {
+        ok: boolean;
+        lat?: string;
+        lon?: string;
+        address?: string | null;
+      };
+      if (!body.ok) {
+        toast.error(t("ui.places.form.lookUpFailed"));
+        return;
+      }
+      if (from === "address" && body.lat && body.lon) {
+        setCoordinates(formatCoordinates(body.lat, body.lon));
+      }
+      if (from === "point" && body.address) setAddress(body.address);
+    } catch {
+      toast.error(t("ui.places.form.lookUpFailed"));
+    } finally {
+      setLooking(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -244,24 +287,48 @@ export function PayeeForm({
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            {/* The address gets the whole row. It is the longest thing in the
+                form — «Av. Principal de La Trinidad, Caracas 1080, Distrito
+                Capital» is what a reverse lookup writes into it — and it was
+                sharing half a row with a button. */}
+            <div className="grid gap-2">
               <div className="grid min-w-0 gap-2">
                 <Label htmlFor="payee-address">
                   {t("ui.places.form.address")}{" "}
                   <span className="text-muted-foreground">{t("ui.form.optional")}</span>
                 </Label>
-                <Input
-                  id="payee-address"
-                  name="address"
-                  defaultValue={data?.address}
-                  placeholder={t("ui.places.form.addressPlaceholder")}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="payee-address"
+                    name="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder={t("ui.places.form.addressPlaceholder")}
+                  />
+                  {geocoder && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 shrink-0"
+                      disabled={looking || !address.trim()}
+                      onClick={() => lookUp("address")}
+                    >
+                      {t("ui.places.form.findOnMap")}
+                    </Button>
+                  )}
+                </div>
               </div>
 
-              {/* Nobody knows their shop's latitude. What they do is open a map,
-                  find the branch and copy — so this takes the numbers or the
-                  whole URL, and there is no geocoding: turning an address into a
-                  point would mean sending every shop you visit to a stranger. */}
+            </div>
+
+            {/* Nobody knows their shop's latitude. What they do is point at it.
+                So there are three ways to say the same thing — the map, these
+                two numbers, and the address — and each moves the other two. The
+                first two are the same fact written twice and cost nothing; the
+                address is the one that has to ask somebody else, which is why
+                it asks only when told to. */}
+            <div className="grid gap-2">
               <div className="grid min-w-0 gap-2">
                 <Label htmlFor="payee-coordinates">
                   {t("ui.places.form.coordinates")}{" "}
@@ -276,8 +343,20 @@ export function PayeeForm({
                   aria-describedby="payee-coordinates-help"
                 />
                 <p id="payee-coordinates-help" className="text-xs text-muted-foreground">
-                  {t("ui.places.form.coordinatesHelp")}
+                  {geocoder ? t("ui.places.form.coordinatesHelpGeo") : t("ui.places.form.coordinatesHelp")}
                 </p>
+                {geocoder && pinned && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 justify-start px-0 text-xs"
+                    disabled={looking}
+                    onClick={() => lookUp("point")}
+                  >
+                    {t("ui.places.form.fillAddress")}
+                  </Button>
+                )}
               </div>
             </div>
 

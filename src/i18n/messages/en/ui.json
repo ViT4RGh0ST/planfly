@@ -449,7 +449,11 @@
       "create": "Create place",
       "coordinates": "Location",
       "coordinatesHelp": "Paste the two numbers, or the whole link from a map. There is no lookup: your addresses stay here.",
-      "thisPlace": "This place"
+      "thisPlace": "This place",
+      "findOnMap": "Find",
+      "fillAddress": "Fill the address from this point",
+      "coordinatesHelpGeo": "Click the map, or paste the numbers or a link. «Find» asks a geocoding service — the only thing here that leaves your machine.",
+      "lookUpFailed": "The lookup found nothing. Point at it on the map instead."
     },
     "branchNeedsAddress": "a branch needs its address",
     "mapOff": "{n, plural, one {One place knows} other {# places know}} where they are, and there is no map to draw them on: a map tile is a request to somebody else's server carrying the coordinates of where you shop, so it stays off until you name the tile source in MAP_TILES_URL.",

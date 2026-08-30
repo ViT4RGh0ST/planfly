@@ -47,6 +47,7 @@ export function PlaceMap({
 }) {
   const t = useTranslations();
   const container = useRef<HTMLDivElement>(null);
+  const dot = useRef<import("leaflet").DivIcon | null>(null);
   const map = useRef<LeafletMap | null>(null);
   const marker = useRef<Marker | null>(null);
   const picker = useRef(onPick);
@@ -89,7 +90,7 @@ export function PlaceMap({
 
       L.tileLayer(tiles, { maxZoom: 19 }).addTo(instance);
 
-      const dot = L.divIcon({
+      dot.current ??= L.divIcon({
         className: "",
         html: '<span class="block size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow"></span>',
         iconSize: [0, 0],
@@ -97,7 +98,7 @@ export function PlaceMap({
 
       const drawn = points.filter((p) => p.lat && p.lon);
       for (const point of drawn) {
-        const at = L.marker([Number(point.lat), Number(point.lon)], { icon: dot });
+        const at = L.marker([Number(point.lat), Number(point.lon)], { icon: dot.current });
         at.bindTooltip(point.name);
         at.addTo(instance);
         if (pick) marker.current = at;
@@ -136,7 +137,7 @@ export function PlaceMap({
         instance.on("click", (event) => {
           const { lat, lng } = event.latlng;
           if (marker.current) marker.current.setLatLng([lat, lng]);
-          else marker.current = L.marker([lat, lng], { icon: dot }).addTo(instance);
+          else marker.current = L.marker([lat, lng], { icon: dot.current! }).addTo(instance);
           // Six decimals is about ten centimetres. More is noise the map cannot
           // draw and the field cannot show.
           picker.current?.(lat.toFixed(6), lng.toFixed(6));
@@ -154,6 +155,37 @@ export function PlaceMap({
     // re-running this on every render would throw away the pan the person did.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tiles]);
+
+  /*
+   * The pin follows the field, not only the other way round.
+   *
+   * Three things say where a place is — the map, the two numbers and the
+   * address — and each has to move the other two, or the screen ends up showing
+   * a pin in one city and coordinates from another with nothing to say which is
+   * the truth. This is the half that needs nobody's server: a point typed or
+   * pasted moves the marker straight away.
+   */
+  const target = pick ? points.find((p) => p.lat && p.lon) : undefined;
+  useEffect(() => {
+    const instance = map.current;
+    if (!pick || !instance || !target) return;
+    const at: [number, number] = [Number(target.lat), Number(target.lon)];
+    // Already where it should be: moving it again would fight the pan of
+    // somebody who has just dragged the map after clicking.
+    if (marker.current?.getLatLng().equals(at, 1e-6)) return;
+
+    void (async () => {
+      const L = await import("leaflet");
+      dot.current ??= L.divIcon({
+        className: "",
+        html: '<span class="block size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow"></span>',
+        iconSize: [0, 0],
+      });
+      if (marker.current) marker.current.setLatLng(at);
+      else marker.current = L.marker(at, { icon: dot.current }).addTo(instance);
+      instance.setView(at, Math.max(instance.getZoom(), 16));
+    })();
+  }, [pick, target?.lat, target?.lon, target]);
 
   if (!tiles) {
     return (

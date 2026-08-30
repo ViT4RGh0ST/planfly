@@ -37,6 +37,7 @@ export function UnplacedGroups({
   categories,
   tiles,
   attribution,
+  geocoder,
 }: {
   groups: UnplacedGroup[];
   /** How many there are in all, so a cut list never reads as the whole list. */
@@ -47,6 +48,7 @@ export function UnplacedGroups({
   categories: CategoryOption[];
   tiles: string | null;
   attribution: string | null;
+  geocoder: boolean;
 }) {
   const t = useTranslations();
   /*
@@ -82,6 +84,8 @@ export function UnplacedGroups({
             categories={categories}
           tiles={tiles}
           attribution={attribution}
+        geocoder={geocoder}
+          
           />
         ))}
       </ul>
@@ -96,6 +100,7 @@ function Group({
   categories,
   tiles,
   attribution,
+  geocoder,
 }: {
   group: UnplacedGroup;
   places: { id: string; name: string }[];
@@ -103,6 +108,7 @@ function Group({
   categories: CategoryOption[];
   tiles: string | null;
   attribution: string | null;
+  geocoder: boolean;
 }) {
   const t = useTranslations();
   const [pending, startTransition] = useTransition();
@@ -175,6 +181,8 @@ function Group({
           categories={categories}
           tiles={tiles}
           attribution={attribution}
+        geocoder={geocoder}
+          
           // The group's own text: the shop's name is what is being grouped by.
           defaultName={group.description}
           open={creating}

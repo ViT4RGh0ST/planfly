@@ -67,6 +67,9 @@ export default async function PlacesPage() {
   // browser. It travels as a prop rather than being read twice.
   const tiles = process.env.MAP_TILES_URL?.trim() || null;
   const attribution = process.env.MAP_TILES_ATTRIBUTION?.trim() || null;
+  // Whether an address can be turned into a point at all. The service is named
+  // on the server; the screen only needs to know if there is one.
+  const geocoder = Boolean(process.env.GEOCODER_URL?.trim());
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
@@ -80,6 +83,7 @@ export default async function PlacesPage() {
           categories={categories}
           tiles={tiles}
           attribution={attribution}
+          geocoder={geocoder}
         />
       </header>
 
@@ -95,6 +99,7 @@ export default async function PlacesPage() {
         categories={categories}
         tiles={tiles}
         attribution={attribution}
+        geocoder={geocoder}
       />
 
       {/* What was bought somewhere nobody wrote down. It goes under the list and
@@ -111,6 +116,7 @@ export default async function PlacesPage() {
         categories={categories}
         tiles={tiles}
         attribution={attribution}
+        geocoder={geocoder}
       />
 
       {/* Archiving does not delete. With nowhere to see them, a place archived by

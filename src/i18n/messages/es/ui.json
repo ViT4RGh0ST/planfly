@@ -449,7 +449,11 @@
       "create": "Crear sitio",
       "coordinates": "Ubicación",
       "coordinatesHelp": "Pega los dos números, o el enlace entero de un mapa. No hay búsqueda: tus direcciones se quedan aquí.",
-      "thisPlace": "Este sitio"
+      "thisPlace": "Este sitio",
+      "findOnMap": "Buscar",
+      "fillAddress": "Poner la dirección de este punto",
+      "coordinatesHelpGeo": "Haz clic en el mapa, o pega los números o un enlace. «Buscar» le pregunta a un servicio de geocodificación — lo único aquí que sale de tu máquina.",
+      "lookUpFailed": "La búsqueda no encontró nada. Márcalo en el mapa mejor."
     },
     "branchNeedsAddress": "una sucursal necesita su dirección",
     "mapOff": "{n, plural, one {Un sitio sabe} other {# sitios saben}} dónde están, y no hay mapa donde dibujarlos: un tile es una petición al servidor de otro llevando las coordenadas de dónde compras, así que queda apagado hasta que digas de dónde salen en MAP_TILES_URL.",
