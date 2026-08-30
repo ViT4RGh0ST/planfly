@@ -200,7 +200,21 @@ export function PlaceMap({
       <div
         ref={container}
         style={{ height }}
-        className="w-full overflow-hidden rounded-lg border border-border bg-muted [&_.leaflet-container]:bg-muted"
+        /*
+         * `isolate` is not decoration: it is what keeps the map underneath the
+         * dialog.
+         *
+         * Leaflet stacks its own world with generous z-indexes — 400 for the
+         * tile panes, 800 for the zoom control — and those are absolute numbers
+         * in whatever stacking context they land in. Dropped straight onto the
+         * page they climb over a modal that sits at 50, so the map of every
+         * place painted right across the form for correcting one of them.
+         *
+         * Isolating makes the wrapper its own stacking context: everything
+         * Leaflet does stays inside it, and what competes with the dialog is
+         * this element, at z-0.
+         */
+        className="relative isolate z-0 w-full overflow-hidden rounded-lg border border-border bg-muted [&_.leaflet-container]:bg-muted"
         role="application"
         aria-label={pick ? t("ui.places.mapPickLabel") : t("ui.places.mapLabel", { n: points.length })}
       />
