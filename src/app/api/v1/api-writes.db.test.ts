@@ -69,6 +69,39 @@ describe("the routes that write", { skip: hasDb() ? false : "no Postgres availab
     assert.match((await res.json()).message, /Banco Nuevo/);
   });
 
+  it("what the 409 tells the bot to do next is a thing the API accepts", async () => {
+    /*
+     * The two calls have to be walked together, because each one passed on its
+     * own and the pair did not.
+     *
+     * The 409 says «call again with confirm=true». `confirm` was not declared in
+     * the schema, and `rejectUnknownKeys` walks the schema — so the second call
+     * came back 400, «I do not know the field confirm». The agent did exactly as
+     * it was told, was refused for doing it, and tried again: a closed loop in
+     * which the account could never be opened, and nothing in either answer said
+     * why. It sat there for days.
+     */
+    const { POST } = await import("./accounts/route");
+
+    const warned = await POST(
+      pide("/api/v1/accounts", {
+        method: "POST", token,
+        body: { name: "Efectivo COP", type: "cash", currency: "VES" },
+      }),
+    );
+    assert.equal(warned.status, 409);
+    const advice = await warned.json();
+    assert.match(advice.message, /confirm/, "the 409 has to name the way through");
+
+    const created = await POST(
+      pide("/api/v1/accounts", {
+        method: "POST", token,
+        body: { name: "Efectivo COP", type: "cash", currency: "VES", confirm: true },
+      }),
+    );
+    assert.equal(created.status, 201, "and taking that way through has to work");
+  });
+
   it("a made-up account type is rejected", async () => {
     const { POST } = await import("./accounts/route");
     const res = await POST(

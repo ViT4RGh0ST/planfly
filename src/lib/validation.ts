@@ -152,6 +152,16 @@ export const createAccountSchema = z.object({
   institution: z.string().max(120).optional(),
   /** Comma-separated: they are the hints the bot finds the account by. */
   aliases: z.string().max(400).optional(),
+  /**
+   * The person's explicit yes, after the server warned the account may exist.
+   *
+   * It has to be DECLARED here even though the route only needs its value,
+   * because `rejectUnknownKeys` walks this shape: without it the API answered
+   * «call again with confirm=true» and then refused `confirm` as a field it did
+   * not know. The bot did as it was told, was told no, and tried again — a
+   * closed loop in which the account could never be opened.
+   */
+  confirm: z.boolean().optional(),
 });
 
 export const updateAccountSchema = createAccountSchema.partial().extend({
