@@ -524,6 +524,9 @@ export type PricePoint = {
   unit: string | null;
   transactionId: string;
   description: string;
+  /** Where it was bought. Null for an entry with no place on it. */
+  place: string | null;
+  placeId: string | null;
 };
 
 export type ProductHistory = {
@@ -563,14 +566,22 @@ export async function productHistory(
     unit: string | null;
     transaction_id: string;
     description: string;
+    place: string | null;
+    place_id: string | null;
   }>(sql`
     SELECT t.occurred_on, t.id AS transaction_id, t.description, i.currency, i.unit,
+           -- Where it was bought, which the entry has always known: payee_id
+           -- has hung off every transaction since the beginning and nothing read
+           -- it. A price without its place answers «is it dearer?» and cannot
+           -- answer «is it dearer HERE?», which is the one you can act on.
+           p.name AS place, p.id AS place_id,
            i.base_quantity::text AS quantity,
            round(i.total_minor / i.base_quantity)::text AS unit_price,
            round(i.base_amount_bcv_minor / i.base_quantity)::text AS unit_price_bcv,
            round(i.base_amount_p2p_minor / i.base_quantity)::text AS unit_price_p2p
       FROM transaction_items i
       JOIN transactions t ON t.id = i.transaction_id
+      LEFT JOIN payees p ON p.id = t.payee_id
      WHERE i.household_id = ${householdId}
        AND i.product_id = ${productId}
        AND t.voided_at IS NULL
@@ -591,6 +602,8 @@ export async function productHistory(
       unit: r.unit,
       transactionId: r.transaction_id,
       description: r.description,
+      place: r.place,
+      placeId: r.place_id,
     })),
   };
 }

@@ -31,7 +31,7 @@ import {
   type ItemInput,
   type PreparedItem,
 } from "./products";
-import { resolveAccount, resolveCategory } from "./resolve-entities";
+import { resolveAccount, resolveCategory, resolvePayee } from "./resolve-entities";
 import { InvalidTransactionError } from "./record-transaction";
 
 /**
@@ -62,6 +62,13 @@ export type UpdateTransactionInput = {
   account?: string;
   toAccount?: string;
   category?: string;
+  /**
+   * The shop, by name or alias. Empty string clears it.
+   *
+   * A correction is where a place gets put on an entry that never had one —
+   * which is nearly all of them, since until now no door could set it.
+   */
+  payee?: string;
   description?: string;
   /** 'YYYY-MM-DD'. Changing it re-resolves THAT day's rates. */
   occurredOn?: string;
@@ -178,6 +185,7 @@ export async function updateTransaction(
       occurredOn: transactions.occurredOn,
       description: transactions.description,
       notes: transactions.notes,
+      payeeId: transactions.payeeId,
       source: transactions.source,
       voidedAt: transactions.voidedAt,
     })
@@ -424,6 +432,37 @@ export async function updateTransaction(
     if (category.id !== from.categoryId) {
       patchOf(from).categoryId = category.id;
       changes.push(t("services.updateTransaction.change.category", { name: category.name }));
+    }
+  }
+
+  // ── Place ─────────────────────────────────────────────────────────────────
+  if (input.payee != null) {
+    const wanted = input.payee.trim();
+    if (!wanted) {
+      if (header.payeeId != null) {
+        headerPatch.payeeId = null;
+        changes.push(t("services.updateTransaction.change.noPayee"));
+      }
+    } else {
+      /*
+       * Unlike the recording path, a correction REFUSES an unknown place.
+       *
+       * There the purchase already happened and losing it would be worse than
+       * losing its shop, so it warns. Here somebody is sitting in front of the
+       * screen typing a name: silently leaving it as it was would be the screen
+       * pretending to have understood.
+       */
+      const payee = await resolvePayee(input.householdId, wanted);
+      if (!payee) {
+        throw new InvalidTransactionError(
+          t("services.updateTransaction.payeeNotFound", { input: wanted }),
+          "payee_not_found",
+        );
+      }
+      if (payee.id !== header.payeeId) {
+        headerPatch.payeeId = payee.id;
+        changes.push(t("services.updateTransaction.change.payee", { name: payee.name }));
+      }
     }
   }
 

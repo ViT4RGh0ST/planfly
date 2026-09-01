@@ -14,6 +14,7 @@ import {
   Repeat,
   Receipt,
   TrendingUp,
+  Store,
   Tags,
   Upload,
   Wallet,
@@ -69,6 +70,7 @@ const GROUPS = [
       { href: "/review", key: "review", icon: ClipboardCheck, showBadge: true },
       { href: "/import", key: "import", icon: Upload },
       { href: "/categories", key: "categories", icon: Tags },
+      { href: "/places", key: "places", icon: Store },
     ],
   },
 ];

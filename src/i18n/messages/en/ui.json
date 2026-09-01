@@ -38,7 +38,9 @@
       "price": "Price",
       "change": "Change"
     },
-    "firstTime": "first time"
+    "firstTime": "first time",
+    "cheapestAt": "Cheapest at {place}, {amount}.",
+    "dearestAt": "Dearest at {place}, {amount}."
   },
   "nav": {
     "sections": "Sections",
@@ -58,6 +60,7 @@
     "review": "Review",
     "import": "Import",
     "categories": "Categories",
+    "places": "Places",
     "signOut": "Sign out",
     "pendingReview": "{n, plural, one { pending review} other { pending review}}",
     "language": "Language",
@@ -270,7 +273,8 @@
     "unconvertible": "There is no rate to value {currency} in {base}: this entry will be saved without an equivalent. Only the {base}/VES pair is solved.",
     "breakDown": "Break down products",
     "saving": "Saving…",
-    "save": "Save"
+    "save": "Save",
+    "place": "Place"
   },
   "rowActions": {
     "menu": "Actions on {description}",
@@ -314,7 +318,8 @@
     "toRate": "Destination rate",
     "ratePlaceholder": "Empty: the day's one",
     "breakdown": "Breakdown",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "noPlace": "Nowhere in particular"
   },
   "review": {
     "title": "Review tray",
@@ -405,6 +410,67 @@
       "aliasesHelp": "Comma separated. They are the words the bot finds this category by when you write «I spent 300 at the super». No two categories may share one: it would have to choose between them.",
       "create": "Create category"
     }
+  },
+  "places": {
+    "title": "Places",
+    "hint": "Where you buy. Two branches of one chain are two places, because they do not price the same — and they still add up together.",
+    "archived": "Archived",
+    "empty": "No places yet. One is born the first time the bot reads a shop's name off a receipt.",
+    "add": "Add place",
+    "menu": "Actions on {name}",
+    "correct": "Correct…",
+    "archive": "Archive",
+    "unarchive": "Restore",
+    "noDetails": "no fiscal id, no address",
+    "noItems": "no itemised receipt",
+    "entries": "{n, plural, one {# purchase} other {# purchases}}",
+    "items": "{n, plural, one {# priced item} other {# priced items}}",
+    "form": {
+      "titleEdit": "Correct place",
+      "titleNew": "Add place",
+      "help": "A branch hangs off its brand: they price differently, and their totals still add up together.",
+      "failed": "I could not load that place.",
+      "name": "Name",
+      "namePlaceholder": "Farmatodo La Trinidad",
+      "taxId": "Fiscal id",
+      "taxIdHelp": "The one thing about a shop that does not change. Every invoice carries it.",
+      "brand": "Branch of",
+      "noBrand": "Not a branch",
+      "brandHelp": "For a chain, so its branches add up together.",
+      "brandLocked": "It has branches of its own.",
+      "address": "Address",
+      "addressPlaceholder": "Av. La Trinidad, Caracas",
+      "category": "Files under",
+      "noCategory": "No default",
+      "aliases": "Other names",
+      "aliasesPlaceholder": "farmatodo trinidad, farma trinidad",
+      "aliasesHelp": "Comma separated. They are the words the bot finds this place by on a receipt. No two places may share one: it would have to choose between them.",
+      "sharedTaxId": "Yes — it is another branch of that same company. Keep both.",
+      "create": "Create place",
+      "coordinates": "Location",
+      "coordinatesHelp": "Paste the two numbers, or the whole link from a map. There is no lookup: your addresses stay here.",
+      "thisPlace": "This place",
+      "findOnMap": "Find",
+      "fillAddress": "Fill the address from this point",
+      "coordinatesHelpGeo": "Click the map, or paste the numbers or a link. «Find» asks a geocoding service — the only thing here that leaves your machine.",
+      "lookUpFailed": "The lookup found nothing. Point at it on the map instead."
+    },
+    "branchNeedsAddress": "a branch needs its address",
+    "mapOff": "{n, plural, one {One place knows} other {# places know}} where they are, and there is no map to draw them on: a map tile is a request to somebody else's server carrying the coordinates of where you shop, so it stays off until you name the tile source in MAP_TILES_URL.",
+    "mapLabel": "{n, plural, one {# place} other {# places}} on the map",
+    "mapCredit": "Tiles from {host}, which sees these coordinates.",
+    "unplacedTitle": "Bought somewhere nobody wrote down",
+    "unplacedHint": "For months no way in could set a place, so the shop stayed inside the description. Pick which one each of these was, and every entry that says the same thing gets it at once.",
+    "unplacedCount": "{n, plural, one {# entry} other {# entries}}",
+    "unplacedItems": "{n, plural, one {# priced item} other {# priced items}}",
+    "unplacedPick": "Which place?",
+    "unplacedChoose": "Place for «{description}»",
+    "unplacedAssign": "Assign",
+    "unplacedMore": "There are {n, plural, one {# more group} other {# more groups}} below these; they appear as these are cleared.",
+    "unplacedCreate": "Create as a place",
+    "mapOffPick": "There is no map to point at: a tile is a request to somebody else's server carrying where you shop, so it stays off until you name the source in MAP_TILES_URL. The two numbers can still be pasted above.",
+    "mapPickLabel": "Click the map to set where this place is",
+    "mapFailed": "The map could not load."
   },
   "budgets": {
     "title": "Budgets",

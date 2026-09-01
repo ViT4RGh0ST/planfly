@@ -55,6 +55,32 @@ export default async function ProductPage({
         100
       : null;
 
+  /*
+   * Where it came out cheapest, and where dearest.
+   *
+   * In the base currency and never in bolívares: two purchases three months
+   * apart at the same shop differ by the rate before they differ by the price,
+   * and a comparison in bolívares would crown whichever place you happened to
+   * visit earliest. It is the same reason the chart is in base currency.
+   *
+   * Only with two places or more. With one, «cheapest» is a word for a list of
+   * one thing.
+   */
+  const byPlace = new Map<string, { place: string; minor: number; on: string }>();
+  for (const point of withRate) {
+    if (!point.place) continue;
+    const minor = (valuation === "bcv" ? point.unitPriceBcvMinor : point.unitPriceP2pMinor)!;
+    const seen = byPlace.get(point.place);
+    // The latest price at each place, not the lowest it ever was: what you can
+    // act on is what it costs there now.
+    if (!seen || point.occurredOn >= seen.on) {
+      byPlace.set(point.place, { place: point.place, minor, on: point.occurredOn });
+    }
+  }
+  const places = [...byPlace.values()].sort((a, b) => a.minor - b.minor);
+  const cheapest = places.length > 1 ? places[0] : null;
+  const dearest = places.length > 1 ? places[places.length - 1] : null;
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
       <Link
@@ -82,6 +108,21 @@ export default async function ProductPage({
           )}
         </p>
       </header>
+
+      {cheapest && dearest && cheapest.minor < dearest.minor && (
+        <p className="-mt-4 mb-8 max-w-prose text-sm text-muted-foreground">
+          {t("ui.products.cheapestAt", {
+            place: cheapest.place,
+            amount: formatAmount(cheapest.minor, ctx.baseCurrency),
+          })}{" "}
+          <span className="text-foreground">
+            {t("ui.products.dearestAt", {
+              place: dearest.place,
+              amount: formatAmount(dearest.minor, ctx.baseCurrency),
+            })}
+          </span>
+        </p>
+      )}
 
       {withRate.length < 2 ? (
         // With a single point there is no curve: saying so is more useful than drawing
@@ -116,6 +157,10 @@ export default async function ProductPage({
                 <p className="text-xs text-muted-foreground">
                   {formatDayYear(p.occurredOn, ctx.locale)} · {p.quantity}{" "}
                   {p.unit ?? t(`domain.unit.bare.${history.baseUnit}`)}
+                  {/* The place, when the entry carries one. An entry written by
+                      hand often does not, and inventing «unknown» for it would
+                      add noise to every row to say nothing. */}
+                  {p.place && <> · {p.place}</>}
                 </p>
               </div>
               <div className="shrink-0 text-right leading-tight">

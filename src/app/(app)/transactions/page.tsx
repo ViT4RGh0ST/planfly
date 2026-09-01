@@ -7,7 +7,7 @@ import { ResultSummary } from "@/components/result-summary";
 import { TransactionFacets } from "@/components/transaction-facets";
 import { TransactionsTable } from "@/components/transactions-table";
 import { db } from "@/db";
-import { accounts, categories } from "@/db/schema";
+import { accounts, categories, payees } from "@/db/schema";
 import { requireSession } from "@/lib/session";
 import { canonicalPeriod, resolvePeriod, today } from "@/lib/dates";
 import { periodName } from "@/i18n/periods";
@@ -87,7 +87,7 @@ export default async function TransactionsPage({
     includeVoided: params.anulados === "1",
   };
 
-  const [accountList, categoryList, transactions, total, totals, facets, rates] =
+  const [accountList, categoryList, placeList, transactions, total, totals, facets, rates] =
     await Promise.all([
       db
         .select({ name: accounts.name, currency: accounts.currency })
@@ -99,6 +99,12 @@ export default async function TransactionsPage({
         .from(categories)
         .where(and(eq(categories.householdId, ctx.householdId), isNull(categories.archivedAt)))
         .orderBy(asc(categories.sortOrder)),
+      // The shops, so a correction can put one on an entry that never had it.
+      db
+        .select({ name: payees.name })
+        .from(payees)
+        .where(and(eq(payees.householdId, ctx.householdId), isNull(payees.archivedAt)))
+        .orderBy(asc(payees.name)),
       recentTransactions(ctx.householdId, { limit: PAGE_SIZE, ...filters }),
       countTransactions(ctx.householdId, filters),
       filteredTotals(ctx.householdId, filters),
@@ -194,6 +200,7 @@ export default async function TransactionsPage({
               baseCurrency={ctx.baseCurrency}
               valuation={valuation}
               categories={categoryList.map((c) => c.name)}
+              places={placeList.map((p) => p.name)}
               accounts={accountList}
               todayDate={date}
               filtered={filtered}

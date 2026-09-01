@@ -144,6 +144,14 @@ call **did land**. Retrying with a changed amount to dodge it leaves two expense
 where there was one — and the comparison carries slack precisely so that changing
 a cent does not work.
 
+**1b. Opening an account answers 409 before it answers 201.** Creating one that
+resembles an existing account — «Provincial» where «Banco Provincial» already is
+— returns `account_may_exist` naming the one it found, and creates nothing. That
+is not a failure: two accounts for one bank do not clash on any index, and from
+then on half the expenses go to each, so both balances and net worth are false.
+Ask the person, and when they say it really is another one, send the same body
+again **with `confirm: true`**. Nothing else about the call changes.
+
 **2. A valid field in the wrong place is rejected.** `to_account` is the account
 receiving in a transfer; sending it on an expense returns 422 telling you to use
 `account`. It used to be ignored in silence and the expense ended up in the

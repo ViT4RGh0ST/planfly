@@ -34,7 +34,7 @@ export const POST = withToken("accounts:write", async ({ principal, req }) => {
   rejectIdentityKeys(body);
   rejectUnknownKeys(body, createAccountSchema);
   const input = createAccountSchema.parse(body);
-  const confirm = body?.confirm === true;
+  const confirm = input.confirm === true;
 
   if (!confirm) {
     // With the currency first, same as when recording: "efectivo" is ambiguous

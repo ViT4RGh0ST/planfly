@@ -38,7 +38,9 @@
       "price": "Precio",
       "change": "Cambio"
     },
-    "firstTime": "primera vez"
+    "firstTime": "primera vez",
+    "cheapestAt": "Más barato en {place}, {amount}.",
+    "dearestAt": "Más caro en {place}, {amount}."
   },
   "nav": {
     "sections": "Secciones",
@@ -58,6 +60,7 @@
     "review": "Revisar",
     "import": "Importar",
     "categories": "Categorías",
+    "places": "Sitios",
     "signOut": "Salir",
     "pendingReview": "{n, plural, one { pendiente de revisar} other { pendientes de revisar}}",
     "language": "Idioma",
@@ -270,7 +273,8 @@
     "unconvertible": "No hay tasa para valorar {currency} en {base}: este movimiento se va a guardar sin equivalente. Solo está resuelto el par {base}/VES.",
     "breakDown": "Desglosar productos",
     "saving": "Guardando…",
-    "save": "Guardar"
+    "save": "Guardar",
+    "place": "Sitio"
   },
   "rowActions": {
     "menu": "Acciones sobre {description}",
@@ -314,7 +318,8 @@
     "toRate": "Tasa de destino",
     "ratePlaceholder": "Vacío: la del día",
     "breakdown": "Desglose",
-    "saveChanges": "Guardar cambios"
+    "saveChanges": "Guardar cambios",
+    "noPlace": "En ningún sitio"
   },
   "review": {
     "title": "Bandeja de revisión",
@@ -405,6 +410,67 @@
       "aliasesHelp": "Separados por comas. Son las palabras con las que el bot encuentra esta categoría cuando le escribes «gasté 300 en el super». Dos categorías no pueden compartir uno: tendría que elegir entre ellas.",
       "create": "Crear categoría"
     }
+  },
+  "places": {
+    "title": "Sitios",
+    "hint": "Dónde compras. Dos sucursales de una cadena son dos sitios, porque no cobran igual — y aun así suman juntas.",
+    "archived": "Archivados",
+    "empty": "Todavía no hay sitios. Nace uno la primera vez que el bot lee el nombre de una tienda en una factura.",
+    "add": "Añadir sitio",
+    "menu": "Acciones sobre {name}",
+    "correct": "Corregir…",
+    "archive": "Archivar",
+    "unarchive": "Recuperar",
+    "noDetails": "sin RIF, sin dirección",
+    "noItems": "sin factura desglosada",
+    "entries": "{n, plural, one {# compra} other {# compras}}",
+    "items": "{n, plural, one {# ítem con precio} other {# ítems con precio}}",
+    "form": {
+      "titleEdit": "Corregir sitio",
+      "titleNew": "Añadir sitio",
+      "help": "Una sucursal cuelga de su marca: cobran distinto, y sus totales siguen sumando juntos.",
+      "failed": "No pude cargar ese sitio.",
+      "name": "Nombre",
+      "namePlaceholder": "Farmatodo La Trinidad",
+      "taxId": "RIF",
+      "taxIdHelp": "Lo único de una tienda que no cambia. Toda factura lo trae.",
+      "brand": "Sucursal de",
+      "noBrand": "No es sucursal",
+      "brandHelp": "Para una cadena, para que sus sucursales sumen juntas.",
+      "brandLocked": "Tiene sucursales propias.",
+      "address": "Dirección",
+      "addressPlaceholder": "Av. La Trinidad, Caracas",
+      "category": "Cae en",
+      "noCategory": "Sin categoría fija",
+      "aliases": "Otros nombres",
+      "aliasesPlaceholder": "farmatodo trinidad, farma trinidad",
+      "aliasesHelp": "Separados por comas. Son las palabras con las que el bot encuentra este sitio en una factura. Dos sitios no pueden compartir uno: tendría que elegir entre ellos.",
+      "sharedTaxId": "Sí — es otra sucursal de esa misma empresa. Guarda las dos.",
+      "create": "Crear sitio",
+      "coordinates": "Ubicación",
+      "coordinatesHelp": "Pega los dos números, o el enlace entero de un mapa. No hay búsqueda: tus direcciones se quedan aquí.",
+      "thisPlace": "Este sitio",
+      "findOnMap": "Buscar",
+      "fillAddress": "Poner la dirección de este punto",
+      "coordinatesHelpGeo": "Haz clic en el mapa, o pega los números o un enlace. «Buscar» le pregunta a un servicio de geocodificación — lo único aquí que sale de tu máquina.",
+      "lookUpFailed": "La búsqueda no encontró nada. Márcalo en el mapa mejor."
+    },
+    "branchNeedsAddress": "una sucursal necesita su dirección",
+    "mapOff": "{n, plural, one {Un sitio sabe} other {# sitios saben}} dónde están, y no hay mapa donde dibujarlos: un tile es una petición al servidor de otro llevando las coordenadas de dónde compras, así que queda apagado hasta que digas de dónde salen en MAP_TILES_URL.",
+    "mapLabel": "{n, plural, one {# sitio} other {# sitios}} en el mapa",
+    "mapCredit": "Tiles de {host}, que ve estas coordenadas.",
+    "unplacedTitle": "Comprado en un sitio que nadie anotó",
+    "unplacedHint": "Durante meses ninguna vía podía poner el sitio, así que la tienda se quedó dentro de la descripción. Di cuál era cada uno y todos los movimientos que dicen lo mismo lo reciben de una vez.",
+    "unplacedCount": "{n, plural, one {# movimiento} other {# movimientos}}",
+    "unplacedItems": "{n, plural, one {# ítem con precio} other {# ítems con precio}}",
+    "unplacedPick": "¿Cuál sitio?",
+    "unplacedChoose": "Sitio para «{description}»",
+    "unplacedAssign": "Asignar",
+    "unplacedMore": "Hay {n, plural, one {# grupo más} other {# grupos más}} debajo de estos; van apareciendo a medida que resuelvas estos.",
+    "unplacedCreate": "Crear como sitio",
+    "mapOffPick": "No hay mapa al que apuntar: un tile es una petición al servidor de otro llevando dónde compras, así que queda apagado hasta que digas de dónde salen en MAP_TILES_URL. Los dos números se pueden pegar arriba igual.",
+    "mapPickLabel": "Haz clic en el mapa para poner dónde está este sitio",
+    "mapFailed": "No se pudo cargar el mapa."
   },
   "budgets": {
     "title": "Presupuestos",

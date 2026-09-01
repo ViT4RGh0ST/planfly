@@ -48,7 +48,8 @@
       "alreadyStored": "Ya lo tenía registrado, no lo dupliqué. ",
       "noDescription": "Sin descripción",
       "transferDescription": "Transferencia"
-    }
+    },
+    "payeeNotRecognised": "No conozco el sitio «{input}». El movimiento queda registrado y esperando en la bandeja para que digas cuál tienda fue."
   },
   "updateTransaction": {
     "householdNotFound": "El hogar no existe",
@@ -87,13 +88,16 @@
       "items": "desglose a {n, plural, one {# producto} other {# productos}}",
       "description": "descripción",
       "notes": "nota",
-      "reviewed": "marcado como revisado"
+      "reviewed": "marcado como revisado",
+      "payee": "sitio a {name}",
+      "noPayee": "sitio quitado"
     },
     "summary": {
       "nothingToChange": "No había nada que cambiar.",
       "done": "Listo, corregí {changes}.",
       "markedReviewed": "Marcado como revisado."
-    }
+    },
+    "payeeNotFound": "No conozco el sitio «{input}». Créalo en Sitios primero, o déjalo vacío."
   },
   "financing": {
     "missingRate": "No tengo tasa {source} del {date} para pasar el precio de {from} a {to}.",
@@ -194,6 +198,42 @@
     "archived": "{name} archivada. Sus movimientos siguen ahí.",
     "unarchived": "{name} vuelve a la lista."
   },
+  "managePayees": {
+    "missingName": "El sitio necesita un nombre.",
+    "duplicateArchived": "Ya existe un sitio archivado que se llama \"{name}\". Cámbiale el nombre al nuevo, o desarchiva aquel.",
+    "duplicateName": "Ya tienes un sitio que se llama \"{name}\".",
+    "duplicateAlias": "\"{alias}\" ya es otro nombre de {name}. Que dos sitios respondan a la misma palabra hace que el bot elija entre ellos por orden alfabético, y el historial de precios de una tienda quedaría partido en dos.",
+    "taxIdArchived": "{name} lleva el RIF {taxId} y está archivado. Desarchívalo en vez de escribirlo otra vez, o sus compras quedarían bajo dos nombres.",
+    "payeeNotFound": "No encontré ese sitio.",
+    "categoryNotFound": "No encontré esa categoría.",
+    "ownParent": "Un sitio no puede ser sucursal de sí mismo.",
+    "parentIsBranch": "{parent} ya es sucursal de otro sitio. Una cadena va dos niveles y no más, porque hasta ahí mira su total.",
+    "parentArchived": "{parent} está archivado. Desarchívalo primero, o la sucursal colgaría de algo que no está en la lista.",
+    "hasBranches": "{name} tiene sucursales propias, así que no puede volverse una: eso haría un tercer nivel, que ningún total mira.",
+    "created": "Sitio {name} creado.",
+    "createdWithCategory": "Sitio {name} creado, con {category} como categoría por defecto.",
+    "createdBranch": "Sitio {name} creado como sucursal de {parent}.",
+    "change": {
+      "name": "nombre",
+      "taxId": "RIF",
+      "address": "dirección",
+      "parent": "ahora sucursal de {parent}",
+      "noParent": "ya no es sucursal",
+      "category": "categoría por defecto a {category}",
+      "noCategory": "sin categoría por defecto",
+      "aliases": "otros nombres",
+      "coordinates": "ubicación",
+      "noCoordinates": "ubicación quitada"
+    },
+    "nothingToChange": "No había nada que cambiar.",
+    "done": "Listo, corregí {changes}.",
+    "alreadyArchived": "{name} ya estaba archivado.",
+    "archived": "{name} archivado. Sus compras y sus precios siguen ahí.",
+    "unarchived": "{name} vuelve a la lista.",
+    "taxIdSameSpot": "{name} ya lleva el RIF {taxId} en esa misma dirección. Es la tienda que ya tienes: una segunda fila le parte el historial de precios a la mitad, y ninguna de las dos te diría cuánto cuesta nada.",
+    "taxIdOtherSpot": "{name} lleva el RIF {taxId}, en otra dirección. Eso se lee como una segunda sucursal de la misma empresa, que es algo que pasa — dilo y guardo las dos, y cuelga esta de su marca para que sus totales sigan sumando juntos.",
+    "placed": "{n, plural, one {# movimiento} other {# movimientos}} ahora comprados en {name}."
+  },
   "products": {
     "noText": "La línea no tiene texto con el que identificar un producto",
     "mergeWithItself": "No se puede fusionar un producto consigo mismo",
@@ -277,7 +317,8 @@
     "missingEntry": "Falta el movimiento a corregir.",
     "missingAccount": "Falta la cuenta a corregir.",
     "missingCategory": "Falta la categoría a corregir.",
-    "budgetSaved": "Presupuesto guardado. {summary}"
+    "budgetSaved": "Presupuesto guardado. {summary}",
+    "missingPayee": "Falta el sitio a corregir."
   },
   "amount": {
     "head": "No pude interpretar el monto {input}: {reason}",

@@ -45,10 +45,18 @@ import {
  * and presenting them as a single field was the way to unbalance them without
  * noticing.
  */
+/**
+ * What the `<select>` sends for «nowhere», which is a real answer: it takes the
+ * place off an entry that had one. An empty value is not allowed in a Radix
+ * item, so it travels as a word and the action turns it back into empty.
+ */
+const NO_PLACE = "—";
+
 export function TransactionEdit({
   id,
   accounts,
   categories,
+  places,
   todayDate,
   open,
   onOpenChange,
@@ -56,6 +64,8 @@ export function TransactionEdit({
   id: string;
   accounts: { name: string; currency: string }[];
   categories: string[];
+  /** The shops, so a correction can put one on an entry that never had it. */
+  places: string[];
   todayDate: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -266,6 +276,30 @@ export function TransactionEdit({
                     {categories.map((c) => (
                       <SelectItem key={c} value={c}>
                         {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Where it was bought.
+                Outside the category block on purpose: a transfer has no
+                category and can still have been made at a shop, and this is the
+                only screen that can put a place on the months of entries
+                recorded before any door could set one. */}
+            {places.length > 0 && (
+              <div className="grid min-w-0 gap-2">
+                <Label htmlFor="edit-payee">{t("ui.form.place")}</Label>
+                <Select name="payee" defaultValue={data.payee || NO_PLACE}>
+                  <SelectTrigger id="edit-payee">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_PLACE}>{t("ui.edit.noPlace")}</SelectItem>
+                    {places.map((place) => (
+                      <SelectItem key={place} value={place}>
+                        {place}
                       </SelectItem>
                     ))}
                   </SelectContent>

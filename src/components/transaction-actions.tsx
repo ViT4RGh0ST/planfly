@@ -44,6 +44,7 @@ export function TransactionActions({
   baseCurrency,
   voided,
   categories,
+  places,
   accounts,
   todayDate,
 }: {
@@ -53,6 +54,7 @@ export function TransactionActions({
   baseCurrency: string;
   voided: boolean;
   categories: string[];
+  places: string[];
   /** With no accounts the full form cannot be offered: only the shortcuts. */
   accounts?: { name: string; currency: string }[];
   todayDate?: string;
@@ -222,6 +224,7 @@ export function TransactionActions({
           id={id}
           accounts={accounts!}
           categories={categories}
+          places={places}
           todayDate={todayDate!}
           open={editing}
           onOpenChange={setEditing}

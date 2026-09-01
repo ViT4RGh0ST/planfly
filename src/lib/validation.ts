@@ -152,6 +152,16 @@ export const createAccountSchema = z.object({
   institution: z.string().max(120).optional(),
   /** Comma-separated: they are the hints the bot finds the account by. */
   aliases: z.string().max(400).optional(),
+  /**
+   * The person's explicit yes, after the server warned the account may exist.
+   *
+   * It has to be DECLARED here even though the route only needs its value,
+   * because `rejectUnknownKeys` walks this shape: without it the API answered
+   * «call again with confirm=true» and then refused `confirm` as a field it did
+   * not know. The bot did as it was told, was told no, and tried again — a
+   * closed loop in which the account could never be opened.
+   */
+  confirm: z.boolean().optional(),
 });
 
 export const updateAccountSchema = createAccountSchema.partial().extend({
@@ -177,6 +187,33 @@ export const createCategorySchema = z.object({
 });
 
 export const updateCategorySchema = createCategorySchema.partial().extend({
+  id: z.string().uuid(),
+});
+
+/**
+ * A place as the screen sends it.
+ *
+ * `tax_id` is not validated against the Venezuelan RIF shape on purpose: a
+ * receipt from a Colombian shop or a made-up number for the plumber are both
+ * legitimate here, and rejecting them would be the app arguing with the paper.
+ * It is normalised for comparison and stored; it is never computed with.
+ */
+export const createPayeeSchema = z.object({
+  name: z.string().min(1).max(120),
+  tax_id: z.string().max(40).optional(),
+  address: z.string().max(300).optional(),
+  /** Empty string from a `<select>` means «not a branch», which is a real choice. */
+  parent_id: z.union([z.string().uuid(), z.literal("")]).optional(),
+  default_category_id: z.union([z.string().uuid(), z.literal("")]).optional(),
+  /** A pasted pair of numbers or a map URL. Parsed, never validated into an error. */
+  coordinates: z.string().max(500).optional(),
+  /** Comma-separated: they are the hints the bot finds the place by. */
+  aliases: z.string().max(400).optional(),
+  /** «Yes, it really is another branch of that same company.» */
+  allow_shared_tax_id: z.boolean().optional(),
+});
+
+export const updatePayeeSchema = createPayeeSchema.partial().extend({
   id: z.string().uuid(),
 });
 

@@ -6,6 +6,7 @@ import { seedScenario, type Scenario } from "@/test/fixtures";
 import { recordTransaction } from "./record-transaction";
 import { updateTransaction } from "./update-transaction";
 import { filteredTotals, netWorth, spendingByCategory } from "./reports";
+import { today } from "@/lib/dates";
 import { pool } from "@/db";
 
 /**
@@ -16,8 +17,19 @@ import { pool } from "@/db";
  * TypeScript compiled without a murmur. Neither is visible without running the
  * query against data.
  */
-const DATE = "2026-08-21";
 const TZ = "America/Caracas";
+/*
+ * Today, and not a date written down.
+ *
+ * One of these tests asks for the DEFAULT period, which is the current month,
+ * and the scenario used to be dated in August: it passed every day of that
+ * month and started failing on the 1st of September, with both totals at zero
+ * and an assertion about exchange rates blaming the rates. A test whose answer
+ * depends on the day it runs will one morning accuse the wrong thing.
+ *
+ * The rates are seeded on this same date, so nothing else in the file moves.
+ */
+const DATE = today(TZ);
 let e: Scenario;
 
 describe("the reports against the database", { skip: hasDb() ? false : "no Postgres available" }, () => {

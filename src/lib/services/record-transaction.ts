@@ -26,6 +26,7 @@ import {
 import {
   resolveAccount,
   resolveCategory,
+  resolvePayee,
   REVIEW_THRESHOLD,
   type Match,
 } from "./resolve-entities";
@@ -83,6 +84,15 @@ export type RecordTransactionInput = {
   category?: string;
   description?: string;
   payeeId?: string;
+  /**
+   * The shop, in the words of whoever writes: «MI SUPER, C.A».
+   *
+   * Resolved HERE and not by the caller. It used to be resolved in the v1 route,
+   * which meant the other three doors could not set it at all — and when it
+   * failed to match, the route dropped it and returned 201. Months of entries
+   * came in with the shop's name inside the description and no place on them.
+   */
+  payee?: string;
   /** 'YYYY-MM-DD'. Defaults to today in the household's timezone. */
   occurredOn?: string;
   notes?: string;
@@ -445,6 +455,27 @@ export async function recordTransaction(
     }
   }
 
+  // ── Place ─────────────────────────────────────────────────────────────────
+  /*
+   * An unmatched place WARNS, exactly like an unmatched category.
+   *
+   * It is not created on the fly: a shop carries a fiscal id and an address that
+   * only a person can supply, and a typo would quietly become a second branch
+   * splitting one shop's prices. And it does not fail either — the purchase
+   * happened, and refusing to record it because a name is new would be the
+   * worst of the three. So it lands in the review tray, which is what the tray
+   * is for.
+   */
+  let payee: Match | null = null;
+  if (input.payeeId) {
+    payee = { id: input.payeeId, name: "", score: 1, via: "slug" };
+  } else if (input.payee) {
+    payee = await resolvePayee(household.id, input.payee);
+    if (!payee) {
+      warnings.push(t("services.recordTransaction.payeeNotRecognised", { input: input.payee }));
+    }
+  }
+
   // ── Amounts ───────────────────────────────────────────────────────────────
   const currency = (input.currency ?? fromAccount.currency).toUpperCase();
   if (currency !== fromAccount.currency) {
@@ -733,7 +764,7 @@ export async function recordTransaction(
         occurredOn,
         description,
         notes: input.notes ?? null,
-        payeeId: input.payeeId ?? null,
+        payeeId: payee?.id ?? null,
         paymentMethod: input.paymentMethod ?? inferPaymentMethod(fromAccount.type),
         source: input.source,
         sourceRef: input.sourceRef ?? null,

@@ -9,11 +9,13 @@ import {
   categories,
   households,
   netWorthSnapshots,
+  payees,
   transactionEntries,
   transactions,
 } from "@/db/schema";
 import { requireSession, requireWriter } from "@/lib/session";
 import { amountErrorMessage, messageForScreen } from "@/lib/user-error";
+import { formatCoordinates } from "@/lib/coordinates";
 import { normalizeLocale, type Locale } from "@/i18n/config";
 import { getTranslator } from "@/i18n/translator";
 import { formatAmount, formatRate, parseRate, InvalidAmountError } from "@/lib/money";
@@ -31,7 +33,11 @@ import {
   saveRecurringRule,
   setRecurringActive,
 } from "@/lib/services/recurring";
-import { recordTransaction, type PaymentMethod } from "@/lib/services/record-transaction";
+import {
+  InvalidTransactionError,
+  recordTransaction,
+  type PaymentMethod,
+} from "@/lib/services/record-transaction";
 import { updateTransaction } from "@/lib/services/update-transaction";
 import { voidTransaction as voidTransactionRecord } from "@/lib/services/void-transaction";
 import { removeRule, saveRule } from "@/lib/services/rules";
@@ -50,6 +56,13 @@ import {
   type CategoryKind,
 } from "@/lib/services/manage-categories";
 import {
+  archivePayee,
+  createPayee,
+  placeUnplaced,
+  unarchivePayee,
+  updatePayee,
+} from "@/lib/services/manage-payees";
+import {
   payInstallment,
   planForTransaction,
   recordFinancedPurchase,
@@ -63,6 +76,7 @@ import { netWorth } from "@/lib/services/reports";
 import {
   createAccountSchema,
   createCategorySchema,
+  createPayeeSchema,
   manualRateSchema,
 } from "@/lib/validation";
 
@@ -75,7 +89,15 @@ import {
  * caller remembering.
  */
 
-export type ActionState = { ok: boolean; message: string } | null;
+/**
+ * `code` travels only when the screen has to do something with it.
+ *
+ * The services already carry one on `InvalidTransactionError`; until now the
+ * actions threw it away and left the screen matching on the text. It is what
+ * lets a form offer the way past its own refusal — «yes, it really is another
+ * branch» — without guessing from a translated sentence.
+ */
+export type ActionState = { ok: boolean; message: string; code?: string } | null;
 
 export async function createTransaction(
   _prev: ActionState,
@@ -123,6 +145,8 @@ export type EditableTransaction = {
   kind: string;
   occurredOn: string;
   description: string;
+  /** The shop's name, so the dialog can offer it selected. Empty when it has none. */
+  payee: string;
   notes: string;
   baseCurrency: string;
   /** The two rates of the day: the correction dialog converts as well. */
@@ -163,10 +187,12 @@ export async function transactionForEdit(id: string): Promise<EditableTransactio
       kind: transactions.kind,
       occurredOn: transactions.occurredOn,
       description: transactions.description,
+      payee: payees.name,
       notes: transactions.notes,
       voidedAt: transactions.voidedAt,
     })
     .from(transactions)
+    .leftJoin(payees, eq(payees.id, transactions.payeeId))
     .where(and(eq(transactions.id, id), eq(transactions.householdId, ctx.householdId)))
     .limit(1);
 
@@ -195,6 +221,7 @@ export async function transactionForEdit(id: string): Promise<EditableTransactio
     kind: header.kind,
     occurredOn: header.occurredOn,
     description: header.description,
+    payee: header.payee ?? "",
     notes: header.notes ?? "",
     baseCurrency: ctx.baseCurrency,
     rates,
@@ -433,6 +460,14 @@ export async function editTransaction(
       account: field("account"),
       toAccount: field("to_account"),
       category: field("category"),
+      // «—» is how the dialog says «nowhere»; the empty string takes the place
+      // off, and undefined leaves it alone.
+      payee:
+        form.get("payee") == null
+          ? undefined
+          : String(form.get("payee")) === "—"
+            ? ""
+            : String(form.get("payee")),
       description: field("description"),
       occurredOn: field("occurred_on"),
       // Notes do admit empty: clearing them is a legitimate edit.
@@ -761,6 +796,194 @@ export async function unarchiveCategoryAction(id: string): Promise<ActionState> 
   } catch (err) {
     return { ok: false, message: messageForScreen(err, ctx.locale) };
   }
+}
+
+/**
+ * Places.
+ *
+ * The fiscal id is the only field here that can be told «no» twice: the first
+ * time it names the place that already carries it, and the second — with the
+ * box ticked — it writes it anyway, because a franchise really does give two
+ * branches two companies. Same shape as a suspected duplicate entry.
+ */
+export async function createPayeeAction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const ctx = await requireWriter();
+  const text = (name: string) => {
+    const value = form.get(name);
+    return value == null ? undefined : String(value).trim() || undefined;
+  };
+
+  try {
+    const input = createPayeeSchema.parse({
+      name: text("name") ?? "",
+      tax_id: text("tax_id"),
+      address: text("address"),
+      parent_id: form.get("parent_id") == null ? undefined : String(form.get("parent_id")),
+      default_category_id:
+        form.get("default_category_id") == null ? undefined : String(form.get("default_category_id")),
+      coordinates: text("coordinates"),
+      aliases: text("aliases"),
+      allow_shared_tax_id: form.get("allow_shared_tax_id") === "on",
+    });
+
+    const result = await createPayee({
+      householdId: ctx.householdId,
+      locale: ctx.locale,
+      name: input.name,
+      taxId: input.tax_id,
+      address: input.address,
+      parentId: input.parent_id || null,
+      coordinates: input.coordinates,
+      defaultCategoryId: input.default_category_id || null,
+      aliases: input.aliases,
+      allowSharedTaxId: input.allow_shared_tax_id,
+    });
+
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return {
+      ok: false,
+      message: messageForScreen(err, ctx.locale),
+      code: err instanceof InvalidTransactionError ? err.code : undefined,
+    };
+  }
+}
+
+export async function editPayeeAction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const ctx = await requireWriter();
+  const t = getTranslator(normalizeLocale(ctx.locale));
+  const id = String(form.get("id") ?? "");
+  if (!id) return { ok: false, message: t("services.actions.missingPayee") };
+
+  // These admit empty: clearing an address, a fiscal id or the brand is a
+  // legitimate edit, and `undefined` has to keep meaning «leave it alone».
+  const raw = (name: string) => {
+    const value = form.get(name);
+    return value == null ? undefined : String(value);
+  };
+  const text = (name: string) => raw(name)?.trim() || undefined;
+
+  try {
+    const result = await updatePayee({
+      householdId: ctx.householdId,
+      payeeId: id,
+      locale: ctx.locale,
+      name: text("name"),
+      taxId: raw("tax_id"),
+      address: raw("address"),
+      parentId: raw("parent_id") === undefined ? undefined : raw("parent_id") || null,
+      coordinates: raw("coordinates"),
+      defaultCategoryId:
+        raw("default_category_id") === undefined ? undefined : raw("default_category_id") || null,
+      aliases: raw("aliases"),
+      allowSharedTaxId: form.get("allow_shared_tax_id") === "on",
+    });
+
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return {
+      ok: false,
+      message: messageForScreen(err, ctx.locale),
+      code: err instanceof InvalidTransactionError ? err.code : undefined,
+    };
+  }
+}
+
+/**
+ * Puts a place on every entry that carries one description.
+ *
+ * It writes `payee_id` and nothing else — no amount, no rate, no account — so it
+ * does not go through `updateTransaction`. What it changes is a label on rows
+ * that were never labelled.
+ */
+export async function placeUnplacedAction(
+  description: string,
+  payeeId: string,
+): Promise<ActionState> {
+  const ctx = await requireWriter();
+  try {
+    const result = await placeUnplaced(ctx.householdId, description, payeeId);
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
+  }
+}
+
+export async function archivePayeeAction(id: string): Promise<ActionState> {
+  const ctx = await requireWriter();
+  try {
+    const result = await archivePayee(ctx.householdId, id);
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
+  }
+}
+
+export async function unarchivePayeeAction(id: string): Promise<ActionState> {
+  const ctx = await requireWriter();
+  try {
+    const result = await unarchivePayee(ctx.householdId, id);
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
+  }
+}
+
+export type EditablePayee = {
+  id: string;
+  name: string;
+  taxId: string;
+  address: string;
+  parentId: string | null;
+  /** As it goes back into the field: "10.4806, -66.9036". */
+  coordinates: string;
+  defaultCategoryId: string | null;
+  aliases: string;
+  /** True if branches hang off it, in which case it cannot become one. */
+  hasBranches: boolean;
+};
+
+/** Loads a place for the correction dialog. */
+export async function payeeForEdit(id: string): Promise<EditablePayee | null> {
+  const ctx = await requireSession();
+
+  const [row] = await db
+    .select()
+    .from(payees)
+    .where(and(eq(payees.id, id), eq(payees.householdId, ctx.householdId)))
+    .limit(1);
+
+  if (!row) return null;
+
+  const [branch] = await db
+    .select({ id: payees.id })
+    .from(payees)
+    .where(eq(payees.parentId, id))
+    .limit(1);
+
+  return {
+    id: row.id,
+    name: row.name,
+    taxId: row.taxId ?? "",
+    address: row.address ?? "",
+    parentId: row.parentId,
+    coordinates: formatCoordinates(row.lat, row.lon),
+    defaultCategoryId: row.defaultCategoryId,
+    // Back as they are typed, comma separated: it is what `parseAliases` reads.
+    aliases: row.aliases.join(", "),
+    hasBranches: Boolean(branch),
+  };
 }
 
 /**

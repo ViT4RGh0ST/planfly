@@ -187,6 +187,7 @@ export function TransactionsTable({
   baseCurrency,
   valuation,
   categories,
+  places = [],
   accounts,
   todayDate,
   filtered = false,
@@ -196,6 +197,8 @@ export function TransactionsTable({
   valuation: "bcv" | "p2p";
   /** For the recategorise dropdown. Without them the table is read-only. */
   categories?: string[];
+  /** The shops, for the correction dialog. */
+  places?: string[];
   /** They enable the full correction form, the only one that reaches the amount. */
   accounts?: { name: string; currency: string }[];
   todayDate?: string;
@@ -326,6 +329,7 @@ export function TransactionsTable({
                   baseCurrency={baseCurrency}
                   voided={t.voided}
                   categories={categories}
+                  places={places}
                   accounts={accounts}
                   todayDate={todayDate}
                 />
@@ -526,6 +530,7 @@ export function TransactionsTable({
                       baseCurrency={baseCurrency}
                       voided={t.voided}
                       categories={categories}
+                  places={places}
                       accounts={accounts}
                       todayDate={todayDate}
                     />
