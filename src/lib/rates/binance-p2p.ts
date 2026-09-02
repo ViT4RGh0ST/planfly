@@ -15,6 +15,33 @@ const BINANCE_P2P_URL = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/se
 
 /** The same aliases your plugin already uses, so that "provincial" means the
  *  same thing in the bot and on the dashboard. */
+/**
+ * The rail each market's reference rate is read on.
+ *
+ * A P2P median is not one number: it is the number for a way of paying. In
+ * Venezuela the reference is a transfer to Provincial; in Colombia it is
+ * Bancolombia. Reading pesos with the Venezuelan rail returns nothing at all —
+ * which is the good failure, but it is a failure — and reading them with no rail
+ * mixes cash, Nequi and bank transfer into one median that describes no
+ * transaction anybody makes.
+ *
+ * It lives here, with the reader that understands what a payType is, and not on
+ * the `currencies` table: which rail is the reference in a market is knowledge
+ * about Binance, not a property of the money.
+ *
+ * A fiat that is not here reads the whole market, unfiltered, and says so by
+ * being absent rather than by silently using somebody else's bank.
+ */
+const RAIL_BY_FIAT: Record<string, string> = {
+  VES: "provincial",
+  COP: "bancolombia",
+};
+
+/** The rail to read a market on, or the whole market when none is set for it. */
+export function railFor(fiat: string): string {
+  return RAIL_BY_FIAT[fiat.toUpperCase()] ?? "any";
+}
+
 const PAY_TYPE_ALIASES: Record<string, string> = {
   provincial: "Provincial",
   banesco: "Banesco",
@@ -27,6 +54,20 @@ const PAY_TYPE_ALIASES: Record<string, string> = {
   zinli: "Zinli",
   zelle: "Zelle",
   bank: "BANK",
+  /*
+   * Colombia. The identifier is «BancolombiaSA», not the bank's name.
+   *
+   * Asked with «Bancolombia» the market answered with zero ads even with every
+   * threshold switched off — which reads exactly like «there is no market in
+   * pesos», and there is: 17 ads and a median of 3.139 the moment the rail is
+   * named the way Binance names it. The identifiers came out of the ads
+   * themselves; guessing them from the bank's name is how this looked broken.
+   */
+  bancolombia: "BancolombiaSA",
+  nequi: "Nequi",
+  daviplata: "Daviplata",
+  davivienda: "DaviviendaSA",
+  bancogota: "BancodeBogota",
 };
 
 export type P2pOptions = {
@@ -82,7 +123,9 @@ function median(values: number[]): number {
 export async function fetchP2pRate(options: P2pOptions = {}): Promise<P2pResult> {
   const {
     fiat = "VES",
-    bank = "provincial",
+    // The rail follows the market, not the other way round: defaulting every
+    // fiat to a Venezuelan bank is how pesos came back with no ads at all.
+    bank = railFor(options.fiat ?? "VES"),
     tradeType = "SELL",
     // The same thresholds you already have configured in the plugin: they exclude
     // the occasional merchant publishing a rate nobody can take.

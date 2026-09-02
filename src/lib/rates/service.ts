@@ -328,8 +328,61 @@ export async function lastSnapshotAt(): Promise<Date | null> {
 }
 
 /** Snapshot of both sources. Called by instrumentation.ts and POST /api/v1/rates. */
+/**
+ * The pairs worth capturing, taken from the accounts that exist.
+ *
+ * It used to be a constant — USD against the bolívar — so a household that
+ * opened an account in another currency got no rate for it, ever, and every
+ * entry in it was stored with no equivalent and sent to the review tray asking
+ * for a number by hand. The household already says which currencies it uses by
+ * opening accounts in them; asking that instead of keeping a second list is what
+ * makes the next currency cost a row and nothing else.
+ *
+ * Only the ones whose rate ages: a stablecoin against its own currency has its
+ * row already and no market to ask.
+ */
+async function pairsInUse(): Promise<Array<{ base: string; quote: string }>> {
+  const { rows } = await db.execute<{ base: string; quote: string }>(sql`
+    SELECT DISTINCT h.base_currency AS base, a.currency AS quote
+      FROM accounts a
+      JOIN households h ON h.id = a.household_id
+      JOIN currencies c ON c.code = a.currency
+     WHERE a.archived_at IS NULL
+       AND a.currency <> h.base_currency
+       AND c.rate_ages
+     ORDER BY 1, 2
+  `);
+  return rows;
+}
+
 export async function dailySnapshot(date: string): Promise<DailyRates> {
   const [bcv, p2p] = await Promise.all([refreshSlot("bcv", date), refreshSlot("p2p", date)]);
+
+  /*
+   * And the market rate for every other currency in use.
+   *
+   * Only the parallel slot. The official one is somebody's central bank,
+   * configured for one country: asked about pesos it either answers nothing or —
+   * far worse, if a provider ignores the pair it was handed — answers with
+   * bolívares under a peso label. A rate that is wrong about which currency it
+   * describes is not a rate, it is a number that will be added to something.
+   *
+   * One at a time and never fatal: they go to the same public endpoint, and a
+   * market that does not answer today is a hole the product already knows how to
+   * show.
+   */
+  for (const pair of await pairsInUse()) {
+    if (pair.base === "USD" && pair.quote === "VES") continue;
+    try {
+      await refreshSlot("p2p", date, pair);
+    } catch (err) {
+      console.warn(
+        `[rates] ${pair.base}/${pair.quote} could not be captured:`,
+        (err as Error).message,
+      );
+    }
+  }
+
   return { bcv, p2p };
 }
 
