@@ -8,7 +8,7 @@ import { requireSession } from "@/lib/session";
 import { currentRates } from "@/lib/rates/service";
 import { formatAmount } from "@/lib/money";
 import { formatDay, today } from "@/lib/dates";
-import { budgetUsage, type Valuation } from "@/lib/services/reports";
+import { budgetUsage, type Valuation, valuationFrom } from "@/lib/services/reports";
 import { cn } from "@/lib/utils";
 import { getTranslations } from "next-intl/server";
 
@@ -59,7 +59,7 @@ export default async function BudgetsPage({
   const ctx = await requireSession();
   const t = await getTranslations();
   const params = await searchParams;
-  const valuation: Valuation = params.rate === "bcv" ? "bcv" : "p2p";
+  const valuation: Valuation = valuationFrom(params.rate);
 
   const date = today(ctx.timezone);
 

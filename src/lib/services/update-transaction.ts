@@ -86,9 +86,9 @@ export type UpdateTransactionInput = {
    * `useMoneyEntry` describes as its reason to exist, and the wire that was
    * missing.
    */
-  rateSource?: "bcv" | "p2p" | "manual";
+  rateSource?: "official" | "parallel" | "manual";
   /** Same for a transfer's destination leg. */
-  toRateSource?: "bcv" | "p2p" | "manual";
+  toRateSource?: "official" | "parallel" | "manual";
   /**
    * The complete breakdown, if it is touched at all.
    *
@@ -142,11 +142,11 @@ type Leg = {
   amountMinor: number;
   currency: string;
   baseCurrency: string;
-  rateBcv: string | null;
-  rateP2p: string | null;
+  rateOfficial: string | null;
+  rateParallel: string | null;
   rateManual: string | null;
-  rateBcvId: string | null;
-  rateP2pId: string | null;
+  rateOfficialId: string | null;
+  rateParallelId: string | null;
   rateSourceUsed: string;
 };
 
@@ -228,11 +228,11 @@ export async function updateTransaction(
       amountMinor: transactionEntries.amountMinor,
       currency: transactionEntries.currency,
       baseCurrency: transactionEntries.baseCurrency,
-      rateBcv: transactionEntries.rateBcv,
-      rateP2p: transactionEntries.rateP2p,
+      rateOfficial: transactionEntries.rateOfficial,
+      rateParallel: transactionEntries.rateParallel,
       rateManual: transactionEntries.rateManual,
-      rateBcvId: transactionEntries.rateBcvId,
-      rateP2pId: transactionEntries.rateP2pId,
+      rateOfficialId: transactionEntries.rateOfficialId,
+      rateParallelId: transactionEntries.rateParallelId,
       rateSourceUsed: transactionEntries.rateSourceUsed,
     })
     .from(transactionEntries)
@@ -478,10 +478,10 @@ export async function updateTransaction(
   // more: they have to be resolved again even if the date was left alone.
   const currencyChanged = (leg: Leg) => currencyOf.get(leg.id) !== leg.currency;
 
-  const stamped = new Map<string, { bcv: string | null; p2p: string | null }>([
-    [from.id, { bcv: from.rateBcv, p2p: from.rateP2p }],
+  const stamped = new Map<string, { official: string | null; parallel: string | null }>([
+    [from.id, { official: from.rateOfficial, parallel: from.rateParallel }],
   ]);
-  if (to) stamped.set(to.id, { bcv: to.rateBcv, p2p: to.rateP2p });
+  if (to) stamped.set(to.id, { official: to.rateOfficial, parallel: to.rateParallel });
 
   for (const leg of [from, to].filter(Boolean) as Leg[]) {
     if (!dateChanged && !currencyChanged(leg)) continue;
@@ -494,16 +494,16 @@ export async function updateTransaction(
       isToday: occurredOn === today(household.timezone),
     });
 
-    stamped.set(leg.id, { bcv: fresh.bcv?.value ?? null, p2p: fresh.p2p?.value ?? null });
+    stamped.set(leg.id, { official: fresh.official?.value ?? null, parallel: fresh.parallel?.value ?? null });
     revalue.add(leg.id);
     const p = patchOf(leg);
-    p.rateBcv = fresh.bcv?.value ?? null;
-    p.rateP2p = fresh.p2p?.value ?? null;
-    p.rateBcvId = fresh.bcv?.id ?? null;
-    p.rateP2pId = fresh.p2p?.id ?? null;
-    p.rateStale = Boolean(fresh.bcv?.stale || fresh.p2p?.stale);
+    p.rateOfficial = fresh.official?.value ?? null;
+    p.rateParallel = fresh.parallel?.value ?? null;
+    p.rateOfficialId = fresh.official?.id ?? null;
+    p.rateParallelId = fresh.parallel?.id ?? null;
+    p.rateStale = Boolean(fresh.official?.stale || fresh.parallel?.stale);
 
-    if (currency !== household.baseCurrency && !fresh.bcv && !fresh.p2p) {
+    if (currency !== household.baseCurrency && !fresh.official && !fresh.parallel) {
       warnings.push(
         t("services.updateTransaction.warning.noRate", {
           date: occurredOn,
@@ -512,8 +512,8 @@ export async function updateTransaction(
         }),
       );
     } else if (
-      (fresh.bcv && isRateTooStale(fresh.bcv, occurredOn)) ||
-      (fresh.p2p && isRateTooStale(fresh.p2p, occurredOn))
+      (fresh.official && isRateTooStale(fresh.official, occurredOn)) ||
+      (fresh.parallel && isRateTooStale(fresh.parallel, occurredOn))
     ) {
       warnings.push(t("services.updateTransaction.warning.staleRate", { date: occurredOn }));
     }
@@ -611,12 +611,12 @@ export async function updateTransaction(
     const rates = stamped.get(leg.id)!;
     const manualRate = manual.get(leg.id) ?? null;
 
-    const baseBcv = convertToBase(amount, currency, household.baseCurrency, rates.bcv);
-    const baseP2p = convertToBase(amount, currency, household.baseCurrency, rates.p2p);
+    const baseBcv = convertToBase(amount, currency, household.baseCurrency, rates.official);
+    const baseP2p = convertToBase(amount, currency, household.baseCurrency, rates.parallel);
     const baseManual = convertToBase(amount, currency, household.baseCurrency, manualRate);
 
-    p.baseAmountBcvMinor = baseBcv;
-    p.baseAmountP2pMinor = baseP2p;
+    p.baseAmountOfficialMinor = baseBcv;
+    p.baseAmountParallelMinor = baseP2p;
     p.baseAmountManualMinor = baseManual;
 
     /*
@@ -633,8 +633,8 @@ export async function updateTransaction(
      * history.
      */
     const previous =
-      leg.rateSourceUsed === "bcv" ||
-      leg.rateSourceUsed === "p2p" ||
+      leg.rateSourceUsed === "official" ||
+      leg.rateSourceUsed === "parallel" ||
       leg.rateSourceUsed === "manual"
         ? leg.rateSourceUsed
         : undefined;
@@ -642,8 +642,8 @@ export async function updateTransaction(
       isBaseCurrency: currency === household.baseCurrency,
       preferred: (leg === to ? input.toRateSource : input.rateSource) ?? previous,
       fallback: household.defaultRateSource as RateSource,
-      baseBcvMinor: baseBcv,
-      baseP2pMinor: baseP2p,
+      baseOfficialMinor: baseBcv,
+      baseParallelMinor: baseP2p,
       baseManualMinor: baseManual,
     });
 
@@ -834,17 +834,17 @@ export async function updateTransaction(
             currency,
             // With the rates ALREADY stamped on the line, not with today's:
             // correcting a breakdown cannot rewrite the price's history.
-            baseAmountBcvMinor: convertToBase(
+            baseAmountOfficialMinor: convertToBase(
               item.totalMinor,
               currency,
               household.baseCurrency,
-              stampedRates.bcv,
+              stampedRates.official,
             ),
-            baseAmountP2pMinor: convertToBase(
+            baseAmountParallelMinor: convertToBase(
               item.totalMinor,
               currency,
               household.baseCurrency,
-              stampedRates.p2p,
+              stampedRates.parallel,
             ),
             confidence: item.confidence.toFixed(3),
             sortOrder: i,

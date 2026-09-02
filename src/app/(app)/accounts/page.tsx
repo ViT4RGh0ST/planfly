@@ -9,7 +9,7 @@ import { requireSession } from "@/lib/session";
 import { today } from "@/lib/dates";
 import { currentRates } from "@/lib/rates/service";
 import { archivedAccounts } from "@/lib/services/manage-accounts";
-import { committedInstallments, netWorth, type Valuation } from "@/lib/services/reports";
+import { committedInstallments, netWorth, type Valuation, valuationFrom } from "@/lib/services/reports";
 import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export default async function AccountsPage({
   const ctx = await requireSession();
   const t = await getTranslations();
   const params = await searchParams;
-  const valuation: Valuation = params.rate === "bcv" ? "bcv" : "p2p";
+  const valuation: Valuation = valuationFrom(params.rate);
   const base = ctx.baseCurrency;
   const date = today(ctx.timezone);
 
@@ -46,8 +46,8 @@ export default async function AccountsPage({
   const currencyCodes = currencyList.map((c) => c.code);
 
   const spread =
-    rates.bcv && rates.p2p
-      ? (Number(rates.p2p.rate) / Number(rates.bcv.rate) - 1) * 100
+    rates.official && rates.parallel
+      ? (Number(rates.parallel.rate) / Number(rates.official.rate) - 1) * 100
       : null;
 
   const groups = [
@@ -68,12 +68,12 @@ export default async function AccountsPage({
       </header>
 
       <NetWorth
-        bcvMinor={position.totalBcvMinor}
-        p2pMinor={position.totalP2pMinor}
-        assetsBcvMinor={position.assetsBcvMinor}
-        assetsP2pMinor={position.assetsP2pMinor}
-        liabilitiesBcvMinor={position.liabilitiesBcvMinor}
-        liabilitiesP2pMinor={position.liabilitiesP2pMinor}
+        officialMinor={position.totalOfficialMinor}
+        parallelMinor={position.totalParallelMinor}
+        assetsOfficialMinor={position.assetsOfficialMinor}
+        assetsParallelMinor={position.assetsParallelMinor}
+        liabilitiesOfficialMinor={position.liabilitiesOfficialMinor}
+        liabilitiesParallelMinor={position.liabilitiesParallelMinor}
         currency={base}
         spreadPercent={spread}
         accountCount={position.accounts.length}

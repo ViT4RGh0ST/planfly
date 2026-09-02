@@ -117,5 +117,15 @@
     "ocr": "de una foto",
     "api": "por la API",
     "recurring": "recurrente"
+  },
+  "rateSlot": {
+    "official": "la oficial",
+    "parallel": "la paralela",
+    "manual": "la fijada a mano"
+  },
+  "rateSlotShort": {
+    "official": "oficial",
+    "parallel": "paralela",
+    "manual": "a mano"
   }
 }

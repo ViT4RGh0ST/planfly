@@ -98,7 +98,7 @@ export type RecordTransactionInput = {
   notes?: string;
   /** Manual quoted-per-base rate (859.00 Bs per USD). */
   rate?: string | number;
-  rateSource?: "bcv" | "p2p" | "manual";
+  rateSource?: "official" | "parallel" | "manual";
   /** Which rail it left by: cash, card, mobile payment, transfer… */
   paymentMethod?: PaymentMethod;
 
@@ -151,15 +151,15 @@ export type RecordTransactionResult = {
   amount: { minor: number; currency: string; text: string };
   base: {
     currency: string;
-    bcvMinor: number | null;
-    p2pMinor: number | null;
+    officialMinor: number | null;
+    parallelMinor: number | null;
     manualMinor: number | null;
     usedMinor: number | null;
     sourceUsed: string;
   };
   rates: {
-    bcv: string | null;
-    p2p: string | null;
+    official: string | null;
+    parallel: string | null;
     manual: string | null;
     effectiveOn: string | null;
     stale: boolean;
@@ -203,7 +203,7 @@ type Household = {
   id: string;
   baseCurrency: string;
   timezone: string;
-  defaultRateSource: "bcv" | "p2p" | "manual";
+  defaultRateSource: "official" | "parallel" | "manual";
   /**
    * The language everything this service words comes out in.
    *
@@ -530,8 +530,8 @@ export async function recordTransaction(
   const toBase = (rate: string | null) =>
     convertToBase(amountMinor, currency, household.baseCurrency, rate);
 
-  const baseBcv = toBase(rates.bcv?.value ?? null);
-  const baseP2p = toBase(rates.p2p?.value ?? null);
+  const baseBcv = toBase(rates.official?.value ?? null);
+  const baseP2p = toBase(rates.parallel?.value ?? null);
   const baseManual = manualRate ? toBase(manualRate) : null;
 
   const needsRate = currency !== household.baseCurrency;
@@ -543,8 +543,8 @@ export async function recordTransaction(
     isBaseCurrency: !needsRate,
     preferred: preferredSource,
     fallback: household.defaultRateSource as RateSource,
-    baseBcvMinor: baseBcv,
-    baseP2pMinor: baseP2p,
+    baseOfficialMinor: baseBcv,
+    baseParallelMinor: baseP2p,
     baseManualMinor: baseManual,
   });
   const sourceUsed = chosen.source;
@@ -559,7 +559,7 @@ export async function recordTransaction(
   }
 
   const usedRate: ResolvedRate | null =
-    sourceUsed === "bcv" ? rates.bcv : sourceUsed === "p2p" ? rates.p2p : null;
+    sourceUsed === "official" ? rates.official : sourceUsed === "parallel" ? rates.parallel : null;
 
   if (usedRate?.stale) {
     warnings.push(
@@ -658,7 +658,7 @@ export async function recordTransaction(
 
   // ── Destination line, for transfers ───────────────────────────────────────
   let toAmountMinor: number | null = null;
-  let toBases: { bcv: number | null; p2p: number | null; manual: number | null } | null = null;
+  let toBases: { official: number | null; parallel: number | null; manual: number | null } | null = null;
   let toRates = rates;
 
   if (input.kind === "transfer" && toAccount) {
@@ -666,8 +666,8 @@ export async function recordTransaction(
     if (toCurrency === currency) {
       toAmountMinor = absAmount;
       toBases = {
-        bcv: baseBcv == null ? null : -baseBcv,
-        p2p: baseP2p == null ? null : -baseP2p,
+        official: baseBcv == null ? null : -baseBcv,
+        parallel: baseP2p == null ? null : -baseP2p,
         manual: baseManual == null ? null : -baseManual,
       };
     } else {
@@ -691,8 +691,8 @@ export async function recordTransaction(
         isToday,
       });
       toBases = {
-        bcv: convertToBase(toAmountMinor, toCurrency, household.baseCurrency, toRates.bcv?.value ?? null),
-        p2p: convertToBase(toAmountMinor, toCurrency, household.baseCurrency, toRates.p2p?.value ?? null),
+        official: convertToBase(toAmountMinor, toCurrency, household.baseCurrency, toRates.official?.value ?? null),
+        parallel: convertToBase(toAmountMinor, toCurrency, household.baseCurrency, toRates.parallel?.value ?? null),
         manual: manualRate
           ? convertToBase(toAmountMinor, toCurrency, household.baseCurrency, manualRate)
           : null,
@@ -789,15 +789,15 @@ export async function recordTransaction(
         amountMinor,
         currency,
         baseCurrency: household.baseCurrency,
-        rateBcv: rates.bcv?.value ?? null,
-        rateP2p: rates.p2p?.value ?? null,
+        rateOfficial: rates.official?.value ?? null,
+        rateParallel: rates.parallel?.value ?? null,
         rateManual: manualRate,
-        rateBcvId: rates.bcv?.id ?? null,
-        rateP2pId: rates.p2p?.id ?? null,
+        rateOfficialId: rates.official?.id ?? null,
+        rateParallelId: rates.parallel?.id ?? null,
         rateSourceUsed: sourceUsed,
         rateStale: Boolean(usedRate?.stale),
-        baseAmountBcvMinor: baseBcv,
-        baseAmountP2pMinor: baseP2p,
+        baseAmountOfficialMinor: baseBcv,
+        baseAmountParallelMinor: baseP2p,
         baseAmountManualMinor: baseManual,
         sortOrder: 0,
       },
@@ -812,15 +812,15 @@ export async function recordTransaction(
         amountMinor: toAmountMinor,
         currency: toAccount.currency,
         baseCurrency: household.baseCurrency,
-        rateBcv: toRates.bcv?.value ?? null,
-        rateP2p: toRates.p2p?.value ?? null,
+        rateOfficial: toRates.official?.value ?? null,
+        rateParallel: toRates.parallel?.value ?? null,
         rateManual: manualRate,
-        rateBcvId: toRates.bcv?.id ?? null,
-        rateP2pId: toRates.p2p?.id ?? null,
+        rateOfficialId: toRates.official?.id ?? null,
+        rateParallelId: toRates.parallel?.id ?? null,
         rateSourceUsed: sourceUsed,
-        rateStale: Boolean(toRates.bcv?.stale || toRates.p2p?.stale),
-        baseAmountBcvMinor: toBases?.bcv ?? null,
-        baseAmountP2pMinor: toBases?.p2p ?? null,
+        rateStale: Boolean(toRates.official?.stale || toRates.parallel?.stale),
+        baseAmountOfficialMinor: toBases?.official ?? null,
+        baseAmountParallelMinor: toBases?.parallel ?? null,
         baseAmountManualMinor: toBases?.manual ?? null,
         sortOrder: 1,
       });
@@ -844,17 +844,17 @@ export async function recordTransaction(
           // EACH line's equivalent at that day's rate: it is what lets you ask whether
           // a product went up without reconverting fourteen rows per purchase, and
           // without the answer depending on today's rate.
-          baseAmountBcvMinor: convertToBase(
+          baseAmountOfficialMinor: convertToBase(
             item.totalMinor,
             currency,
             household.baseCurrency,
-            rates.bcv?.value ?? null,
+            rates.official?.value ?? null,
           ),
-          baseAmountP2pMinor: convertToBase(
+          baseAmountParallelMinor: convertToBase(
             item.totalMinor,
             currency,
             household.baseCurrency,
-            rates.p2p?.value ?? null,
+            rates.parallel?.value ?? null,
           ),
           confidence: item.confidence.toFixed(3),
           sortOrder: i,
@@ -890,8 +890,8 @@ type BuildArgs = {
   baseP2p: number | null;
   baseManual: number | null;
   baseUsed: number | null;
-  sourceUsed: "bcv" | "p2p" | "manual" | "none";
-  rates: { bcv: ResolvedRate | null; p2p: ResolvedRate | null };
+  sourceUsed: "official" | "parallel" | "manual" | "none";
+  rates: { official: ResolvedRate | null; parallel: ResolvedRate | null };
   manualRate: string | null;
   account: { id: string; name: string; currency: string; type?: string; score: number; via: string };
   toAccount: {
@@ -918,7 +918,14 @@ function buildResult(a: BuildArgs): RecordTransactionResult {
       ? formatAmount(Math.abs(a.baseUsed), a.household.baseCurrency)
       : null;
 
-  const sourceLabel = a.sourceUsed === "p2p" ? "P2P" : a.sourceUsed === "bcv" ? "BCV" : "manual";
+  /*
+   * The slot, in the household's language.
+   *
+   * This lands in the sentence the bot repeats word for word in the chat. It
+   * said «P2P» and «BCV» for every currency, so a peso expense came back
+   * announcing it had been valued at Venezuela's central bank rate.
+   */
+  const sourceLabel = t(`domain.rateSlotShort.${a.sourceUsed}`);
 
   // The bot repeats the summary verbatim in Telegram. It is assembled here, and
   // not in the model, so it has to do no arithmetic and reformat no figures.
@@ -1002,18 +1009,18 @@ function buildResult(a: BuildArgs): RecordTransactionResult {
     amount: { minor: a.amountMinor, currency: a.currency, text: amountText },
     base: {
       currency: a.household.baseCurrency,
-      bcvMinor: a.baseBcv,
-      p2pMinor: a.baseP2p,
+      officialMinor: a.baseBcv,
+      parallelMinor: a.baseP2p,
       manualMinor: a.baseManual,
       usedMinor: a.baseUsed,
       sourceUsed: a.sourceUsed,
     },
     rates: {
-      bcv: a.rates.bcv?.value ?? null,
-      p2p: a.rates.p2p?.value ?? null,
+      official: a.rates.official?.value ?? null,
+      parallel: a.rates.parallel?.value ?? null,
       manual: a.manualRate,
-      effectiveOn: a.rates.p2p?.effectiveOn ?? a.rates.bcv?.effectiveOn ?? null,
-      stale: Boolean(a.rates.p2p?.stale || a.rates.bcv?.stale),
+      effectiveOn: a.rates.parallel?.effectiveOn ?? a.rates.official?.effectiveOn ?? null,
+      stale: Boolean(a.rates.parallel?.stale || a.rates.official?.stale),
     },
     resolved: {
       account: { ...a.account, via: a.account.via as Match["via"] },
@@ -1057,12 +1064,12 @@ async function describeExisting(
     needs_review: boolean;
     amount_minor: string;
     currency: string;
-    base_amount_bcv_minor: string | null;
-    base_amount_p2p_minor: string | null;
+    base_amount_official_minor: string | null;
+    base_amount_parallel_minor: string | null;
     base_amount_manual_minor: string | null;
     rate_source_used: string;
-    rate_bcv: string | null;
-    rate_p2p: string | null;
+    rate_official: string | null;
+    rate_parallel: string | null;
     rate_manual: string | null;
     account_id: string;
     account_name: string;
@@ -1072,9 +1079,9 @@ async function describeExisting(
   }>(sql`
     SELECT t.kind, t.occurred_on, t.description, t.needs_review,
            e.amount_minor::text, e.currency,
-           e.base_amount_bcv_minor::text, e.base_amount_p2p_minor::text,
+           e.base_amount_official_minor::text, e.base_amount_parallel_minor::text,
            e.base_amount_manual_minor::text, e.rate_source_used,
-           e.rate_bcv, e.rate_p2p, e.rate_manual,
+           e.rate_official, e.rate_parallel, e.rate_manual,
            a.id AS account_id, a.name AS account_name, a.currency AS account_currency,
            c.id AS category_id, c.name AS category_name
       FROM transactions t
@@ -1099,14 +1106,14 @@ async function describeExisting(
     description: r.description,
     amountMinor: Number(r.amount_minor),
     currency: r.currency,
-    baseBcv: num(r.base_amount_bcv_minor),
-    baseP2p: num(r.base_amount_p2p_minor),
+    baseBcv: num(r.base_amount_official_minor),
+    baseP2p: num(r.base_amount_parallel_minor),
     baseManual: num(r.base_amount_manual_minor),
     baseUsed:
-      r.rate_source_used === "bcv"
-        ? num(r.base_amount_bcv_minor)
-        : r.rate_source_used === "p2p"
-          ? num(r.base_amount_p2p_minor)
+      r.rate_source_used === "official"
+        ? num(r.base_amount_official_minor)
+        : r.rate_source_used === "parallel"
+          ? num(r.base_amount_parallel_minor)
           : r.rate_source_used === "manual"
             ? num(r.base_amount_manual_minor)
             : Number(r.amount_minor),
@@ -1115,11 +1122,11 @@ async function describeExisting(
       // Rebuilt from what is stamped on the row, not from the rates table: that is
       // why the id comes back empty and `manual` cannot be known here — the row
       // stores the figure that was used, not where it came from that day.
-      bcv: r.rate_bcv
-        ? { id: "", value: r.rate_bcv, effectiveOn: r.occurred_on, stale: false, manual: false, ages: true }
+      official: r.rate_official
+        ? { id: "", value: r.rate_official, effectiveOn: r.occurred_on, stale: false, manual: false, ages: true }
         : null,
-      p2p: r.rate_p2p
-        ? { id: "", value: r.rate_p2p, effectiveOn: r.occurred_on, stale: false, manual: false, ages: true }
+      parallel: r.rate_parallel
+        ? { id: "", value: r.rate_parallel, effectiveOn: r.occurred_on, stale: false, manual: false, ages: true }
         : null,
     },
     manualRate: r.rate_manual,

@@ -82,8 +82,8 @@ export function RecurringForm({
   const [amountCurrency, setAmountCurrency] = useState(
     rule?.template.amountCurrency ?? "",
   );
-  const [rateSource, setRateSource] = useState<"bcv" | "p2p">(
-    rule?.template.rateSource === "bcv" ? "bcv" : "p2p",
+  const [rateSource, setRateSource] = useState<"official" | "parallel">(
+    rule?.template.rateSource === "official" ? "official" : "parallel",
   );
 
   const [state, action, pending] = useActionState(
@@ -232,7 +232,7 @@ export function RecurringForm({
             <div className="grid gap-2">
               <Label>{t("ui.recurringForm.whichRate")}</Label>
               <div role="radiogroup" aria-label={t("ui.recurringForm.whichRate")} className="flex gap-2">
-                {(["p2p", "bcv"] as const).map((option) => (
+                {(["parallel", "official"] as const).map((option) => (
                   <Button
                     key={option}
                     type="button"
@@ -242,7 +242,7 @@ export function RecurringForm({
                     size="sm"
                     onClick={() => setRateSource(option)}
                   >
-                    {option === "p2p" ? t("ui.recurringForm.parallel") : t("ui.recurringForm.official")}
+                    {option === "parallel" ? t("ui.recurringForm.parallel") : t("ui.recurringForm.official")}
                   </Button>
                 ))}
               </div>

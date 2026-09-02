@@ -518,8 +518,8 @@ export type PricePoint = {
   unitPriceMinor: number;
   currency: string;
   /** The same unit price in base currency, at THAT day's rate. */
-  unitPriceBcvMinor: number | null;
-  unitPriceP2pMinor: number | null;
+  unitPriceOfficialMinor: number | null;
+  unitPriceParallelMinor: number | null;
   quantity: number;
   unit: string | null;
   transactionId: string;
@@ -577,8 +577,8 @@ export async function productHistory(
            p.name AS place, p.id AS place_id,
            i.base_quantity::text AS quantity,
            round(i.total_minor / i.base_quantity)::text AS unit_price,
-           round(i.base_amount_bcv_minor / i.base_quantity)::text AS unit_price_bcv,
-           round(i.base_amount_p2p_minor / i.base_quantity)::text AS unit_price_p2p
+           round(i.base_amount_official_minor / i.base_quantity)::text AS unit_price_bcv,
+           round(i.base_amount_parallel_minor / i.base_quantity)::text AS unit_price_p2p
       FROM transaction_items i
       JOIN transactions t ON t.id = i.transaction_id
       LEFT JOIN payees p ON p.id = t.payee_id
@@ -596,8 +596,8 @@ export async function productHistory(
       occurredOn: r.occurred_on,
       unitPriceMinor: Number(r.unit_price),
       currency: r.currency,
-      unitPriceBcvMinor: r.unit_price_bcv == null ? null : Number(r.unit_price_bcv),
-      unitPriceP2pMinor: r.unit_price_p2p == null ? null : Number(r.unit_price_p2p),
+      unitPriceOfficialMinor: r.unit_price_bcv == null ? null : Number(r.unit_price_bcv),
+      unitPriceParallelMinor: r.unit_price_p2p == null ? null : Number(r.unit_price_p2p),
       quantity: Number(r.quantity),
       unit: r.unit,
       transactionId: r.transaction_id,
@@ -631,9 +631,9 @@ export type ProductSummary = {
  */
 export async function productCatalog(
   householdId: string,
-  valuation: "bcv" | "p2p" = "p2p",
+  valuation: "official" | "parallel" = "parallel",
 ): Promise<ProductSummary[]> {
-  const column = valuation === "bcv" ? sql`base_amount_bcv_minor` : sql`base_amount_p2p_minor`;
+  const column = valuation === "official" ? sql`base_amount_official_minor` : sql`base_amount_parallel_minor`;
 
   const { rows } = await db.execute<{
     id: string;

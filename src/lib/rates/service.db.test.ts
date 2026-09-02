@@ -47,21 +47,21 @@ describe("the rate ladder", { skip: hasDb() ? false : "no Postgres available" },
 
   it("with nothing written by hand, the source's rate rules", async () => {
     const r = await pide(DATE);
-    assert.equal(r.bcv?.value, "780.0000000000");
-    assert.equal(r.p2p?.value, "900.0000000000");
-    assert.equal(r.bcv?.manual, false);
-    assert.equal(r.bcv?.stale, false, "es del día que se pidió");
+    assert.equal(r.official?.value, "780.0000000000");
+    assert.equal(r.parallel?.value, "900.0000000000");
+    assert.equal(r.official?.manual, false);
+    assert.equal(r.official?.stale, false, "es del día que se pidió");
   });
 
   it("on the same day, the hand-written one beats the automatic", async () => {
     // The whole rule: someone set it while looking at the screen, the automatic
     // one is a guess. It lives in a CASE inside the ORDER BY and no test touched it.
-    await saveManualRate({ slot: "bcv", value: "500.0000000000", effectiveOn: DATE });
+    await saveManualRate({ slot: "official", value: "500.0000000000", effectiveOn: DATE });
 
     const r = await pide(DATE);
-    assert.equal(r.bcv?.value, "500.0000000000", "la de la persona");
-    assert.equal(r.bcv?.manual, true);
-    assert.equal(r.p2p?.value, "900.0000000000", "y la otra casilla no se toca");
+    assert.equal(r.official?.value, "500.0000000000", "la de la persona");
+    assert.equal(r.official?.manual, true);
+    assert.equal(r.parallel?.value, "900.0000000000", "y la otra casilla no se toca");
   });
 
   it("but an old manual one does NOT beat today's automatic", async () => {
@@ -69,13 +69,13 @@ describe("the rate ladder", { skip: hasDb() ? false : "no Postgres available" },
     // what matters: the other way round, a correction from three days ago would
     // stay stuck valuing this week's spending.
     await saveRate({
-      baseCurrency: "USD", quoteCurrency: "VES", source: "bcv",
+      baseCurrency: "USD", quoteCurrency: "VES", source: "official",
       value: "820.0000000000", effectiveOn: "2026-08-25",
     });
-    await saveManualRate({ slot: "bcv", value: "111.0000000000", effectiveOn: "2026-08-22" });
+    await saveManualRate({ slot: "official", value: "111.0000000000", effectiveOn: "2026-08-22" });
 
     const r = await pide("2026-08-25");
-    assert.equal(r.bcv?.value, "820.0000000000", "manda la del día, no la manual de tres días antes");
+    assert.equal(r.official?.value, "820.0000000000", "manda la del día, no la manual de tres días antes");
   });
 
   it("a value date in the future counts when there's nothing earlier", async () => {
@@ -83,32 +83,32 @@ describe("the rate ladder", { skip: hasDb() ? false : "no Postgres available" },
     // out. With a plain `<= date`, the first expense of the day on a fresh
     // install would find no rate at all even if it had just been downloaded.
     await saveRate({
-      baseCurrency: "USD", quoteCurrency: "COP", source: "bcv",
+      baseCurrency: "USD", quoteCurrency: "COP", source: "official",
       value: "4100.0000000000", effectiveOn: "2026-09-02",
     });
     const r = await resolveRates({
       baseCurrency: "USD", quoteCurrency: "COP", date: "2026-09-01", isToday: false,
     });
-    assert.equal(r.bcv?.value, "4100.0000000000");
-    assert.equal(r.bcv?.stale, true, "y se dice que no es exactamente la del día");
+    assert.equal(r.official?.value, "4100.0000000000");
+    assert.equal(r.official?.stale, true, "y se dice que no es exactamente la del día");
   });
 
   it("a manual rate anchors to ITS slot: a parallel one doesn't fill the official", async () => {
     await saveManualRate({
-      slot: "p2p", value: "1250.0000000000", effectiveOn: "2026-10-05",
+      slot: "parallel", value: "1250.0000000000", effectiveOn: "2026-10-05",
       baseCurrency: "USD", quoteCurrency: "PEN",
     });
     const r = await resolveRates({
       baseCurrency: "USD", quoteCurrency: "PEN", date: "2026-10-05", isToday: false,
     });
-    assert.equal(r.p2p?.value, "1250.0000000000");
-    assert.equal(r.bcv, null, "la casilla oficial sigue vacía, que es lo honesto");
+    assert.equal(r.parallel?.value, "1250.0000000000");
+    assert.equal(r.official, null, "la casilla oficial sigue vacía, que es lo honesto");
   });
 
   it("a rate too far from the date is declared stale", async () => {
     const r = await pide(DATE);
-    assert.equal(isRateTooStale(r.bcv, DATE), false);
-    assert.equal(isRateTooStale(r.bcv, "2026-12-31"), true, "meses después ya no vale");
+    assert.equal(isRateTooStale(r.official, DATE), false);
+    assert.equal(isRateTooStale(r.official, "2026-12-31"), true, "meses después ya no vale");
     assert.equal(isRateTooStale(null, DATE), true, "y no tenerla es el caso más viejo de todos");
   });
 
@@ -117,7 +117,7 @@ describe("the rate ladder", { skip: hasDb() ? false : "no Postgres available" },
     assert.ok(list.length >= 1, "las escritas a mano quedan a la vista");
 
     const loose = await saveManualRate({
-      slot: "bcv", value: "333.0000000000", effectiveOn: "2027-01-15",
+      slot: "official", value: "333.0000000000", effectiveOn: "2027-01-15",
     });
     assert.equal(await removeManualRate(loose.id), true, "si no valoró nada, se borra");
     assert.equal(await removeManualRate(loose.id), false, "y la segunda vez ya no está");
@@ -125,13 +125,13 @@ describe("the rate ladder", { skip: hasDb() ? false : "no Postgres available" },
 
   it("a rate that has ALREADY valued entries isn't deleted: they'd be left with no provenance", async () => {
     /*
-     * `rate_bcv_id` points here with ON DELETE SET NULL. Deleting it would leave
+     * `rate_official_id` points here with ON DELETE SET NULL. Deleting it would leave
      * the entries with their dollar equivalent already computed and nothing
      * saying where it came from: the right amount and the provenance saying
      * "none", which is exactly the kind of lie this project avoids.
      */
     const used = await saveManualRate({
-      slot: "bcv", value: "600.0000000000", effectiveOn: "2026-11-03",
+      slot: "official", value: "600.0000000000", effectiveOn: "2026-11-03",
     });
     await recordTransaction({
       householdId: e.home.id, kind: "expense", amount: "6.000,00", currency: "VES",
@@ -143,9 +143,9 @@ describe("the rate ladder", { skip: hasDb() ? false : "no Postgres available" },
 
   it("the day's summary brings both slots, hand-set or not", async () => {
     const r = await currentRates(DATE);
-    assert.ok(r.bcv, "la oficial");
-    assert.ok(r.p2p, "y la paralela");
-    assert.equal(r.bcv!.manual, true, "hoy la oficial está corregida a mano");
+    assert.ok(r.official, "la oficial");
+    assert.ok(r.parallel, "y la paralela");
+    assert.equal(r.official!.manual, true, "hoy la oficial está corregida a mano");
   });
 
   it("when we last went out to fetch, which is not the same as the value date", async () => {
@@ -169,7 +169,7 @@ describe("the rate ladder", { skip: hasDb() ? false : "no Postgres available" },
       .onConflictDoNothing();
     // Written once, far back. It is the definition of a stablecoin against its
     // own currency, not a market price captured that day.
-    for (const variant of ["bcv", "p2p"]) {
+    for (const variant of ["official", "parallel"]) {
       await db.insert(exchangeRates).values({
         baseCurrency: "USD",
         quoteCurrency: "USDT",
@@ -195,9 +195,9 @@ describe("the rate ladder", { skip: hasDb() ? false : "no Postgres available" },
       isToday: false,
     });
 
-    assert.equal(Number(rates.p2p?.value), 1, "the row from the year 2000 is found");
-    assert.equal(rates.p2p?.stale, false, "and it is not announced as being from another day");
-    assert.equal(isRateTooStale(rates.p2p, "2026-08-24"), false, "nor is it distrusted");
+    assert.equal(Number(rates.parallel?.value), 1, "the row from the year 2000 is found");
+    assert.equal(rates.parallel?.stale, false, "and it is not announced as being from another day");
+    assert.equal(isRateTooStale(rates.parallel, "2026-08-24"), false, "nor is it distrusted");
   });
 
   it("the same figure is distrusted when the pair does move", () => {

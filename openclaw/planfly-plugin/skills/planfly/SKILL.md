@@ -214,7 +214,7 @@ to correct in time.
 - "¿qué gasté esta semana?" → `report: "recent_transactions"`, `period: "week"`
 
 By default it values at the **P2P** rate, which is the one reflecting real
-purchasing power. Use `valuation: "bcv"` only if the user explicitly asks for the
+purchasing power. Use `valuation: "official"` only if the user explicitly asks for the
 official rate.
 
 ## Corrections

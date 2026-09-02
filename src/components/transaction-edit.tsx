@@ -141,7 +141,7 @@ export function TransactionEdit({
 
   /** The USD/VES pair goes both ways; USDT is not resolved. */
   const convertible = (currency: string) =>
-    Boolean(data && (data.rates.bcv || data.rates.p2p)) &&
+    Boolean(data && (data.rates.official || data.rates.parallel)) &&
     Boolean(data) &&
     (currency === data!.baseCurrency || (data?.ratedCurrencies ?? []).includes(currency));
 

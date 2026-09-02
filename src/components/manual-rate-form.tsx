@@ -49,13 +49,13 @@ export function ManualRateForm({ today }: { today: string }) {
         <Label htmlFor="slot" className="text-xs text-muted-foreground">
           {t("ui.rates.form.which")}
         </Label>
-        <Select name="slot" defaultValue="bcv">
+        <Select name="slot" defaultValue="official">
           <SelectTrigger id="slot" className="mt-1.5 h-9 w-[9.5rem]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="bcv">{t("ui.rates.form.officialShort")}</SelectItem>
-            <SelectItem value="p2p">{t("ui.rates.form.parallelShort")}</SelectItem>
+            <SelectItem value="official">{t("ui.rates.form.officialShort")}</SelectItem>
+            <SelectItem value="parallel">{t("ui.rates.form.parallelShort")}</SelectItem>
           </SelectContent>
         </Select>
       </div>

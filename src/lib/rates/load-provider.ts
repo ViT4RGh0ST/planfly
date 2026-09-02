@@ -17,14 +17,14 @@ import type { RateProvider, RateProviderContext, RateReader, RateSlot } from "./
  */
 
 const ENV_BY_SLOT: Record<RateSlot, string> = {
-  bcv: "RATES_PROVIDER_BCV",
-  p2p: "RATES_PROVIDER_P2P",
+  official: "RATES_PROVIDER_BCV",
+  parallel: "RATES_PROVIDER_P2P",
 };
 
 /** The built-in parallel-market reader. It is a public, documented API. */
 const BUILTIN: Partial<Record<RateSlot, RateProvider>> = {
-  p2p: {
-    id: "p2p",
+  parallel: {
+    id: "parallel",
     async read({ base, quote, date, timeoutMs }: RateProviderContext) {
       const result = await fetchP2pRate({ fiat: quote, timeoutMs });
       return {

@@ -132,7 +132,9 @@ function Row({
             ? t("ui.recurring.amountAtRate", {
                 amount: rule.template.amount ?? "",
                 currency: rule.template.amountCurrency,
-                source: rule.template.rateSource === "bcv" ? "BCV" : "P2P",
+                // The slot, in the household's language: this line is read by somebody
+            // who may hold no bolívares at all.
+            source: t(`domain.rateSlotShort.${rule.template.rateSource}`),
               })
             : t("ui.recurring.amountPlain", {
                 amount: rule.template.amount ?? "",

@@ -32,9 +32,9 @@ describe("recordTransaction against the database", { skip: hasDb() ? false : "no
       householdId: e.home.id, kind: "expense", amount: "7.800,00", currency: "VES",
       account: "efectivo", category: "mercado", occurredOn: DATE, source: "form",
     });
-    assert.equal(r.base.bcvMinor, -1000, "7.800 Bs a 780 son 10,00 USD");
-    assert.equal(r.base.p2pMinor, -867, "los mismos 7.800 a 900 son 8,67 USD");
-    assert.equal(r.base.sourceUsed, "p2p", "el hogar prefiere la paralela");
+    assert.equal(r.base.officialMinor, -1000, "7.800 Bs a 780 son 10,00 USD");
+    assert.equal(r.base.parallelMinor, -867, "los mismos 7.800 a 900 son 8,67 USD");
+    assert.equal(r.base.sourceUsed, "parallel", "el hogar prefiere la paralela");
   });
 
   it("an ambiguous rate is rejected instead of storing a figure a thousand times larger", async () => {
@@ -152,7 +152,7 @@ describe("recordTransaction against the database", { skip: hasDb() ? false : "no
     await db
       .insert(exchangeRates)
       .values(
-        ["bcv", "p2p"].map((variant) => ({
+        ["official", "parallel"].map((variant) => ({
           baseCurrency: "USD",
           quoteCurrency: "USDT",
           source: "manual" as const,
@@ -181,7 +181,7 @@ describe("recordTransaction against the database", { skip: hasDb() ? false : "no
       account: wallet.name, category: "mercado", occurredOn: DATE, source: "form",
     });
 
-    assert.equal(r.base.p2pMinor, -3100, "31 USDT are 31,00 USD");
+    assert.equal(r.base.parallelMinor, -3100, "31 USDT are 31,00 USD");
     assert.equal(r.needsReview, false, "and it does not go to the tray for a rate it has");
     assert.deepEqual(r.warnings, [], "nor is anything said about a missing or stale rate");
   });

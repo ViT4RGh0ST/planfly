@@ -13,18 +13,23 @@ import {
 import { formatDay } from "@/lib/dates";
 import { useLocale, useTranslations } from "next-intl";
 
-const CONFIG = {
-  bcv: { label: "BCV", color: "var(--chart-1)" },
-  p2p: { label: "P2P", color: "var(--chart-2)" },
-} satisfies ChartConfig;
-
 export function RatesChart({
   data,
 }: {
-  data: Array<{ date: string; bcv?: number; p2p?: number }>;
+  data: Array<{ date: string; official?: number; parallel?: number }>;
 }) {
   const t = useTranslations();
   const locale = useLocale();
+  /*
+   * The legend named the two institutions — «BCV» and «P2P» — which is right for
+   * the bolívar and wrong for every other currency this chart will draw. It is
+   * the slot's own name now, in the household's language, and it is built inside
+   * the component because it needs the translator.
+   */
+  const config = {
+    official: { label: t("domain.rateSlotShort.official"), color: "var(--chart-1)" },
+    parallel: { label: t("domain.rateSlotShort.parallel"), color: "var(--chart-2)" },
+  } satisfies ChartConfig;
   if (data.length < 2) {
     return (
       <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
@@ -34,7 +39,7 @@ export function RatesChart({
   }
 
   return (
-    <ChartContainer config={CONFIG} className="h-[300px] w-full">
+    <ChartContainer config={config} className="h-[300px] w-full">
       <LineChart
         aria-label={t("ui.rates.chart.label")}
         data={data}
@@ -66,16 +71,16 @@ export function RatesChart({
             less motion does not get it, and a half-drawn line reads as a series
             that cuts off. */}
         <Line
-          dataKey="bcv"
-          stroke="var(--color-bcv)"
+          dataKey="official"
+          stroke="var(--color-official)"
           dot={false}
           strokeWidth={2}
           connectNulls
           isAnimationActive={false}
         />
         <Line
-          dataKey="p2p"
-          stroke="var(--color-p2p)"
+          dataKey="parallel"
+          stroke="var(--color-parallel)"
           dot={false}
           strokeWidth={2}
           connectNulls

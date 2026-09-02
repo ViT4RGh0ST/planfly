@@ -25,7 +25,7 @@ export type UserContext = {
   householdName: string;
   baseCurrency: string;
   timezone: string;
-  defaultRateSource: "bcv" | "p2p" | "manual";
+  defaultRateSource: "official" | "parallel" | "manual";
   /** The interface language. Free text in the column; normalised on the way out. */
   locale: string;
   role: string;

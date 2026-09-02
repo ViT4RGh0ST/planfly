@@ -156,7 +156,7 @@ export function FinancingForm({
   // Same as in the entry form: the resolved pair goes both ways, and a USDT
   // account stays out because that pair does not exist.
   const convertible =
-    Boolean(rates.bcv || rates.p2p) &&
+    Boolean(rates.official || rates.parallel) &&
     Boolean(financierCurrency) &&
     (financierCurrency === baseCurrency || ratedCurrencies.includes(financierCurrency));
 

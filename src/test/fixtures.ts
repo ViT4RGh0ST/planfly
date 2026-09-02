@@ -41,7 +41,7 @@ export async function seedScenario(opts: { bcvRate?: string; p2pRate?: string; d
       name: "Casa de prueba",
       baseCurrency: "USD",
       timezone: "America/Caracas",
-      defaultRateSource: "p2p",
+      defaultRateSource: "parallel",
       /*
        * Explicit, and this is the line that keeps sixteen `.db.test.ts` files
        * green.
@@ -97,8 +97,8 @@ export async function seedScenario(opts: { bcvRate?: string; p2pRate?: string; d
     .returning();
 
   for (const [source, value] of [
-    ["bcv", opts.bcvRate],
-    ["p2p", opts.p2pRate],
+    ["official", opts.bcvRate],
+    ["parallel", opts.p2pRate],
   ] as const) {
     if (!value) continue;
     // No conflict: `exchange_rates` has NO household column — rates belong to the
@@ -111,7 +111,7 @@ export async function seedScenario(opts: { bcvRate?: string; p2pRate?: string; d
         baseCurrency: "USD",
         quoteCurrency: "VES",
         source,
-        variant: source === "p2p" ? "median" : "default",
+        variant: source === "parallel" ? "median" : "default",
         rate: value,
         effectiveOn: opts.date,
       })

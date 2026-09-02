@@ -84,7 +84,7 @@ export function createRecurringTool(api) {
         },
         rate_source: {
           type: "string",
-          enum: ["bcv", "p2p"],
+          enum: ["official", "parallel"],
           description:
             "Which rate to convert with when there is an amount_currency. Ask the user if they do " +
             "not say: between BCV and P2P there is more than 14% and it is not a detail.",

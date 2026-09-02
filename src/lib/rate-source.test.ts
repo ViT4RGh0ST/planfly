@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import { chooseRateSource } from "./rate-source";
 
-const base = { baseBcvMinor: 417, baseP2pMinor: 363, baseManualMinor: null, fallback: "p2p" as const };
+const base = { baseOfficialMinor: 417, baseParallelMinor: 363, baseManualMinor: null, fallback: "parallel" as const };
 
 describe("chooseRateSource", () => {
   it("doesn't convert a line already in the household's currency", () => {
@@ -14,13 +14,13 @@ describe("chooseRateSource", () => {
   it("what was asked for beats the household's preference", () => {
     // It is the fault this came to fix: you typed $40 and converted at BCV, and
     // the history gave you back the figure at P2P.
-    const r = chooseRateSource({ ...base, isBaseCurrency: false, preferred: "bcv" });
-    assert.deepEqual(r, { source: "bcv", baseMinor: 417 });
+    const r = chooseRateSource({ ...base, isBaseCurrency: false, preferred: "official" });
+    assert.deepEqual(r, { source: "official", baseMinor: 417 });
   });
 
   it("with nothing asked for, the household's preference", () => {
     const r = chooseRateSource({ ...base, isBaseCurrency: false });
-    assert.deepEqual(r, { source: "p2p", baseMinor: 363 });
+    assert.deepEqual(r, { source: "parallel", baseMinor: 363 });
   });
 
   it("a hand-set rate wins when it's asked for", () => {
@@ -36,13 +36,13 @@ describe("chooseRateSource", () => {
   it("falls back to whichever exists when the requested one has no figure", () => {
     const r = chooseRateSource({
       isBaseCurrency: false,
-      preferred: "bcv",
-      fallback: "bcv",
-      baseBcvMinor: null,
-      baseP2pMinor: 363,
+      preferred: "official",
+      fallback: "official",
+      baseOfficialMinor: null,
+      baseParallelMinor: 363,
       baseManualMinor: null,
     });
-    assert.deepEqual(r, { source: "p2p", baseMinor: 363 });
+    assert.deepEqual(r, { source: "parallel", baseMinor: 363 });
   });
 
   it("with no figure at all it stays unvalued, not zero", () => {
@@ -50,9 +50,9 @@ describe("chooseRateSource", () => {
     // different and is what leaves the row flagged for review.
     const r = chooseRateSource({
       isBaseCurrency: false,
-      fallback: "p2p",
-      baseBcvMinor: null,
-      baseP2pMinor: null,
+      fallback: "parallel",
+      baseOfficialMinor: null,
+      baseParallelMinor: null,
       baseManualMinor: null,
     });
     assert.deepEqual(r, { source: "none", baseMinor: null });
@@ -63,11 +63,11 @@ describe("chooseRateSource", () => {
       isBaseCurrency: false,
       preferred: "manual",
       fallback: "manual",
-      baseBcvMinor: 417,
-      baseP2pMinor: 363,
+      baseOfficialMinor: 417,
+      baseParallelMinor: 363,
       baseManualMinor: null,
     });
-    assert.deepEqual(r, { source: "p2p", baseMinor: 363 });
+    assert.deepEqual(r, { source: "parallel", baseMinor: 363 });
   });
 });
 
@@ -98,9 +98,9 @@ describe("chooseRateSource · setting the rate by hand", () => {
     const r = chooseRateSource({
       ...base,
       isBaseCurrency: false,
-      preferred: "p2p",
+      preferred: "parallel",
       baseManualMinor: 500,
     });
-    assert.equal(r.source, "p2p");
+    assert.equal(r.source, "parallel");
   });
 });

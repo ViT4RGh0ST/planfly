@@ -57,8 +57,8 @@ describe("updateTransaction against the database", { skip: hasDb() ? false : "no
     // to the minor unit, so doubling the amount does not double the cent.
     // What is checked is that BOTH were recomputed, not that they match bit for bit.
     for (const [col, a, d] of [
-      ["p2p", before.baseAmountP2pMinor, after.baseAmountP2pMinor],
-      ["bcv", before.baseAmountBcvMinor, after.baseAmountBcvMinor],
+      ["parallel", before.baseAmountParallelMinor, after.baseAmountParallelMinor],
+      ["official", before.baseAmountOfficialMinor, after.baseAmountOfficialMinor],
     ] as const) {
       const expected = Number(a) * 2;
       assert.ok(
@@ -133,13 +133,13 @@ describe("updateTransaction against the database", { skip: hasDb() ? false : "no
     // Another day, another rate. No household column: rates belong to the install.
     await db.execute(sql`
       INSERT INTO exchange_rates (base_currency, quote_currency, source, variant, rate, effective_on)
-      VALUES ('USD','VES','bcv','default','390.0000000000','2026-08-15'),
-             ('USD','VES','p2p','median','450.0000000000','2026-08-15')
+      VALUES ('USD','VES','official','default','390.0000000000','2026-08-15'),
+             ('USD','VES','parallel','median','450.0000000000','2026-08-15')
       ON CONFLICT DO NOTHING`);
 
     const id = await newExpense("3.900,00");
     const before = await line(id);
-    assert.equal(before.baseAmountBcvMinor, -500, "a 780, Bs 3.900,00 son $ 5,00");
+    assert.equal(before.baseAmountOfficialMinor, -500, "a 780, Bs 3.900,00 son $ 5,00");
 
     await updateTransaction({
       householdId: e.home.id,
@@ -148,7 +148,7 @@ describe("updateTransaction against the database", { skip: hasDb() ? false : "no
     });
 
     const after = await line(id);
-    assert.equal(after.baseAmountBcvMinor, -1000, "a 390, los mismos bolívares son $ 10,00");
+    assert.equal(after.baseAmountOfficialMinor, -1000, "a 390, los mismos bolívares son $ 10,00");
   });
 
   it("switching accounts doesn't drag along the previous one's rate", async () => {
@@ -165,7 +165,7 @@ describe("updateTransaction against the database", { skip: hasDb() ? false : "no
     // Both accounts carry bolívares, so the equivalent does not move. What is
     // checked is that it was recomputed and not copied: if it were dragged
     // along, switching currencies would give a false figure with no warning.
-    assert.equal(l.baseAmountBcvMinor, -100, "Bs 780,00 a 780 siguen siendo $ 1,00");
+    assert.equal(l.baseAmountOfficialMinor, -100, "Bs 780,00 a 780 siguen siendo $ 1,00");
   });
 
   it("the breakdown is replaced whole, and `append` keeps what was there", async () => {
@@ -270,8 +270,8 @@ describe("updateTransaction against the database", { skip: hasDb() ? false : "no
     const row = {
       category: "Mercado",
       confidence: null,
-      baseBcvMinor: null,
-      baseP2pMinor: null,
+      baseOfficialMinor: null,
+      baseParallelMinor: null,
       currency: "EUR",
       source: "form",
     };

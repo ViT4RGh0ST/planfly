@@ -59,7 +59,7 @@ export function createFinancingTool(api) {
         },
         rate_source: {
           type: "string",
-          enum: ["bcv", "p2p"],
+          enum: ["official", "parallel"],
           description: "Which rate to convert with when there is a total_currency. Ask if they do not say.",
         },
         down_payment: {

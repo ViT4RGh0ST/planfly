@@ -30,7 +30,7 @@ export const GET = withToken("reports:read", async ({ principal, req }) => {
   const t = getTranslator(normalizeLocale(principal.locale));
   const url = new URL(req.url);
   const name = url.searchParams.get("product");
-  const valuation = url.searchParams.get("rate") === "bcv" ? "bcv" : "p2p";
+  const valuation = url.searchParams.get("rate") === "official" ? "official" : "parallel";
 
   if (!name) {
     const catalog = await productCatalog(principal.householdId, valuation);
@@ -96,7 +96,7 @@ export const GET = withToken("reports:read", async ({ principal, req }) => {
   } else {
     detail.push(t("api.products.head", { product: history.name, unit: history.baseUnit }));
     for (const p of history.points) {
-      const inBase = valuation === "bcv" ? p.unitPriceBcvMinor : p.unitPriceP2pMinor;
+      const inBase = valuation === "official" ? p.unitPriceOfficialMinor : p.unitPriceParallelMinor;
       detail.push(
         `· ${formatDay(p.occurredOn, principal.locale)}: ${formatAmount(p.unitPriceMinor, p.currency)}` +
           (inBase != null ? ` (${formatAmount(inBase, principal.baseCurrency)})` : ""),
@@ -135,9 +135,9 @@ export const GET = withToken("reports:read", async ({ principal, req }) => {
       description: p.description,
       unit_price: formatAmount(p.unitPriceMinor, p.currency),
       unit_price_base:
-        (valuation === "bcv" ? p.unitPriceBcvMinor : p.unitPriceP2pMinor) != null
+        (valuation === "official" ? p.unitPriceOfficialMinor : p.unitPriceParallelMinor) != null
           ? formatAmount(
-              (valuation === "bcv" ? p.unitPriceBcvMinor : p.unitPriceP2pMinor)!,
+              (valuation === "official" ? p.unitPriceOfficialMinor : p.unitPriceParallelMinor)!,
               principal.baseCurrency,
             )
           : null,

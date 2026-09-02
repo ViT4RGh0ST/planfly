@@ -17,7 +17,7 @@ import {
   filteredTotals,
   recentTransactions,
   transactionFacets,
-  type Valuation,
+  type Valuation, valuationFrom,
 } from "@/lib/services/reports";
 
 export const dynamic = "force-dynamic";
@@ -69,7 +69,7 @@ export default async function TransactionsPage({
   const ctx = await requireSession();
   const t = await getTranslations();
   const params = await searchParams;
-  const valuation: Valuation = params.rate === "bcv" ? "bcv" : "p2p";
+  const valuation: Valuation = valuationFrom(params.rate);
   const date = today(ctx.timezone);
 
   // "all" is the one thing `resolvePeriod` cannot interpret, because it is not
@@ -114,7 +114,7 @@ export default async function TransactionsPage({
 
   // The rate the server will use if the field is left empty is the one the
   // household sets, not always P2P.
-  const defaultRate = rates[ctx.defaultRateSource] ?? rates.p2p ?? rates.bcv ?? null;
+  const defaultRate = rates[ctx.defaultRateSource] ?? rates.parallel ?? rates.official ?? null;
   const suggestedRate = defaultRate
     ? new Intl.NumberFormat("es-VE", {
         minimumFractionDigits: 2,
@@ -126,7 +126,7 @@ export default async function TransactionsPage({
   // `currentRates` only resolves USD/VES. Promising a rate to a USDT account
   // made the form offer to convert and the row come out afterwards saying
   // "no rate".
-  const ratedCurrencies = rates.bcv || rates.p2p ? ["VES"] : [];
+  const ratedCurrencies = rates.official || rates.parallel ? ["VES"] : [];
 
   const transfers = transactions.filter((t) => t.kind === "transfer").length;
   const filtered = Boolean(params.q || params.account || params.categoria || params.anulados);
@@ -186,8 +186,8 @@ export default async function TransactionsPage({
             count={total}
             shown={transactions.length}
             periodLabel={periodName(t, range?.ref ?? { key: "all" })}
-            bcvMinor={totals.bcvMinor}
-            p2pMinor={totals.p2pMinor}
+            officialMinor={totals.officialMinor}
+            parallelMinor={totals.parallelMinor}
             unvalued={totals.unvalued}
             currency={ctx.baseCurrency}
             valuation={valuation}

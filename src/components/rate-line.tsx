@@ -13,11 +13,21 @@ import { cn } from "@/lib/utils";
  */
 export function RateLine({
   label,
+  slot,
   value,
   baseCurrency,
   active,
 }: {
-  label: "BCV" | "P2P";
+  /** The slot, said in the household's language by whoever draws the row. */
+  label: string;
+  /**
+   * Which slot it is.
+   *
+   * The colour used to be decided by comparing the LABEL against «BCV» — so the
+   * moment those words came from a catalogue, in either language, both lines
+   * went the same colour. What decides a colour is the slot, never its name.
+   */
+  slot: "official" | "parallel";
   value: number | null;
   baseCurrency: string;
   /** The one selected above, and therefore the one the totals add up. */
@@ -33,7 +43,7 @@ export function RateLine({
         active ? "text-foreground" : "text-muted-foreground",
       )}
     >
-      <span className={cn("text-[0.6875rem]", label === "BCV" ? "text-bcv" : "text-p2p")}>
+      <span className={cn("text-[0.6875rem]", slot === "official" ? "text-official" : "text-parallel")}>
         {label}
       </span>
       {value == null ? t("ui.transactions.noRate") : formatAmount(value, baseCurrency)}
@@ -48,20 +58,20 @@ export function RateLine({
  * saying so with a dash is more honest than repeating the same figure twice.
  */
 export function BothRates({
-  bcvMinor,
-  p2pMinor,
+  officialMinor,
+  parallelMinor,
   baseCurrency,
   valuation,
   className,
 }: {
-  bcvMinor: number | null;
-  p2pMinor: number | null;
+  officialMinor: number | null;
+  parallelMinor: number | null;
   baseCurrency: string;
-  valuation: "bcv" | "p2p";
+  valuation: "official" | "parallel";
   className?: string;
 }) {
   const t = useTranslations();
-  if (bcvMinor == null && p2pMinor == null) {
+  if (officialMinor == null && parallelMinor == null) {
     return <span className="text-xs text-muted-foreground">{t("ui.transactions.noRate")}</span>;
   }
 
@@ -70,16 +80,18 @@ export function BothRates({
       {/* P2P on top, as in the selector and in the summary: one and the same
           pair of figures cannot change order depending on where you look. */}
       <RateLine
-        label="P2P"
-        value={p2pMinor}
+        label={t("domain.rateSlotShort.parallel")}
+        slot="parallel"
+        value={parallelMinor}
         baseCurrency={baseCurrency}
-        active={valuation === "p2p"}
+        active={valuation === "parallel"}
       />
       <RateLine
-        label="BCV"
-        value={bcvMinor}
+        label={t("domain.rateSlotShort.official")}
+        slot="official"
+        value={officialMinor}
         baseCurrency={baseCurrency}
-        active={valuation === "bcv"}
+        active={valuation === "official"}
       />
     </span>
   );

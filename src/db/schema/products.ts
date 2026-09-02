@@ -117,8 +117,8 @@ export const transactionItems = pgTable(
      * Precomputed just like the ledger lines: the price chart adds up a column
      * instead of reconverting fourteen rows per purchase.
      */
-    baseAmountBcvMinor: bigint("base_amount_bcv_minor", { mode: "number" }),
-    baseAmountP2pMinor: bigint("base_amount_p2p_minor", { mode: "number" }),
+    baseAmountOfficialMinor: bigint("base_amount_official_minor", { mode: "number" }),
+    baseAmountParallelMinor: bigint("base_amount_parallel_minor", { mode: "number" }),
     /** How sure the match was. Below the threshold, off to review. */
     confidence: numeric("confidence", { precision: 4, scale: 3 }),
     sortOrder: integer("sort_order").notNull().default(0),

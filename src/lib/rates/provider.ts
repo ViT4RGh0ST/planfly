@@ -22,7 +22,7 @@ import { z } from "zod";
  * slot says what it is for — and why there is no need to touch the Postgres
  * enum, nor the four `transaction_entries` columns, nor the selector.
  */
-export const RATE_SLOTS = ["bcv", "p2p"] as const;
+export const RATE_SLOTS = ["official", "parallel"] as const;
 export type RateSlot = (typeof RATE_SLOTS)[number];
 
 

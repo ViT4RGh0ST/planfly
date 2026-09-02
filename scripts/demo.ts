@@ -114,8 +114,8 @@ async function main() {
       await saveRate({
         baseCurrency: "USD",
         quoteCurrency: "VES",
-        source: "bcv",
-        variant: "bcv",
+        source: "official",
+        variant: "official",
         value: bcv.toFixed(4),
         effectiveOn: date,
         raw: { typedBy: "demo" },
@@ -124,8 +124,8 @@ async function main() {
     await saveRate({
       baseCurrency: "USD",
       quoteCurrency: "VES",
-      source: "p2p",
-      variant: "p2p",
+      source: "parallel",
+      variant: "parallel",
       value: p2p.toFixed(4),
       effectiveOn: date,
       raw: { typedBy: "demo" },
@@ -137,7 +137,7 @@ async function main() {
     baseCurrency: "USD",
     quoteCurrency: "VES",
     source: "manual",
-    variant: "p2p",
+    variant: "parallel",
     value: "925.0000",
     effectiveOn: addDays(now, -3),
     raw: { typedBy: "demo", note: "what the exchange actually paid that day" },
@@ -399,7 +399,7 @@ async function main() {
       amount: "150",
       amountCurrency: "USD",
       currency: "VES",
-      rateSource: "p2p",
+      rateSource: "parallel",
       account: "Banco",
       category: "Hogar",
       description: "Alquiler",
@@ -436,7 +436,7 @@ async function main() {
       amount: "12",
       amountCurrency: "USD",
       currency: "VES",
-      rateSource: "bcv",
+      rateSource: "official",
       account: "Efectivo Bs",
       category: "Entretenimiento",
       description: "Gimnasio",
@@ -486,7 +486,7 @@ async function main() {
     // Comfortable, which is what most of them look like most of the time.
     Gasolina: 2.6,
   };
-  for (const row of await budgetUsage(home.id, now, "p2p")) {
+  for (const row of await budgetUsage(home.id, now, "parallel")) {
     const factor = target[row.category];
     if (!factor || row.spentMinor <= 0) continue;
     await saveBudget({

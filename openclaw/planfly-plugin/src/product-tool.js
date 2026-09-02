@@ -48,7 +48,7 @@ export function createProductTool(api) {
         },
         rate: {
           type: "string",
-          enum: ["p2p", "bcv"],
+          enum: ["parallel", "official"],
           description: "Which rate the dollar prices are read at. Defaults to p2p.",
         },
         from: {
@@ -61,7 +61,7 @@ export function createProductTool(api) {
     async execute(_id, params) {
       try {
         const action = params.action ?? "history";
-        const rate = params.rate === "bcv" ? "bcv" : "p2p";
+        const rate = params.rate === "official" ? "official" : "parallel";
 
         if (action === "split") {
           const result = await client.post("/api/v1/products", {

@@ -223,12 +223,12 @@ async function resolveTemplateAmount(
   if (!native || native === written) return {};
 
   const home = await homeOf(householdId);
-  const source: "bcv" | "p2p" =
-    template.rateSource === "bcv" || template.rateSource === "p2p"
+  const source: "official" | "parallel" =
+    template.rateSource === "official" || template.rateSource === "parallel"
       ? template.rateSource
-      : home.defaultRateSource === "bcv"
-        ? "bcv"
-        : "p2p";
+      : home.defaultRateSource === "official"
+        ? "official"
+        : "parallel";
 
   /*
    * The rate quotes the NON-base currency against the base: 877,50 bolívares per

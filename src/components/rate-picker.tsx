@@ -29,19 +29,21 @@ export function RatePicker({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const [rate, setRate] = useQueryState("rate", { defaultValue: "p2p", shallow: false });
+  const [rate, setRate] = useQueryState("rate", { defaultValue: "parallel", shallow: false });
   const [, startTransition] = useTransition();
-  const [active, setOptimistic] = useOptimistic<"bcv" | "p2p">(rate === "bcv" ? "bcv" : "p2p");
+  const [active, setOptimistic] = useOptimistic<"official" | "parallel">(rate === "official" ? "official" : "parallel");
 
-  const choose = (option: "bcv" | "p2p") =>
+  const choose = (option: "official" | "parallel") =>
     startTransition(() => {
       setOptimistic(option);
       void setRate(option);
     });
 
   const options = [
-    { key: "p2p" as const, label: "P2P", accent: "text-p2p", rule: "bg-p2p" },
-    { key: "bcv" as const, label: "BCV", accent: "text-bcv", rule: "bg-bcv" },
+    // The slot's name from the catalogue: this picker sits above totals that add
+    // up every currency the household holds, and «BCV» names one country's bank.
+    { key: "parallel" as const, label: t("domain.rateSlotShort.parallel"), accent: "text-parallel", rule: "bg-parallel" },
+    { key: "official" as const, label: t("domain.rateSlotShort.official"), accent: "text-official", rule: "bg-official" },
   ].filter((option) => rates[option.key]);
 
   if (options.length === 0) {

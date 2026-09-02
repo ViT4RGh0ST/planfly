@@ -28,7 +28,7 @@ export const households = pgTable("households", {
   baseCurrency: varchar("base_currency", { length: 10 }).notNull().default("USD"),
   /** Which of the two rates rules by default when valuing. Changing it revalues
    *  everything instantly, with no migration, because every line stores both. */
-  defaultRateSource: rateSourceEnum("default_rate_source").notNull().default("p2p"),
+  defaultRateSource: rateSourceEnum("default_rate_source").notNull().default("parallel"),
   timezone: text("timezone").notNull().default("America/Caracas"),
   /**
    * The interface language, and the one the bot answers in.

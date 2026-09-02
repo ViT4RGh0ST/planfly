@@ -35,7 +35,7 @@ export function createReportTool(api) {
         },
         valuation: {
           type: "string",
-          enum: ["p2p", "bcv"],
+          enum: ["parallel", "official"],
           description:
             "Which rate to value at. Defaults to the household's preferred one (P2P). Use bcv only if the user explicitly asks for the official rate.",
         },

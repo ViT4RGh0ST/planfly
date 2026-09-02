@@ -82,8 +82,8 @@ export async function register() {
 
       const result = await dailySnapshot(today(timezone));
       const parts = [
-        result.bcv ? `BCV ${Number(result.bcv.value).toFixed(2)}` : "BCV failed",
-        result.p2p ? `P2P ${Number(result.p2p.value).toFixed(2)}` : "P2P failed",
+        result.official ? `BCV ${Number(result.official.value).toFixed(2)}` : "BCV failed",
+        result.parallel ? `P2P ${Number(result.parallel.value).toFixed(2)}` : "P2P failed",
       ];
       const slotLabel = new Intl.DateTimeFormat("es-VE", {
         timeZone: timezone,

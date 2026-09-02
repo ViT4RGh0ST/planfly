@@ -23,8 +23,8 @@ export function ResultSummary({
   count,
   shown,
   periodLabel,
-  bcvMinor,
-  p2pMinor,
+  officialMinor,
+  parallelMinor,
   unvalued,
   currency,
   valuation,
@@ -34,12 +34,12 @@ export function ResultSummary({
   /** How many rows are actually painted, when fewer than the total. */
   shown: number;
   periodLabel: string | null;
-  bcvMinor: number;
-  p2pMinor: number;
+  officialMinor: number;
+  parallelMinor: number;
   /** Entries in the set that could not be valued. */
   unvalued: number;
   currency: string;
-  valuation: "bcv" | "p2p";
+  valuation: "official" | "parallel";
   transfersExcluded: number;
 }) {
   const t = useTranslations();
@@ -49,8 +49,10 @@ export function ResultSummary({
   // With the orders crossed, picking the rate on the left highlighted the figure
   // on the right: the gesture and its effect pointed in opposite directions.
   const options = [
-    { key: "p2p" as const, label: "P2P", minor: p2pMinor, accent: "text-p2p" },
-    { key: "bcv" as const, label: "BCV", minor: bcvMinor, accent: "text-bcv" },
+    // The slot, not the institution: this summary is shown for whatever currency
+    // was just recorded.
+    { key: "parallel" as const, label: t("domain.rateSlotShort.parallel"), minor: parallelMinor, accent: "text-parallel" },
+    { key: "official" as const, label: t("domain.rateSlotShort.official"), minor: officialMinor, accent: "text-official" },
   ];
 
   return (

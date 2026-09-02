@@ -148,19 +148,19 @@ export const transactionEntries = pgTable(
 
     // ── Double rate snapshot (NULL when the line is already in base currency) ──
     baseCurrency: varchar("base_currency", { length: 10 }).notNull(),
-    rateBcv: numeric("rate_bcv", { precision: 24, scale: 10 }),
-    rateP2p: numeric("rate_p2p", { precision: 24, scale: 10 }),
+    rateOfficial: numeric("rate_official", { precision: 24, scale: 10 }),
+    rateParallel: numeric("rate_parallel", { precision: 24, scale: 10 }),
     rateManual: numeric("rate_manual", { precision: 24, scale: 10 }),
-    rateBcvId: uuid("rate_bcv_id").references(() => exchangeRates.id, { onDelete: "set null" }),
-    rateP2pId: uuid("rate_p2p_id").references(() => exchangeRates.id, { onDelete: "set null" }),
+    rateOfficialId: uuid("rate_official_id").references(() => exchangeRates.id, { onDelete: "set null" }),
+    rateParallelId: uuid("rate_parallel_id").references(() => exchangeRates.id, { onDelete: "set null" }),
     rateSourceUsed: rateSourceUsedEnum("rate_source_used").notNull().default("none"),
     /** The rate applied is not from the entry's date (none was available). */
     rateStale: boolean("rate_stale").notNull().default(false),
 
     /** Amounts already converted, immutable: it is what it cost THAT day.
      *  Revaluing the net position at today's rate is a different query (see reports). */
-    baseAmountBcvMinor: bigint("base_amount_bcv_minor", { mode: "number" }),
-    baseAmountP2pMinor: bigint("base_amount_p2p_minor", { mode: "number" }),
+    baseAmountOfficialMinor: bigint("base_amount_official_minor", { mode: "number" }),
+    baseAmountParallelMinor: bigint("base_amount_parallel_minor", { mode: "number" }),
     baseAmountManualMinor: bigint("base_amount_manual_minor", { mode: "number" }),
 
     memo: text("memo"),

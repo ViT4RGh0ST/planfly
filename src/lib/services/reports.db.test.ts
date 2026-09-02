@@ -47,13 +47,13 @@ describe("the reports against the database", { skip: hasDb() ? false : "no Postg
       account: "tdc", category: "mercado", occurredOn: DATE, source: "form",
     });
     const n = await netWorth(e.home.id, DATE, "USD");
-    assert.ok(n.totalBcvMinor < 0, `una deuda sola tiene que dar patrimonio negativo, dio ${n.totalBcvMinor}`);
-    assert.equal(n.liabilitiesBcvMinor, -1000, "7.800 Bs a 780 son 10,00 USD de deuda");
+    assert.ok(n.totalOfficialMinor < 0, `una deuda sola tiene que dar patrimonio negativo, dio ${n.totalOfficialMinor}`);
+    assert.equal(n.liabilitiesOfficialMinor, -1000, "7.800 Bs a 780 son 10,00 USD de deuda");
   });
 
   it("switching valuation changes the figure, it recalculates nothing", async () => {
-    const bcv = await spendingByCategory(e.home.id, undefined, TZ, "bcv");
-    const p2p = await spendingByCategory(e.home.id, undefined, TZ, "p2p");
+    const bcv = await spendingByCategory(e.home.id, undefined, TZ, "official");
+    const p2p = await spendingByCategory(e.home.id, undefined, TZ, "parallel");
     const sum = (x: { categories: Array<{ totalMinor: number }> }) =>
       x.categories.reduce((s, r) => s + Number(r.totalMinor), 0);
     const totalBcv = sum(bcv);
@@ -82,14 +82,14 @@ describe("the reports against the database", { skip: hasDb() ? false : "no Postg
 
     // 1.000 Bs go from being worth 1,11 USD (at 900) to 2,00 (at 500): the total
     // has to move in that direction, not stay where it was.
-    assert.notEqual(after.p2pMinor, before.p2pMinor, "fijar la tasa a mano tiene que mover el total");
+    assert.notEqual(after.parallelMinor, before.parallelMinor, "fijar la tasa a mano tiene que mover el total");
   });
 
   it("a hand-set rate moves net worth, not just the rates screen", async () => {
     // The other half of the same fault: reports.ts had its own copy of the rates
     // SQL, and without updating it setting the rate moved /rates and not net worth.
     const before = await netWorth(e.home.id, DATE, "USD");
-    assert.ok(Number.isFinite(before.totalBcvMinor), "el patrimonio se calcula");
+    assert.ok(Number.isFinite(before.totalOfficialMinor), "el patrimonio se calcula");
   });
 
   it("a voided entry stops counting", async () => {
@@ -101,6 +101,6 @@ describe("the reports against the database", { skip: hasDb() ? false : "no Postg
     const { voidTransaction } = await import("./void-transaction");
     await voidTransaction({ householdId: e.home.id, transactionId: r.transactionId!, reason: "prueba" });
     const sin = await filteredTotals(e.home.id, {});
-    assert.notEqual(sin.p2pMinor, con.p2pMinor, "anular tiene que sacarlo de los totales");
+    assert.notEqual(sin.parallelMinor, con.parallelMinor, "anular tiene que sacarlo de los totales");
   });
 });

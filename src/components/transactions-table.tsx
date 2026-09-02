@@ -36,8 +36,8 @@ export type TransactionRow = {
   amountMinor: number;
   currency: string;
   amountText: string;
-  baseBcvMinor: number | null;
-  baseP2pMinor: number | null;
+  baseOfficialMinor: number | null;
+  baseParallelMinor: number | null;
   baseManualMinor: number | null;
   rateSourceUsed: string;
   account: string;
@@ -89,7 +89,7 @@ const SOURCES: Record<string, React.ComponentType<{ className?: string }>> = {
  * each computed its own version, they would end up disagreeing about which rate
  * was used.
  */
-function describe(t: TransactionRow, valuation: "bcv" | "p2p") {
+function describe(t: TransactionRow, valuation: "official" | "parallel") {
   const Icon = SOURCES[t.source] ?? Terminal;
   // A hand-corrected rate beats both automatic ones: it is the one the user
   // decided was the truth for this line.
@@ -97,9 +97,9 @@ function describe(t: TransactionRow, valuation: "bcv" | "p2p") {
     t.rateSourceUsed === "manual" && t.baseManualMinor != null;
   const inBase = fixedByHand
     ? t.baseManualMinor
-    : valuation === "bcv"
-      ? t.baseBcvMinor
-      : t.baseP2pMinor;
+    : valuation === "official"
+      ? t.baseOfficialMinor
+      : t.baseParallelMinor;
   // A transfer is not money lost: it is the same money somewhere else.
   const isTransfer = t.kind === "transfer" && t.toAccount != null;
   // When the two legs are in different currencies, the rate you actually got
@@ -140,7 +140,7 @@ function BaseAmount({
   inBase: number | null;
   fixedByHand: boolean;
   baseCurrency: string;
-  valuation: "bcv" | "p2p";
+  valuation: "official" | "parallel";
 }) {
   const tr = useTranslations();
   // A line already in the household's currency has nothing to convert.
@@ -160,23 +160,25 @@ function BaseAmount({
     );
   }
 
-  if (t.baseBcvMinor == null && t.baseP2pMinor == null) return <>{tr("ui.transactions.noRate")}</>;
+  if (t.baseOfficialMinor == null && t.baseParallelMinor == null) return <>{tr("ui.transactions.noRate")}</>;
 
   return (
     <span className="flex flex-col items-end leading-tight">
       {/* P2P on top, as in the selector and in the summary: one and the same
           pair of figures cannot change order depending on where you look. */}
       <RateLine
-        label="P2P"
-        value={t.baseP2pMinor}
+        label={tr("domain.rateSlotShort.parallel")}
+        slot="parallel"
+        value={t.baseParallelMinor}
         baseCurrency={baseCurrency}
-        active={valuation === "p2p"}
+        active={valuation === "parallel"}
       />
       <RateLine
-        label="BCV"
-        value={t.baseBcvMinor}
+        label={tr("domain.rateSlotShort.official")}
+        slot="official"
+        value={t.baseOfficialMinor}
         baseCurrency={baseCurrency}
-        active={valuation === "bcv"}
+        active={valuation === "official"}
       />
     </span>
   );
@@ -194,7 +196,7 @@ export function TransactionsTable({
 }: {
   transactions: TransactionRow[];
   baseCurrency: string;
-  valuation: "bcv" | "p2p";
+  valuation: "official" | "parallel";
   /** For the recategorise dropdown. Without them the table is read-only. */
   categories?: string[];
   /** The shops, for the correction dialog. */
