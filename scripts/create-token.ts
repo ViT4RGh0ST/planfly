@@ -31,6 +31,15 @@ const SCOPES = [
   "budgets:write",
   "financing:write",
   "recurring:write",
+  /*
+   * Entering /api/mcp at all.
+   *
+   * `npm run mcp:token` asked for it and this list refused it, so the script
+   * that exists to mint an MCP credential could not mint one: «I do not know
+   * mcp:access». Nothing caught it because the tests build their tokens through
+   * the fixture, which inserts the row directly and never asks this allowlist.
+   */
+  "mcp:access",
 ] as const;
 
 function requestedScopes(): string[] {

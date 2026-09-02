@@ -68,9 +68,20 @@ describe("the HTTP MCP route against the database", { skip: hasDb() ? false : "n
     const body = await mcpBody(listed);
     assert.deepEqual(
       body.result.tools.map((tool: { name: string }) => tool.name).sort(),
+      /*
+       * The exact list, on purpose.
+       *
+       * What a server advertises is its contract: a tool that quietly stops
+       * being registered does not fail, it just stops being offered, and a bot
+       * that can no longer open an account will find some other way to record
+       * the expense.
+       */
       [
+        "planfly_account",
+        "planfly_budget",
         "planfly_confirm_transaction",
         "planfly_context",
+        "planfly_help",
         "planfly_preview_transaction",
         "planfly_report",
       ],

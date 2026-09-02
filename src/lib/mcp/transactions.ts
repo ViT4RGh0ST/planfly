@@ -18,11 +18,63 @@ type PendingTransaction = {
   input: McpTransactionDraftInput;
 };
 
+/**
+ * What a confirmable operation has to be able to do.
+ *
+ * The gate was written for one operation and hard-coded its name, so the three
+ * other writes that need it — correcting an entry, paying an installment,
+ * merging two products — each arrived wanting to widen the same `if`. Three
+ * widenings of one check is three chances for one of them to skip the
+ * fingerprint, which is the part that stops a person approving one figure and
+ * a different one being written.
+ *
+ * `run` with `dryRun` computes without storing. Not every service can do that —
+ * only `recordTransaction` simulates today — so an operation that cannot must
+ * return, instead, a description of what it is about to change, built from the
+ * state it depends on. The fingerprint is then over THAT state: if the
+ * installment's amount or the account's balance moved between the preview and
+ * the yes, the yes was for something else.
+ */
+export type McpOperation = {
+  run(
+    principal: Principal,
+    input: unknown,
+    confirmationId: string,
+    dryRun: boolean,
+  ): Promise<Record<string, unknown>>;
+  /** The values that, if they changed, mean the person approved something else. */
+  fingerprint(preview: Record<string, unknown>): string;
+};
+
+/**
+ * The operations a confirmation can hold.
+ *
+ * `mcp_pending_operations.operation` is text and not an enum precisely so this
+ * list can grow without a migration; what may not grow is the number of places
+ * that decide whether a confirmation is valid.
+ */
+export const MCP_OPERATIONS: Record<string, McpOperation> = {
+  /*
+   * Recording an entry, which is the one the gate was written for and the only
+   * one whose service can genuinely simulate itself: `recordTransaction` with
+   * `dryRun` resolves the account, the category and the day's rates, computes
+   * both equivalents, and stores nothing.
+   */
+  record_transaction: {
+    run: (principal, input, confirmationId, dryRun) =>
+      recordTransaction(
+        toRecordInput(principal, confirmationId, input as McpTransactionDraftInput, dryRun),
+      ) as Promise<Record<string, unknown>>,
+    fingerprint: (preview) => approvalFingerprint(preview as unknown as RecordTransactionResult),
+  },
+};
+
 export class McpConfirmationError extends Error {
   constructor(
     message: string,
     readonly code: "not_found" | "expired" | "already_confirmed" | "preview_changed",
-    readonly preview?: RecordTransactionResult,
+    /** The refreshed preview, whatever shape that operation's previews have. */
+    readonly preview?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -127,6 +179,58 @@ function approvalFingerprint(preview: RecordTransactionResult): string {
   });
 }
 
+/**
+ * Stages any confirmable operation. THE only way one is staged.
+ *
+ * Every tool that needs the gate reached for the table itself and wrote its own
+ * insert, its own expiry check and its own claim-before-write. Four copies of
+ * «claim before writing» is four chances for one of them to drop the atomic
+ * claim or the fingerprint — and the failure that follows is an installment
+ * paid twice, or a person approving one figure while another is written. There
+ * is one copy.
+ */
+export async function previewMcpOperation(
+  principal: Principal,
+  operationName: string,
+  input: unknown,
+): Promise<{ confirmationId: string; expiresAt: string; preview: Record<string, unknown> }> {
+  const operation = MCP_OPERATIONS[operationName];
+  if (!operation) {
+    throw new McpConfirmationError("Confirmation operation is not supported.", "not_found");
+  }
+
+  /*
+   * Insert first to obtain the id, which becomes the idempotency key and the
+   * audit reference. A simulation that fails is removed, so it can never be
+   * confirmed.
+   */
+  const [pending] = await db
+    .insert(mcpPendingOperations)
+    .values({
+      householdId: principal.householdId,
+      userId: principal.userId,
+      tokenId: principal.tokenId,
+      credentialId: principal.credentialId,
+      operation: operationName,
+      payload: { input },
+      preview: {},
+      expiresAt: new Date(Date.now() + CONFIRMATION_TTL_MS),
+    })
+    .returning({ id: mcpPendingOperations.id, expiresAt: mcpPendingOperations.expiresAt });
+
+  try {
+    const preview = await operation.run(principal, input, pending.id, true);
+    await db
+      .update(mcpPendingOperations)
+      .set({ preview })
+      .where(eq(mcpPendingOperations.id, pending.id));
+    return { confirmationId: pending.id, expiresAt: pending.expiresAt.toISOString(), preview };
+  } catch (error) {
+    await db.delete(mcpPendingOperations).where(eq(mcpPendingOperations.id, pending.id));
+    throw error;
+  }
+}
+
 export async function previewMcpTransaction(
   principal: Principal,
   rawInput: unknown,
@@ -164,6 +268,14 @@ export async function previewMcpTransaction(
   }
 }
 
+/** Confirms any staged operation. The transaction one is a caller of this. */
+export async function confirmMcpOperation(
+  principal: Principal,
+  confirmationId: string,
+): Promise<Record<string, unknown>> {
+  return confirmMcpTransaction(principal, confirmationId) as Promise<Record<string, unknown>>;
+}
+
 export async function confirmMcpTransaction(
   principal: Principal,
   confirmationId: string,
@@ -188,22 +300,21 @@ export async function confirmMcpTransaction(
   if (pending.expiresAt <= new Date()) {
     throw new McpConfirmationError("Confirmation expired. Create a fresh preview.", "expired");
   }
-  if (pending.operation !== "record_transaction") {
+  const operation = MCP_OPERATIONS[pending.operation];
+  if (!operation) {
     throw new McpConfirmationError("Confirmation operation is not supported.", "not_found");
   }
 
   const payload = pending.payload as PendingTransaction;
-  const preview = pending.preview as RecordTransactionResult;
-  const refreshed = await recordTransaction(
-    toRecordInput(principal, pending.id, payload.input, true),
-  );
+  const preview = pending.preview as Record<string, unknown>;
+  const refreshed = await operation.run(principal, payload.input, pending.id, true);
 
   /*
    * A rate, account match or duplicate warning may have changed while the
    * person was reviewing. Store the fresh preview and require another explicit
    * confirmation rather than recording a different financial outcome.
    */
-  if (approvalFingerprint(preview) !== approvalFingerprint(refreshed)) {
+  if (operation.fingerprint(preview) !== operation.fingerprint(refreshed)) {
     await db
       .update(mcpPendingOperations)
       .set({ preview: refreshed })
@@ -247,7 +358,7 @@ export async function confirmMcpTransaction(
   }
 
   try {
-    return await recordTransaction(toRecordInput(principal, pending.id, payload.input, false));
+    return (await operation.run(principal, payload.input, pending.id, false)) as RecordTransactionResult;
   } catch (error) {
     // Do not strand an approval if the write failed before the service could
     // commit. The idempotency key still prevents duplicate ledger rows.

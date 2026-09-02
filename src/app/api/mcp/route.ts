@@ -18,6 +18,10 @@ import { McpPrincipalError, oauthPrincipal } from "@/lib/mcp/principal";
 import { confirmMcpTransaction, McpConfirmationError, previewMcpTransaction } from "@/lib/mcp/transactions";
 import { InvalidTransactionError } from "@/lib/services/record-transaction";
 import { mcpTransactionDraftSchema } from "@/lib/validation";
+import { makeToolContext } from "@/lib/mcp/tools/context";
+import { registerAccount } from "@/lib/mcp/tools/account";
+import { registerBudget } from "@/lib/mcp/tools/budget";
+import { registerHelp } from "@/lib/mcp/tools/help";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -44,6 +48,11 @@ function principalWithScope(principal: Principal, scope: string): Principal {
 }
 
 function errorResult(error: unknown) {
+  if (error instanceof RouteRefusal) {
+    // Everything the route said, including `existing`, `detail` and `suggestion`:
+    // those are what tell the model whether to ask the person or fix its own call.
+    return jsonToolResult({ ok: false, ...error.payload }, true);
+  }
   if (error instanceof McpConfirmationError) {
     return jsonToolResult({ ok: false, error: error.code, message: error.message, ...(error.preview ? { preview: error.preview } : {}) }, true);
   }
@@ -65,9 +74,31 @@ function errorResult(error: unknown) {
 async function invokeReadRoute(principal: Principal, path: string, route: (req: NextRequest) => Promise<Response>) {
   const req = withInternalPrincipal(new NextRequest(`http://planfly.internal${path}`), principal);
   const response = await route(req);
-  const payload: unknown = await response.json();
-  if (!response.ok) throw new Error("The underlying Planfly read route rejected the request.");
-  return payload as Record<string, unknown>;
+  const payload = (await response.json()) as Record<string, unknown>;
+  if (!response.ok) {
+    /*
+     * The route's own answer, not a sentence about it.
+     *
+     * This threw away the body and reported «the underlying read route rejected
+     * the request», which is the one thing the caller already knew. Every refusal
+     * the v1 routes are careful to word — «you may already have an account
+     * called X», «I do not know the field Y, did you mean Z», the list of scopes
+     * that were missing — arrived at the model as that sentence, and a bot told
+     * only that it was rejected can do nothing but try again.
+     */
+    throw new RouteRefusal(payload, response.status);
+  }
+  return payload;
+}
+
+/** A refusal from a v1 route, carried whole so the tool can hand it back. */
+class RouteRefusal extends Error {
+  constructor(
+    readonly payload: Record<string, unknown>,
+    readonly status: number,
+  ) {
+    super(typeof payload.message === "string" ? payload.message : `HTTP ${status}`);
+  }
 }
 
 const reportInputSchema = z.object({
@@ -157,6 +188,19 @@ const handler = createMcpHandler(
         } catch (error) { return errorResult(error); }
       },
     );
+
+    /*
+     * The tools that live in their own files.
+     *
+     * Four in one route file was already at the edge of readable; eleven would
+     * not be. Each module registers itself and takes the same context, so «how a
+     * scope is checked» and «how a refusal is passed on» have one implementation
+     * instead of eleven.
+     */
+    const tools = makeToolContext(principal, errorResult);
+    registerAccount(server, tools);
+    registerBudget(server, tools);
+    registerHelp(server, tools);
 
     return server;
   },
