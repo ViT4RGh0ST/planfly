@@ -9,7 +9,7 @@ import { exchangeRates } from "@/db/schema";
 import { requireSession } from "@/lib/session";
 import { formatPercent, formatRate } from "@/lib/money";
 import { formatDay, today } from "@/lib/dates";
-import { currentRates, manualRates, p2pTopOfDay } from "@/lib/rates/service";
+import { currentRates, manualRates, p2pTopOfDay, pairsInUse } from "@/lib/rates/service";
 import { isSlotConfigured } from "@/lib/rates/load-provider";
 import { cn } from "@/lib/utils";
 import { getTranslations } from "next-intl/server";
@@ -28,8 +28,22 @@ export default async function RatesPage() {
   const t = await getTranslations();
   const date = today(ctx.timezone);
 
-  const [current, history, fijadas, top] = await Promise.all([
+  /*
+   * Which currencies this household holds, and the figures for each.
+   *
+   * The screen used to ask about one pair written into the query, so a currency
+   * whose rate was captured and stored had nowhere at all to be seen. It asks
+   * the accounts now — the same question the heartbeat asks before capturing —
+   * so what is drawn and what exists cannot become two lists.
+   */
+  const pairs = await pairsInUse();
+  const rest = pairs.filter((pair) => pair.base !== "USD" || pair.quote !== "VES");
+
+  const [current, others, history, fijadas, top] = await Promise.all([
     currentRates(date),
+    Promise.all(
+      rest.map(async (pair) => ({ pair, rates: await currentRates(date, pair) })),
+    ),
     db
       .select({
         source: exchangeRates.source,
@@ -131,6 +145,9 @@ export default async function RatesPage() {
         <RefreshRatesButton />
       </header>
 
+      <p className="mb-3 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        {t("ui.rates.pair", { quote: "VES", base: "USD" })}
+      </p>
       <div className="flex flex-wrap gap-x-14 gap-y-8">
         {columns.map((column) => (
           <div key={column.key}>
@@ -154,13 +171,80 @@ export default async function RatesPage() {
         ))}
       </div>
 
+      {/* Every other currency the household holds.
+          Smaller, and without the chart, the ad list or the hand-set form: those
+          belong to a pair that has an official source to compare against and a
+          market whose ads are read here. A currency with one rate has one figure,
+          and saying so is the point — an empty «official» column beside a real
+          number reads like a source that failed rather than a question that does
+          not exist in that country. */}
+      {others.map(({ pair, rates }) => (
+        <section key={pair.quote} className="mt-10" aria-labelledby={`pair-${pair.quote}`}>
+          <p
+            id={`pair-${pair.quote}`}
+            className="mb-3 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
+          >
+            {t("ui.rates.pair", { quote: pair.quote, base: pair.base })}
+          </p>
+          <div className="flex flex-wrap gap-x-14 gap-y-8">
+            {pair.hasOfficial && (
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.12em] text-bcv">
+                  {t("ui.rates.official")}
+                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight">
+                  {rates.bcv ? formatRate(rates.bcv.rate) : "—"}
+                </p>
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.12em] text-p2p">
+                {t("ui.rates.parallel")}
+              </p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight">
+                {rates.p2p ? formatRate(rates.p2p.rate) : "—"}
+              </p>
+              <p
+                className={cn(
+                  "mt-1 max-w-[28ch] text-xs",
+                  rates.p2p ? "text-muted-foreground" : "text-caution",
+                )}
+              >
+                {rates.p2p
+                  ? rates.p2p.manual
+                    ? t("ui.rates.setByHandOn", {
+                        date: formatDay(rates.p2p.effectiveOn, ctx.locale),
+                      })
+                    : t("ui.rates.whatYoudBePaid", {
+                        date: formatDay(rates.p2p.effectiveOn, ctx.locale),
+                      })
+                  : t("ui.rates.sourceSilent")}
+              </p>
+            </div>
+            {!pair.hasOfficial && (
+              <div className="max-w-[30ch]">
+                <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  {t("ui.rates.onlyOne")}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("ui.rates.onlyOneNote", { quote: pair.quote })}
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+      ))}
+
       {top.length > 0 && (
         <section aria-labelledby="quien-paga" className="mt-10">
           <h2
             id="quien-paga"
             className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
           >
-            {t("ui.rates.whoPays")}
+            {t("ui.rates.whoPays")}{" "}
+            <span className="font-normal text-muted-foreground/70">
+              · {t("ui.rates.pair", { quote: "VES", base: "USD" })}
+            </span>
           </h2>
           <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
             {t("ui.rates.whoPaysHint")}
@@ -192,7 +276,10 @@ export default async function RatesPage() {
           id="a-mano"
           className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
         >
-          {t("ui.rates.setByHand")}
+          {t("ui.rates.setByHand")}{" "}
+          <span className="font-normal text-muted-foreground/70">
+            · {t("ui.rates.pair", { quote: "VES", base: "USD" })}
+          </span>
         </h2>
         <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
           {t("ui.rates.setByHandHint")}
@@ -210,7 +297,10 @@ export default async function RatesPage() {
           id="historico"
           className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
         >
-          {t("ui.rates.history")}
+          {t("ui.rates.history")}{" "}
+          <span className="font-normal text-muted-foreground/70">
+            · {t("ui.rates.pair", { quote: "VES", base: "USD" })}
+          </span>
         </h2>
         <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
           {t("ui.rates.historyHint")}

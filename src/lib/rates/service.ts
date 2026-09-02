@@ -341,9 +341,17 @@ export async function lastSnapshotAt(): Promise<Date | null> {
  * Only the ones whose rate ages: a stablecoin against its own currency has its
  * row already and no market to ask.
  */
-async function pairsInUse(): Promise<
-  Array<{ base: string; quote: string; hasOfficial: boolean }>
-> {
+export type RatePair = { base: string; quote: string; hasOfficial: boolean };
+
+/**
+ * The pairs worth capturing and worth showing, taken from the accounts.
+ *
+ * Exported because the rates screen asks the same question the heartbeat does:
+ * which currencies does this household actually hold. Answering it from the
+ * accounts is what keeps «which rates exist» and «which rates are drawn» from
+ * being two lists that drift.
+ */
+export async function pairsInUse(): Promise<Array<RatePair>> {
   const { rows } = await db.execute<{ base: string; quote: string; has_official: boolean }>(sql`
     SELECT DISTINCT h.base_currency AS base, a.currency AS quote, c.has_official
       FROM accounts a
@@ -395,8 +403,20 @@ export async function dailySnapshot(date: string): Promise<DailyRates> {
   return { bcv, p2p };
 }
 
-/** Each source's latest known rate, for the dashboard header. */
-export async function currentRates(date: string) {
+/**
+ * Each slot's latest known rate for a pair.
+ *
+ * The pair used to be written into the SQL, so this answered about the bolívar
+ * and only the bolívar: a household with an account in another currency had its
+ * rate captured, stored, and shown nowhere at all.
+ *
+ * It defaults to the originating case so every existing caller keeps asking the
+ * same question it always asked.
+ */
+export async function currentRates(
+  date: string,
+  pair: { base: string; quote: string } = { base: "USD", quote: "VES" },
+) {
   const { rows } = await db.execute<{
     slot: string;
     rate: string;
@@ -414,7 +434,7 @@ export async function currentRates(date: string) {
                -- column, so 'manual' + 'bcv' counts as that day's official one.
                CASE WHEN source = 'manual' THEN variant ELSE source::text END AS slot
           FROM exchange_rates
-         WHERE base_currency = 'USD' AND quote_currency = 'VES'
+         WHERE base_currency = ${pair.base} AND quote_currency = ${pair.quote}
            AND (source IN ('bcv','p2p')
                 OR (source = 'manual' AND variant IN ('bcv','p2p')))
       ) x

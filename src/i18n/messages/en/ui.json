@@ -129,7 +129,7 @@
     "noneStored": "No rates stored yet",
     "staleFrom": "from {date}",
     "title": "Rates",
-    "subtitle": "Bolívares per dollar · {date}",
+    "subtitle": "What a dollar is worth in each currency you hold · {date}",
     "official": "Official · BCV",
     "parallel": "Parallel · P2P",
     "spread": "Gap",
@@ -167,7 +167,10 @@
       "label": "History of the bolívar per dollar, at the official and parallel rates"
     },
     "delete": "Delete",
-    "refreshNow": "Refresh now"
+    "refreshNow": "Refresh now",
+    "pair": "{quote} per {base}",
+    "onlyOne": "Only one rate",
+    "onlyOneNote": "There is no official {quote} rate to compare against: one market is the whole answer."
   },
   "accountList": {
     "empty": "No accounts set up yet.",

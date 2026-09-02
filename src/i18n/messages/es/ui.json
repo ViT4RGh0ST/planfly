@@ -129,7 +129,7 @@
     "noneStored": "Sin tasas guardadas todavía",
     "staleFrom": "del {date}",
     "title": "Tasas",
-    "subtitle": "Bolívares por dólar · {date}",
+    "subtitle": "Cuánto vale un dólar en cada moneda que tienes · {date}",
     "official": "Oficial · BCV",
     "parallel": "Paralela · P2P",
     "spread": "Brecha",
@@ -167,7 +167,10 @@
       "label": "Histórico del bolívar por dólar, a tasa oficial y paralela"
     },
     "delete": "Borrar",
-    "refreshNow": "Actualizar ahora"
+    "refreshNow": "Actualizar ahora",
+    "pair": "{quote} por {base}",
+    "onlyOne": "Una sola tasa",
+    "onlyOneNote": "No hay tasa oficial del {quote} contra la que comparar: un mercado es toda la respuesta."
   },
   "accountList": {
     "empty": "No hay cuentas configuradas todavía.",
