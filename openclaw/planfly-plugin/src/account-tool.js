@@ -71,8 +71,14 @@ export function createAccountTool(api) {
         },
         currency: {
           type: "string",
-          enum: ["VES", "USD", "USDT", "EUR"],
-          description: `Which currency the account is in. Defaults to ${defaultCurrency}.`,
+          description:
+            `Which currency the account is in. Defaults to ${defaultCurrency}. ` +
+            "The ones that exist come back in `currencies` from planfly_context — ASK THERE, " +
+            "this tool no longer carries a list of its own. " +
+            "If the one the user wants is not among them, say so and STOP: " +
+            "never open the account in a different currency. An account whose currency is " +
+            "not the money inside it makes every figure it touches false, and nothing " +
+            "downstream notices.",
         },
         opening_balance: {
           type: "string",

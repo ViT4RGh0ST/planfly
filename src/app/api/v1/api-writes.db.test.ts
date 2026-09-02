@@ -102,6 +102,32 @@ describe("the routes that write", { skip: hasDb() ? false : "no Postgres availab
     assert.equal(created.status, 201, "and taking that way through has to work");
   });
 
+  it("a currency this planfly does not have is refused by naming the ones it has", async () => {
+    /*
+     * The failure this replaces was not a refusal, it was a substitution.
+     *
+     * The bot carried its own list of currencies in its tool schema, said pesos
+     * were unsupported, and then opened the account in bolívares — and when told
+     * again, in dollars — suggesting the amounts be converted by hand. An
+     * account whose currency is not the money inside it makes every figure it
+     * touches false, and nothing downstream notices.
+     *
+     * Nothing checked the code against the table either, so what came back was a
+     * foreign-key error with no answer inside it.
+     */
+    const { POST } = await import("./accounts/route");
+    const res = await POST(
+      pide("/api/v1/accounts", {
+        method: "POST", token,
+        body: { name: "Efectivo Yenes", type: "cash", currency: "JPY", confirm: true },
+      }),
+    );
+    assert.equal(res.status, 422);
+    const body = await res.json();
+    assert.match(body.message, /JPY/, "it has to name the one it does not know");
+    assert.match(body.message, /USD/, "and the ones it does, so the caller can choose");
+  });
+
   it("a made-up account type is rejected", async () => {
     const { POST } = await import("./accounts/route");
     const res = await POST(

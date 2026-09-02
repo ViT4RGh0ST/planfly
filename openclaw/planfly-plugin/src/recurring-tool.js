@@ -73,14 +73,14 @@ export function createRecurringTool(api) {
         },
         amount_currency: {
           type: "string",
-          enum: ["VES", "USD", "USDT", "EUR"],
           description:
             "The currency the user THINKS the amount in, when it is NOT the account's. " +
             "'El gimnasio son 15 dólares y me lo cobran en bolívares' → amount 15, " +
             "amount_currency USD, account the bolívar account. " +
             "It is converted at the rate of the day it fires, not today's: that is why the 15 has " +
             "to be stored and not the bolívares, which change every month. Omit it if the amount is " +
-            "already in the account's currency.",
+            "already in the account's currency." +
+            " The ones that exist come back in \`currencies\` from planfly_context; this tool carries no list of its own. Never substitute one the user did not ask for.",
         },
         rate_source: {
           type: "string",

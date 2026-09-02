@@ -166,7 +166,8 @@
     "alreadyArchived": "{account} ya estaba archivada.",
     "notEmpty": "{account} tiene {amount}. Archivarla sacaría ese dinero del patrimonio sin que ningún movimiento lo explique. Transfiere el saldo a otra cuenta primero.",
     "archived": "{account} archivada. Sus movimientos siguen ahí.",
-    "unarchived": "{account} vuelve a la lista."
+    "unarchived": "{account} vuelve a la lista.",
+    "unknownCurrency": "No conozco la moneda {currency}. Las que tiene este planfly son: {known}. Una cuenta en una moneda que no es el dinero que tiene dentro vuelve falsa cada cifra que toca, así que prefiero no abrirla a abrirla en otra."
   },
   "manageCategories": {
     "missingName": "La categoría necesita un nombre.",

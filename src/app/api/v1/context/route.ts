@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
-import { accounts, categories } from "@/db/schema";
+import { accounts, categories, currencies } from "@/db/schema";
 import { withToken } from "@/lib/api/handler";
 import { today } from "@/lib/dates";
 import { currentRates } from "@/lib/rates/service";
@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 export const GET = withToken("context:read", async ({ principal }) => {
   const date = today(principal.timezone);
 
-  const [accountList, categoryList, rates, position] = await Promise.all([
+  const [accountList, categoryList, currencyList, rates, position] = await Promise.all([
     db
       .select({
         name: accounts.name,
@@ -49,6 +49,10 @@ export const GET = withToken("context:read", async ({ principal }) => {
       .from(categories)
       .where(and(eq(categories.householdId, principal.householdId), isNull(categories.archivedAt)))
       .orderBy(asc(categories.sortOrder), asc(categories.name)),
+
+    // The currencies an account may be opened in. It is the list the agent used
+    // to carry written into its own tool schema, and got wrong.
+    db.select({ code: currencies.code }).from(currencies).orderBy(asc(currencies.code)),
 
     currentRates(date),
     netWorth(principal.householdId, date, principal.baseCurrency),
@@ -107,6 +111,20 @@ export const GET = withToken("context:read", async ({ principal }) => {
     date,
     timezone: principal.timezone,
     base_currency: principal.baseCurrency,
+    /*
+     * Which currencies exist, because the agent had its own list.
+     *
+     * The tool schema carried «VES, USD, USDT, EUR» written by hand, so when a
+     * person asked for an account in pesos the bot answered that planfly does
+     * not support them — and then did something far worse than refusing: it
+     * opened the account in another currency and suggested converting in your
+     * head. An account whose currency is not the money inside it makes every
+     * figure it touches false.
+     *
+     * Read from the table, an added currency reaches the bot the moment the row
+     * exists, and there is one list instead of two.
+     */
+    currencies: currencyList.map((c) => c.code),
     accounts: accountList.map((a) => {
       const balance = position.accounts.find((p) => p.name === a.name);
       return {

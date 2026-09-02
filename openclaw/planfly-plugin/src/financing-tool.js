@@ -50,12 +50,12 @@ export function createFinancingTool(api) {
         },
         total_currency: {
           type: "string",
-          enum: ["VES", "USD", "USDT", "EUR"],
           description:
             "The currency the user says the price in, when it is NOT the financier's. " +
             "'Unos zapatos de 50 dólares en Cashea' → total 50, total_currency USD; Cashea deals in " +
             "bolívares and planfly converts at the purchase day's rate. Omit it if they already said " +
-            "it in the financier's currency.",
+            "it in the financier's currency." +
+            " The ones that exist come back in \`currencies\` from planfly_context; this tool carries no list of its own. Never substitute one the user did not ask for.",
         },
         rate_source: {
           type: "string",

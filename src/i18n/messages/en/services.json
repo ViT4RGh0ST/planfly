@@ -166,7 +166,8 @@
     "alreadyArchived": "{account} was already archived.",
     "notEmpty": "{account} has {amount}. Archiving it would take that money out of net worth with no entry to explain it. Transfer the balance to another account first.",
     "archived": "{account} archived. Its entries are still there.",
-    "unarchived": "{account} is back in the list."
+    "unarchived": "{account} is back in the list.",
+    "unknownCurrency": "I do not know the currency {currency}. The ones this planfly has are: {known}. An account in a currency that is not the money inside it makes every figure it touches false, so I would rather not open it than open it in another one."
   },
   "manageCategories": {
     "missingName": "The category needs a name.",

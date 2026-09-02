@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { normalizeLocale, type Locale } from "@/i18n/config";
 import { getTranslator } from "@/i18n/translator";
 import { localeOf } from "./household-locale";
-import { accounts } from "@/db/schema";
+import { accounts, currencies } from "@/db/schema";
 import { formatAmount, parseAmountToMinor } from "@/lib/money";
 import { today } from "@/lib/dates";
 import { accountBalance } from "./balances";
@@ -57,6 +57,29 @@ export function storedBalance(amountMinor: number, type: AccountType): number {
   // Never -0, same as in `convertToBase`: a card at zero must carry no sign,
   // and `-0` sneaks into comparisons where it is not expected.
   return Object.is(signed, -0) ? 0 : signed;
+}
+
+/**
+ * The currency has to be one this installation knows.
+ *
+ * Nothing checked it, so an unknown code reached the foreign key and came back
+ * as a Postgres error with no answer inside it. What the caller needs is the
+ * list: the bot had its own written by hand, and when somebody asked for pesos
+ * it said planfly did not support them and opened the account in another
+ * currency instead — which is worse than refusing, because an account whose
+ * currency is not the money inside it makes every figure it touches false.
+ */
+async function assertCurrencyExists(code: string, locale: Locale) {
+  const rows = await db.select({ code: currencies.code }).from(currencies);
+  if (rows.some((row) => row.code === code)) return code;
+
+  throw new InvalidTransactionError(
+    getTranslator(locale)("services.manageAccounts.unknownCurrency", {
+      currency: code,
+      known: rows.map((row) => row.code).sort().join(", "),
+    }),
+    "unknown_currency",
+  );
 }
 
 /** "provincial, bbva, pago movil" -> ["provincial","bbva","pago movil"] */
@@ -143,7 +166,7 @@ export async function createAccount(input: CreateAccountInput) {
   const t = getTranslator(locale);
   const name = input.name.trim();
   const slug = await assertNameFree(input.householdId, name, locale);
-  const currency = input.currency.toUpperCase();
+  const currency = await assertCurrencyExists(input.currency.toUpperCase(), locale);
 
   const opening = input.openingBalance?.trim()
     ? storedBalance(parseAmountToMinor(input.openingBalance, currency), input.type)
@@ -241,7 +264,7 @@ export async function updateAccount(input: UpdateAccountInput) {
         "currency_locked",
       );
     }
-    currency = input.currency.toUpperCase();
+    currency = await assertCurrencyExists(input.currency.toUpperCase(), locale);
     patch.currency = currency;
     changes.push(t("services.manageAccounts.change.currency"));
   }

@@ -51,8 +51,10 @@ export function createRecordTool(api) {
         },
         currency: {
           type: "string",
-          enum: ["VES", "USD", "USDT", "EUR"],
-          description: `The amount's currency. Defaults to ${defaultCurrency}. "bolos", "bolívares", "Bs" = VES. "dólares", "$", "verdes" = USD.`,
+          description:
+            `The amount's currency. Defaults to ${defaultCurrency}. ` +
+            '"bolos", "bolívares", "Bs" = VES. "dólares", "$", "verdes" = USD. ' +
+            "The ones that exist come back in `currencies` from planfly_context; this tool carries no list of its own. Never substitute one the user did not ask for.",
         },
         account: {
           type: "string",
