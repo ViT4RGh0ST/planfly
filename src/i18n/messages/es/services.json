@@ -337,5 +337,22 @@
     "rateTooPrecise": "no cabe en la columna de tasas",
     "rateZero": "una tasa no puede ser cero",
     "rateTooHigh": "es demasiado alta para ser una tasa (más de {max})"
+  },
+  "manageCurrencies": {
+    "badCode": "Un código de moneda son dos a seis letras: USD, VES, COP.",
+    "alreadyThere": "{code} ya está.",
+    "missingName": "La moneda necesita un nombre.",
+    "symbolFixed": "{code} se va a imprimir como «{symbol}»: el formateo lleva su propia lista de símbolos y cae en el código, así que uno escrito aquí se guardaría y no se vería nunca. Déjalo vacío.",
+    "notFound": "No conozco la moneda {code}.",
+    "inUse": "{code} tiene {n, plural, one {# cuenta} other {# cuentas}}. Muévelas o archívalas antes de quitar la moneda: todo lo registrado en ella está escrito con sus decimales.",
+    "created": "{code} añadida. Ya se puede abrir una cuenta en ella.",
+    "removed": "{code} quitada.",
+    "nothingToChange": "No había nada que cambiar.",
+    "done": "Listo, corregí {changes} de {code}.",
+    "change": {
+      "name": "el nombre",
+      "hasOfficial": "ahora tiene tasa oficial",
+      "noOfficial": "ahora tiene una sola tasa"
+    }
   }
 }

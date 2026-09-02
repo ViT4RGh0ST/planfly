@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 
 import { RefreshRatesButton } from "@/components/refresh-rates-button";
+import { CurrencyManager } from "@/components/currency-manager";
 import { RatesChart } from "@/components/rates-chart";
 import { ManualRateForm } from "@/components/manual-rate-form";
 import { ManualRateList } from "@/components/manual-rate-list";
@@ -10,6 +11,7 @@ import { requireSession } from "@/lib/session";
 import { formatPercent, formatRate } from "@/lib/money";
 import { formatDay, today } from "@/lib/dates";
 import { currentRates, manualRates, p2pTopOfDay, pairsInUse } from "@/lib/rates/service";
+import { listCurrencies } from "@/lib/services/manage-currencies";
 import { isSlotConfigured } from "@/lib/rates/load-provider";
 import { cn } from "@/lib/utils";
 import { getTranslations } from "next-intl/server";
@@ -39,7 +41,7 @@ export default async function RatesPage() {
   const pairs = await pairsInUse();
   const rest = pairs.filter((pair) => pair.base !== "USD" || pair.quote !== "VES");
 
-  const [current, others, history, fijadas, top] = await Promise.all([
+  const [current, others, history, fijadas, top, currencyList] = await Promise.all([
     currentRates(date),
     Promise.all(
       rest.map(async (pair) => ({ pair, rates: await currentRates(date, pair) })),
@@ -69,6 +71,7 @@ export default async function RatesPage() {
       .limit(720),
     manualRates(8),
     p2pTopOfDay(date),
+    listCurrencies(),
   ]);
 
   // Grouped by date so the chart has one series per source.
@@ -308,6 +311,25 @@ export default async function RatesPage() {
         <div className="mt-6">
           <RatesChart data={series} />
         </div>
+      </section>
+
+      <hr className="my-10 border-border" />
+
+      {/* Adding a currency used to be a migration and a release. It goes last
+          because it is done twice in a lifetime — but it goes HERE, because the
+          question that brings somebody to it is «why has my peso no rate?», and
+          that is asked while looking at this screen. */}
+      <section aria-labelledby="monedas">
+        <h2
+          id="monedas"
+          className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
+        >
+          {t("ui.currencies.title")}
+        </h2>
+        <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
+          {t("ui.currencies.hint")}
+        </p>
+        <CurrencyManager currencies={currencyList} baseCurrency={ctx.baseCurrency} />
       </section>
     </div>
   );

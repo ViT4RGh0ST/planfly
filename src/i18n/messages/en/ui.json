@@ -714,5 +714,24 @@
     "wrong": "Wrong email or password.",
     "signingIn": "Signing in…",
     "signIn": "Sign in"
+  },
+  "currencies": {
+    "title": "Currencies",
+    "hint": "The ones this planfly knows. Adding one used to be a migration and a release; an account can be opened in it the moment it is here.",
+    "add": "Add a currency",
+    "code": "Code",
+    "name": "Name",
+    "create": "Add it",
+    "remove": "Remove",
+    "unused": "no accounts",
+    "accounts": "{n, plural, one {# account} other {# accounts}}",
+    "oneRate": "one rate",
+    "withOfficial": "official and parallel",
+    "addOfficial": "Give it an official rate",
+    "dropOfficial": "Remove its official rate",
+    "hasOfficialHelp": "There is an official rate for it, separate from the market's. Most countries have none — Venezuela is the case this was written for.",
+    "decimalsFixed": "It is created with two decimals, which is what the formatting uses. A currency written whole — the Chilean peso, the yen — needs a line of code, because two lists that disagree put every amount out by a hundred without failing.",
+    "isBase": "your own currency",
+    "doesNotAge": "its rate does not expire"
   }
 }

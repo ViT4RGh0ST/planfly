@@ -714,5 +714,24 @@
     "wrong": "Correo o contraseña incorrectos.",
     "signingIn": "Entrando…",
     "signIn": "Entrar"
+  },
+  "currencies": {
+    "title": "Monedas",
+    "hint": "Las que conoce este planfly. Añadir una era una migración y un despliegue; en cuanto está aquí se puede abrir una cuenta en ella.",
+    "add": "Añadir una moneda",
+    "code": "Código",
+    "name": "Nombre",
+    "create": "Añadirla",
+    "remove": "Quitar",
+    "unused": "sin cuentas",
+    "accounts": "{n, plural, one {# cuenta} other {# cuentas}}",
+    "oneRate": "una sola tasa",
+    "withOfficial": "oficial y paralela",
+    "addOfficial": "Ponerle tasa oficial",
+    "dropOfficial": "Quitarle la oficial",
+    "hasOfficialHelp": "Existe una tasa oficial suya, aparte de la del mercado. La mayoría de los países no tienen — Venezuela es el caso para el que se escribió esto.",
+    "decimalsFixed": "Se crea con dos decimales, que es lo que usa el formateo. Una moneda que se escribe entera — el peso chileno, el yen — necesita una línea de código, porque dos listas que discrepan sacan cada monto por cien sin fallar.",
+    "isBase": "tu propia moneda",
+    "doesNotAge": "su tasa no caduca"
   }
 }

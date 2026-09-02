@@ -56,6 +56,11 @@ import {
   type CategoryKind,
 } from "@/lib/services/manage-categories";
 import {
+  createCurrency,
+  removeCurrency,
+  updateCurrency,
+} from "@/lib/services/manage-currencies";
+import {
   archivePayee,
   createPayee,
   placeUnplaced,
@@ -984,6 +989,58 @@ export async function payeeForEdit(id: string): Promise<EditablePayee | null> {
     aliases: row.aliases.join(", "),
     hasBranches: Boolean(branch),
   };
+}
+
+/**
+ * Currencies.
+ *
+ * The only reference data a person can add from the app, and the only field it
+ * refuses to take is the one that could lie: the decimals come from `money.ts`,
+ * which cannot read the table. See `manage-currencies.ts`.
+ */
+export async function createCurrencyAction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const ctx = await requireWriter();
+  try {
+    const result = await createCurrency({
+      locale: ctx.locale,
+      code: String(form.get("code") ?? ""),
+      name: String(form.get("name") ?? ""),
+      hasOfficial: form.get("has_official") === "on",
+      isCrypto: form.get("is_crypto") === "on",
+    });
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
+  }
+}
+
+export async function toggleCurrencyOfficialAction(
+  code: string,
+  hasOfficial: boolean,
+): Promise<ActionState> {
+  const ctx = await requireWriter();
+  try {
+    const result = await updateCurrency({ locale: ctx.locale, code, hasOfficial });
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
+  }
+}
+
+export async function removeCurrencyAction(code: string): Promise<ActionState> {
+  const ctx = await requireWriter();
+  try {
+    const result = await removeCurrency(code, ctx.locale);
+    revalidatePath("/", "layout");
+    return { ok: true, message: result.summary };
+  } catch (err) {
+    return { ok: false, message: messageForScreen(err, ctx.locale) };
+  }
 }
 
 /**

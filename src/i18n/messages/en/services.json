@@ -337,5 +337,22 @@
     "rateTooPrecise": "it does not fit the rates column",
     "rateZero": "a rate cannot be zero",
     "rateTooHigh": "it is too high to be a rate (more than {max})"
+  },
+  "manageCurrencies": {
+    "badCode": "A currency code is two to six letters: USD, VES, COP.",
+    "alreadyThere": "{code} is already here.",
+    "missingName": "The currency needs a name.",
+    "symbolFixed": "{code} will print as «{symbol}»: the formatting keeps its own list of symbols and falls back to the code, so one typed here would be stored and never shown. Leave it empty.",
+    "notFound": "I do not know the currency {code}.",
+    "inUse": "{code} has {n, plural, one {# account} other {# accounts}} in it. Move or archive them before removing the currency: everything recorded in it is written with its decimals.",
+    "created": "{code} added. An account can be opened in it now.",
+    "removed": "{code} removed.",
+    "nothingToChange": "There was nothing to change.",
+    "done": "Done, I corrected {changes} for {code}.",
+    "change": {
+      "name": "the name",
+      "hasOfficial": "it now has an official rate",
+      "noOfficial": "it now has one rate only"
+    }
   }
 }
