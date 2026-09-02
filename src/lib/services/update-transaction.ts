@@ -130,7 +130,7 @@ export type UpdateTransactionResult = {
 };
 
 /** Which origin and age the agent is allowed to correct. */
-export const AGENT_EDITABLE_SOURCES = ["telegram", "ocr"] as const;
+export const AGENT_EDITABLE_SOURCES = ["telegram", "ocr", "mcp"] as const;
 export const AGENT_EDITABLE_DAYS = 7;
 
 type Leg = {

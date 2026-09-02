@@ -162,6 +162,13 @@
       "when": 1788323707429,
       "tag": "0022_currency_names",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1788373970589,
+      "tag": "0023_mcp",
+      "breakpoints": true
     }
   ]
 }

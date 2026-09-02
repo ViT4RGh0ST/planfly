@@ -22,7 +22,10 @@ import { apiTokens, households } from "@/db/schema";
 const PREFIX = "plfy_";
 
 export type Principal = {
-  tokenId: string;
+  /** A revocable machine-token id. OAuth principals intentionally have none. */
+  tokenId: string | null;
+  /** Stable credential binding for confirmation-gated MCP operations. */
+  credentialId: string;
   householdId: string;
   userId: string;
   scopes: string[];
@@ -95,6 +98,7 @@ export async function authenticateToken(header: string | null): Promise<Principa
 
   return {
     tokenId: row.id,
+    credentialId: `token:${row.id}`,
     householdId: row.householdId,
     userId: row.userId,
     scopes: row.scopes,

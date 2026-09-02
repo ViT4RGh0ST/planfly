@@ -26,11 +26,15 @@
     "scan:user": "tsx --env-file-if-exists=.env.local scripts/scan-user.ts",
     "rates:check": "tsx --env-file-if-exists=.env.local scripts/check-rates.ts",
     "openclaw:install": "rsync -a --delete openclaw/planfly-plugin/ ~/.openclaw/extensions/planfly/ && echo \"Installed. Now restart the openclaw gateway so it picks it up.\"",
-    "openclaw:capture": "rsync -a --delete ~/.openclaw/extensions/planfly/ openclaw/planfly-plugin/ && echo \"Pulled into the repo. Review the diff before committing.\""
+    "openclaw:capture": "rsync -a --delete ~/.openclaw/extensions/planfly/ openclaw/planfly-plugin/ && echo \"Pulled into the repo. Review the diff before committing.\"",
+    "mcp:token": "tsx --env-file-if-exists=.env.local scripts/create-token.ts mcp 'mcp:access,context:read,reports:read,transactions:write'"
   },
   "dependencies": {
+    "@better-auth/cimd": "^1.7.2",
+    "@better-auth/mcp": "^1.7.2",
+    "@modelcontextprotocol/server": "^2.0.0",
     "@types/leaflet": "^1.9.22",
-    "better-auth": "^1.6.26",
+    "better-auth": "^1.7.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "0.45.2",
