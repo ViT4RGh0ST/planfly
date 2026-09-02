@@ -23,8 +23,37 @@ export const paymentMethodSchema = z.enum([
   "other",
 ]);
 
-export const rateSourceSchema = z.enum(["bcv", "p2p", "manual"]);
-export const valuationSchema = z.enum(["bcv", "p2p"]);
+/**
+ * The old spellings of the two slots, kept for good.
+ *
+ * They were named after Venezuelan institutions — `bcv` for the central bank and
+ * `p2p` for the way the street trades — and the schema now calls them what they
+ * MEAN, which travels to any country with two rates. But those two words are
+ * what the installed bot sends, what a script somebody wrote last month sends,
+ * and what sits inside conversations already in flight.
+ *
+ * Dropping them would not fail loudly: `rate_source` is optional everywhere, so
+ * a rejected value would be an entry valued at the household's default instead
+ * of the one that was asked for — a figure that is wrong and looks right.
+ *
+ * So they are translated on the way in, permanently, and this table is the one
+ * place that knows the old names. Same decision, for the same reason, as the
+ * Spanish period aliases in `dates.ts`.
+ */
+export const RATE_SLOT_ALIASES: Record<string, string> = {
+  bcv: "official",
+  p2p: "parallel",
+};
+
+/** Whatever arrived, in the name the schema knows. */
+export function canonicalSlot<T>(value: T): T | string {
+  return typeof value === "string" && value in RATE_SLOT_ALIASES
+    ? RATE_SLOT_ALIASES[value]
+    : value;
+}
+
+export const rateSourceSchema = z.enum(["official", "parallel", "manual"]);
+export const valuationSchema = z.preprocess(canonicalSlot, z.enum(["official", "parallel"]));
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "the date has to be YYYY-MM-DD");
 
@@ -129,7 +158,7 @@ export const updateTransactionSchema = z.object({
  * person is precisely what distinguishes this route.
  */
 export const manualRateSchema = z.object({
-  slot: z.enum(["bcv", "p2p"]).default("bcv"),
+  slot: z.preprocess(canonicalSlot, z.enum(["official", "parallel"])).default("official"),
   rate: z.union([z.string().min(1), z.number()]),
   effective_on: isoDate.optional(),
   base_currency: z.string().min(2).max(10).toUpperCase().default("USD"),
@@ -266,7 +295,7 @@ export const createRecurringSchema = z.object({
    * the day's rate» possible: storing the bolívares would expire.
    */
   amount_currency: z.string().min(2).max(10).toUpperCase().optional(),
-  rate_source: z.enum(["bcv", "p2p"]).optional(),
+  rate_source: z.preprocess(canonicalSlot, z.enum(["official", "parallel"])).optional(),
   account: z.string().min(1).optional(),
   to_account: z.string().min(1).optional(),
   category: z.string().min(1).optional(),
@@ -286,7 +315,7 @@ export const createFinancedPurchaseSchema = z.object({
   financier: z.string().min(1),
   total: amountSchema,
   total_currency: z.string().min(2).max(10).toUpperCase().optional(),
-  rate_source: z.enum(["bcv", "p2p"]).optional(),
+  rate_source: z.preprocess(canonicalSlot, z.enum(["official", "parallel"])).optional(),
   down_payment: amountSchema.optional(),
   down_payment_account: z.string().min(1).optional(),
   installments: z.number().int().min(1).max(60),

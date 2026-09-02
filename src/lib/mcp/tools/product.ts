@@ -70,9 +70,9 @@ const productInputSchema = z
           "that list is rejected.",
       ),
     rate: z
-      .enum(["p2p", "bcv"])
+      .enum(["parallel", "official"])
       .optional()
-      .describe("Which rate the dollar prices are read at. Defaults to p2p."),
+      .describe("Which rate the dollar prices are read at. Defaults to parallel."),
     from: z
       .string()
       .min(1)
@@ -118,7 +118,7 @@ const productInputSchema = z
     }
   });
 
-function productsPath(params: { product?: string; rate?: "p2p" | "bcv" }): string {
+function productsPath(params: { product?: string; rate?: "parallel" | "official" }): string {
   const query = new URLSearchParams();
   if (params.product) query.set("product", params.product);
   if (params.rate) query.set("rate", params.rate);

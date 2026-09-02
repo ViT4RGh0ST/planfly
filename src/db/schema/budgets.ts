@@ -64,8 +64,8 @@ export const netWorthSnapshots = pgTable(
       .references(() => households.id, { onDelete: "cascade" }),
     snapshotOn: date("snapshot_on").notNull(),
     baseCurrency: varchar("base_currency", { length: 10 }).notNull(),
-    totalBcvMinor: bigint("total_bcv_minor", { mode: "number" }),
-    totalP2pMinor: bigint("total_p2p_minor", { mode: "number" }),
+    totalOfficialMinor: bigint("total_official_minor", { mode: "number" }),
+    totalParallelMinor: bigint("total_parallel_minor", { mode: "number" }),
     /** Per-account breakdown, so a jump in the curve can be explained. */
     breakdown: jsonb("breakdown"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

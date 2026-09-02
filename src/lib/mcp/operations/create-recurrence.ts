@@ -253,7 +253,7 @@ async function effectiveRateSource(
 
   if (!(await mayNeedARate(draft, account, home?.baseCurrency))) return null;
   if (draft.rate_source) return draft.rate_source;
-  return home?.defaultRateSource === "bcv" ? "bcv" : "p2p";
+  return home?.defaultRateSource === "official" ? "official" : "parallel";
 }
 
 /**

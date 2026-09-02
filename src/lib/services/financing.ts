@@ -82,7 +82,7 @@ export type FinancedPurchaseInput = {
    * that price in dollars again. Without this it would be valued with the
    * household preference and the number would not match what you typed.
    */
-  rateSource?: "bcv" | "p2p" | "manual";
+  rateSource?: "official" | "parallel" | "manual";
 };
 
 /**
@@ -131,11 +131,11 @@ async function totalInFinancierCurrency(
     date: date,
     isToday: date === today(home.timezone),
   });
-  const source = input.rateSource === "bcv" || input.rateSource === "p2p"
+  const source = input.rateSource === "official" || input.rateSource === "parallel"
     ? input.rateSource
-    : home.defaultRateSource === "bcv"
-      ? "bcv"
-      : "p2p";
+    : home.defaultRateSource === "official"
+      ? "official"
+      : "parallel";
   const rate = rates[source]?.value ?? null;
   if (!rate) {
     throw new InvalidTransactionError(

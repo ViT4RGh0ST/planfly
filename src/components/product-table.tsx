@@ -30,7 +30,7 @@ export function ProductTable({
 }: {
   products: ProductSummary[];
   baseCurrency: string;
-  valuation: "bcv" | "p2p";
+  valuation: "official" | "parallel";
 }) {
   const locale = useLocale();
   const t = useTranslations();
@@ -56,8 +56,8 @@ export function ProductTable({
           </TableHead>
           <TableHead scope="col" className="text-right">
             ≈ {baseCurrency}{" "}
-            <span className={valuation === "bcv" ? "text-bcv" : "text-p2p"}>
-              {valuation === "bcv" ? "BCV" : "P2P"}
+            <span className={valuation === "official" ? "text-official" : "text-parallel"}>
+              {t(`domain.rateSlotShort.${valuation}`)}
             </span>
           </TableHead>
           <TableHead scope="col" className="text-right">

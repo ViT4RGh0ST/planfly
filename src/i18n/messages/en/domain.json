@@ -118,5 +118,15 @@
     "mcp": "over MCP",
     "api": "over the API",
     "recurring": "recurring"
+  },
+  "rateSlot": {
+    "official": "the official one",
+    "parallel": "the parallel one",
+    "manual": "the one set by hand"
+  },
+  "rateSlotShort": {
+    "official": "official",
+    "parallel": "parallel",
+    "manual": "by hand"
   }
 }

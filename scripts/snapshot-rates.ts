@@ -18,12 +18,12 @@ dailySnapshot(date)
   .then((result) => {
     console.log(`Date ${date}`);
     console.log(
-      result.bcv
-        ? `  BCV  ${Number(result.bcv.value).toFixed(4)} (value date ${result.bcv.effectiveOn})`
+      result.official
+        ? `  BCV  ${Number(result.official.value).toFixed(4)} (value date ${result.official.effectiveOn})`
         : "  BCV  failed",
     );
-    console.log(result.p2p ? `  P2P  ${Number(result.p2p.value).toFixed(4)}` : "  P2P  failed");
-    if (!result.bcv && !result.p2p) process.exitCode = 1;
+    console.log(result.parallel ? `  P2P  ${Number(result.parallel.value).toFixed(4)}` : "  P2P  failed");
+    if (!result.official && !result.parallel) process.exitCode = 1;
   })
   .catch((err) => {
     console.error("Failed:", err);

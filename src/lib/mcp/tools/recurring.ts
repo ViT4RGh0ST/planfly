@@ -98,14 +98,14 @@ const recurringInputSchema = z.object({
         "already in the account's currency. Take the code from planfly_context; never guess one.",
     ),
   rate_source: z
-    .enum(["bcv", "p2p"])
+    .enum(["official", "parallel"])
     .optional()
     .describe(
       "Which rate to convert with when there is an amount_currency — and, when there is none, " +
         "which rate still values the entry in the household's own currency, every time the " +
         "account it posts to keeps a different one. It is never inert: sent or omitted, one of " +
         "the two is used, and omitting it takes whichever the household is set to on the day. " +
-        "Ask the user if they do not say: between BCV and P2P there is more than 14% and it is " +
+        "Ask the user if they do not say: between the official rate and the parallel one there is more than 14% and it is " +
         "not a detail.",
     ),
   account: z
@@ -174,7 +174,7 @@ export const recurringTool = defineTool({
   /* Both, because which one is required depends on the action. `run` decides. */
   scopes: ["context:read", "recurring:write"],
   examples: [
-    'Creating one: {"action": "create", "name": "Alquiler", "cadence": "monthly", "amount": 120, "amount_currency": "USD", "rate_source": "bcv", "account": "provincial", "category": "vivienda"}',
+    'Creating one: {"action": "create", "name": "Alquiler", "cadence": "monthly", "amount": 120, "amount_currency": "USD", "rate_source": "official", "account": "provincial", "category": "vivienda"}',
     'Seeing them, and getting the ids: {"action": "list"}',
     'Pausing one: {"action": "pause", "id": "<the id action=list returned>"}',
     "A back-dated start_on comes back as confirmation_required with the exact dates it would post.",
@@ -359,7 +359,7 @@ async function refuseImpossibleRule(
    * convert to; with no account there is none, it returns early, and
    * `recordTransaction` then falls back to the household's first account and
    * takes the figure as already being in that account's currency. «15 USD at
-   * BCV» becomes 15,00 Bs, on every caught-up date, and nothing anywhere fails.
+   * official» becomes 15,00 Bs, on every caught-up date, and nothing fails.
    */
   if (draft.amount_currency && !draft.account) {
     return {

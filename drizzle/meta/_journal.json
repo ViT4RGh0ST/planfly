@@ -166,15 +166,15 @@
     {
       "idx": 23,
       "version": "7",
-      "when": 1788373970589,
-      "tag": "0023_mcp",
+      "when": 1788367858395,
+      "tag": "0023_official_parallel",
       "breakpoints": true
     },
     {
       "idx": 24,
       "version": "7",
-      "when": 1788384237082,
-      "tag": "0024_account_issuer",
+      "when": 1788385239241,
+      "tag": "0024_mcp",
       "breakpoints": true
     }
   ]

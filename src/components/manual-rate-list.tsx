@@ -36,8 +36,8 @@ export function ManualRateList({ rows }: { rows: ManualRateRow[] }) {
       {rows.map((row) => (
         <li key={row.id} className="flex items-center justify-between gap-4 py-2">
           <p className="text-sm">
-            <span className={row.slot === "bcv" ? "text-bcv" : "text-p2p"}>
-              {row.slot === "bcv" ? t("ui.rates.form.officialShort") : t("ui.rates.form.parallelShort")}
+            <span className={row.slot === "official" ? "text-official" : "text-parallel"}>
+              {row.slot === "official" ? t("ui.rates.form.officialShort") : t("ui.rates.form.parallelShort")}
             </span>{" "}
             <span className="tabular-nums">{formatRate(row.value)}</span>{" "}
             <span className="text-muted-foreground">· {formatDay(row.effectiveOn, locale)}</span>

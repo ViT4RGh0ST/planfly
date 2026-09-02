@@ -61,7 +61,7 @@ export const reportTool = defineTool({
       ])
       .default("month_summary"),
     period: z.string().max(60).optional(),
-    valuation: z.enum(["bcv", "p2p"]).optional(),
+    valuation: z.enum(["official", "parallel"]).optional(),
     limit: z.number().int().min(1).max(100).optional(),
     needs_review: z.boolean().optional(),
   }),
@@ -76,7 +76,7 @@ export const reportTool = defineTool({
     '  {"report": "month_summary"}  ← the server calculates; do not add up balances yourself',
     "period: today, yesterday, week, month, last_month, year, '2026-07', or a range '2026-07-01..2026-07-15'.",
     "  Defaults to the current month. limit only applies to recent_transactions.",
-    "valuation: use bcv only if the person explicitly asks for the official rate.",
+    "valuation: use official only if the person explicitly asks for the official rate.",
   ],
   run: async (input, ctx) => {
     try {

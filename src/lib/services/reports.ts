@@ -23,7 +23,23 @@ import { balanceExpression } from "./balances";
  * account's native balance with the latest known rate.
  */
 
-export type Valuation = "bcv" | "p2p";
+export type Valuation = "official" | "parallel";
+
+/**
+ * Which valuation a screen was asked for, from the URL.
+ *
+ * Seven screens read the same `?rate=` and each compared it by hand, so when the
+ * slots were renamed a bookmark saying `?rate=bcv` stopped matching and fell
+ * through to the parallel one — the official column silently replaced by the
+ * other, on a link somebody had saved precisely to see the official one.
+ *
+ * The old spellings are read for good, the way `dates.ts` reads the Spanish
+ * period aliases and for the same reason: what is already written down out there
+ * does not get to stop meaning what it meant.
+ */
+export function valuationFrom(param: string | undefined): Valuation {
+  return param === "official" || param === "bcv" ? "official" : "parallel";
+}
 
 /**
  * The rate in force for each currency and source at a date, for valuing stock.
@@ -48,7 +64,7 @@ const currentRates = (baseCurrency: string, date: string): SQL => sql`
              is_manual,
              -- It comes out already boxed and named 'source' on purpose: that
              -- way the three queries consuming it go on writing
-             -- r.source = 'bcv' and none of them has to be touched.
+             -- r.source = 'official' and none of them has to be touched.
              slot AS source
         FROM (
           SELECT quote_currency, rate, effective_on, variant,
@@ -56,8 +72,8 @@ const currentRates = (baseCurrency: string, date: string): SQL => sql`
                  CASE WHEN source = 'manual' THEN variant ELSE source::text END AS slot
             FROM exchange_rates
            WHERE base_currency = ${baseCurrency}
-             AND (source IN ('bcv','p2p')
-                  OR (source = 'manual' AND variant IN ('bcv','p2p')))
+             AND (source IN ('official','parallel')
+                  OR (source = 'manual' AND variant IN ('official','parallel')))
         ) y
     ) x
    ORDER BY quote_currency, source,
@@ -107,13 +123,13 @@ export type Coverage = {
 
 export type NetWorth = {
   baseCurrency: string;
-  totalBcvMinor: number;
-  totalP2pMinor: number;
-  assetsBcvMinor: number;
-  assetsP2pMinor: number;
-  liabilitiesBcvMinor: number;
-  liabilitiesP2pMinor: number;
-  coverage: { bcv: Coverage; p2p: Coverage };
+  totalOfficialMinor: number;
+  totalParallelMinor: number;
+  assetsOfficialMinor: number;
+  assetsParallelMinor: number;
+  liabilitiesOfficialMinor: number;
+  liabilitiesParallelMinor: number;
+  coverage: { official: Coverage; parallel: Coverage };
   accounts: Array<{
     id: string;
     name: string;
@@ -122,8 +138,8 @@ export type NetWorth = {
     currency: string;
     balanceMinor: number;
     balanceText: string;
-    baseBcvMinor: number | null;
-    baseP2pMinor: number | null;
+    baseOfficialMinor: number | null;
+    baseParallelMinor: number | null;
   }>;
 };
 
@@ -165,12 +181,12 @@ export async function netWorth(
            CASE WHEN b.currency = ${baseCurrency} THEN b.balance_minor::text
                 ELSE (SELECT round(b.balance_minor / r.rate)::text
                         FROM rates r
-                       WHERE r.quote_currency = b.currency AND r.source = 'bcv')
+                       WHERE r.quote_currency = b.currency AND r.source = 'official')
            END AS base_bcv_minor,
            CASE WHEN b.currency = ${baseCurrency} THEN b.balance_minor::text
                 ELSE (SELECT round(b.balance_minor / r.rate)::text
                         FROM rates r
-                       WHERE r.quote_currency = b.currency AND r.source = 'p2p')
+                       WHERE r.quote_currency = b.currency AND r.source = 'parallel')
            END AS base_p2p_minor
       FROM balances b
      ORDER BY b.nature, b.sort_order, b.name
@@ -182,8 +198,8 @@ export async function netWorth(
     liabilitiesP2p = 0;
 
   const coverage: Record<Valuation, Coverage> = {
-    bcv: { unvaluedCount: 0, valuedCount: 0, currencies: [] },
-    p2p: { unvaluedCount: 0, valuedCount: 0, currencies: [] },
+    official: { unvaluedCount: 0, valuedCount: 0, currencies: [] },
+    parallel: { unvaluedCount: 0, valuedCount: 0, currencies: [] },
   };
 
   const accountRows = rows.map((r) => {
@@ -194,8 +210,8 @@ export async function netWorth(
     // warning about it would be noise.
     if (Number(r.balance_minor) !== 0) {
       for (const [valuation, base] of [
-        ["bcv", bcv],
-        ["p2p", p2p],
+        ["official", bcv],
+        ["parallel", p2p],
       ] as const) {
         const c = coverage[valuation];
         if (base == null) {
@@ -225,19 +241,19 @@ export async function netWorth(
       currency: r.currency,
       balanceMinor: Number(r.balance_minor),
       balanceText: formatAmount(Number(r.balance_minor), r.currency),
-      baseBcvMinor: bcv,
-      baseP2pMinor: p2p,
+      baseOfficialMinor: bcv,
+      baseParallelMinor: p2p,
     };
   });
 
   return {
     baseCurrency,
-    totalBcvMinor: assetsBcv + liabilitiesBcv,
-    totalP2pMinor: assetsP2p + liabilitiesP2p,
-    assetsBcvMinor: assetsBcv,
-    assetsP2pMinor: assetsP2p,
-    liabilitiesBcvMinor: liabilitiesBcv,
-    liabilitiesP2pMinor: liabilitiesP2p,
+    totalOfficialMinor: assetsBcv + liabilitiesBcv,
+    totalParallelMinor: assetsP2p + liabilitiesP2p,
+    assetsOfficialMinor: assetsBcv,
+    assetsParallelMinor: assetsP2p,
+    liabilitiesOfficialMinor: liabilitiesBcv,
+    liabilitiesParallelMinor: liabilitiesP2p,
     coverage,
     accounts: accountRows,
   };
@@ -250,10 +266,10 @@ export type Committed = {
   overdueCount: number;
   /** The last due date within the horizon. */
   lastDueOn: string;
-  bcvMinor: number;
-  p2pMinor: number;
+  officialMinor: number;
+  parallelMinor: number;
   /** Installments that could not be converted, and in which currencies. */
-  unvalued: { bcv: number; p2p: number; currencies: string[] };
+  unvalued: { official: number; parallel: number; currencies: string[] };
 };
 
 /**
@@ -312,12 +328,12 @@ export async function committedInstallments(
            CASE WHEN d.currency = ${baseCurrency} THEN d.amount_minor::text
                 ELSE (SELECT round(d.amount_minor / r.rate)::text
                         FROM rates r
-                       WHERE r.quote_currency = d.currency AND r.source = 'bcv')
+                       WHERE r.quote_currency = d.currency AND r.source = 'official')
            END AS base_bcv_minor,
            CASE WHEN d.currency = ${baseCurrency} THEN d.amount_minor::text
                 ELSE (SELECT round(d.amount_minor / r.rate)::text
                         FROM rates r
-                       WHERE r.quote_currency = d.currency AND r.source = 'p2p')
+                       WHERE r.quote_currency = d.currency AND r.source = 'parallel')
            END AS base_p2p_minor
       FROM due d
   `);
@@ -328,9 +344,9 @@ export async function committedInstallments(
     count: 0,
     overdueCount: 0,
     lastDueOn: rows[0].last_due,
-    bcvMinor: 0,
-    p2pMinor: 0,
-    unvalued: { bcv: 0, p2p: 0, currencies: [] },
+    officialMinor: 0,
+    parallelMinor: 0,
+    unvalued: { official: 0, parallel: 0, currencies: [] },
   };
 
   for (const r of rows) {
@@ -339,16 +355,16 @@ export async function committedInstallments(
     if (r.last_due > result.lastDueOn) result.lastDueOn = r.last_due;
 
     for (const [valuation, base] of [
-      ["bcv", r.base_bcv_minor],
-      ["p2p", r.base_p2p_minor],
+      ["official", r.base_bcv_minor],
+      ["parallel", r.base_p2p_minor],
     ] as const) {
       if (base == null) {
         result.unvalued[valuation] += r.n;
         if (!result.unvalued.currencies.includes(r.currency)) {
           result.unvalued.currencies.push(r.currency);
         }
-      } else if (valuation === "bcv") result.bcvMinor += Number(base);
-      else result.p2pMinor += Number(base);
+      } else if (valuation === "official") result.officialMinor += Number(base);
+      else result.parallelMinor += Number(base);
     }
   }
 
@@ -384,7 +400,7 @@ export async function spendingByCategory(
   locale: string = DEFAULT_LOCALE,
 ) {
   const { from, to, ref } = resolvePeriod(period, timezone);
-  const column = valuation === "bcv" ? sql`base_amount_bcv_minor` : sql`base_amount_p2p_minor`;
+  const column = valuation === "official" ? sql`base_amount_official_minor` : sql`base_amount_parallel_minor`;
 
   const { rows } = await db.execute<{
     id: string | null;
@@ -436,7 +452,7 @@ export async function periodSummary(
   valuation: Valuation,
 ) {
   const { from, to, ref } = resolvePeriod(period, timezone);
-  const column = valuation === "bcv" ? sql`base_amount_bcv_minor` : sql`base_amount_p2p_minor`;
+  const column = valuation === "official" ? sql`base_amount_official_minor` : sql`base_amount_parallel_minor`;
 
   const { rows } = await db.execute<{ kind: string; total_minor: string; n: string }>(sql`
     SELECT t.kind::text,
@@ -543,16 +559,16 @@ export async function countTransactions(
 export async function filteredTotals(
   householdId: string,
   filters: TransactionFilters = {},
-): Promise<{ bcvMinor: number; p2pMinor: number; unvalued: number }> {
+): Promise<{ officialMinor: number; parallelMinor: number; unvalued: number }> {
   const { rows } = await db.execute<{
-    bcv: string | null;
-    p2p: string | null;
+    official: string | null;
+    parallel: string | null;
     unvalued: string;
   }>(sql`
-    SELECT SUM(${valued(sql`base_amount_bcv_minor`)})::text AS bcv,
-           SUM(${valued(sql`base_amount_p2p_minor`)})::text AS p2p,
+    SELECT SUM(${valued(sql`base_amount_official_minor`)})::text AS official,
+           SUM(${valued(sql`base_amount_parallel_minor`)})::text AS parallel,
            count(*) FILTER (
-             WHERE ${valued(sql`base_amount_p2p_minor`)} IS NULL
+             WHERE ${valued(sql`base_amount_parallel_minor`)} IS NULL
            )::text AS unvalued
       FROM transactions t
       JOIN transaction_entries e ON e.transaction_id = t.id AND e.sort_order = 0
@@ -564,8 +580,8 @@ export async function filteredTotals(
 
   const r = rows[0];
   return {
-    bcvMinor: r?.bcv == null ? 0 : Number(r.bcv),
-    p2pMinor: r?.p2p == null ? 0 : Number(r.p2p),
+    officialMinor: r?.official == null ? 0 : Number(r.official),
+    parallelMinor: r?.parallel == null ? 0 : Number(r.parallel),
     unvalued: Number(r?.unvalued ?? 0),
   };
 }
@@ -592,7 +608,7 @@ export type Facet = {
 export async function transactionFacets(
   householdId: string,
   filters: TransactionFilters = {},
-  valuation: Valuation = "p2p",
+  valuation: Valuation = "parallel",
 ): Promise<{ accounts: Facet[]; categories: Facet[] }> {
   const byAccount = { ...filters, account: undefined };
   const byCategory = { ...filters, category: undefined };
@@ -604,7 +620,7 @@ export async function transactionFacets(
   // each other, so they have to be in the same unit.
   // Without the `e.` alias: `valued()` adds it, and it decides which column counts.
   const column =
-    valuation === "bcv" ? sql`base_amount_bcv_minor` : sql`base_amount_p2p_minor`;
+    valuation === "official" ? sql`base_amount_official_minor` : sql`base_amount_parallel_minor`;
 
   const query = (scope: ReturnType<typeof transactionScope>, column2: SQL) => sql`
     SELECT ${column2} AS value, count(*)::text AS n,
@@ -660,8 +676,8 @@ export async function recentTransactions(
     confidence: string | null;
     amount_minor: string;
     currency: string;
-    base_amount_bcv_minor: string | null;
-    base_amount_p2p_minor: string | null;
+    base_amount_official_minor: string | null;
+    base_amount_parallel_minor: string | null;
     base_amount_manual_minor: string | null;
     rate_source_used: string;
     account_name: string;
@@ -676,7 +692,7 @@ export async function recentTransactions(
     SELECT t.id, t.kind::text, t.occurred_on, t.description, t.source::text,
            t.needs_review, t.confidence, t.voided_at::text, t.void_reason,
            e.amount_minor::text, e.currency,
-           e.base_amount_bcv_minor::text, e.base_amount_p2p_minor::text,
+           e.base_amount_official_minor::text, e.base_amount_parallel_minor::text,
            -- The rate the user set by hand rules over both automatic ones, same
            -- as in the other queries in this file. Without this, a correction
            -- made in /review was never visible in the history.
@@ -712,8 +728,8 @@ export async function recentTransactions(
     amountMinor: Number(r.amount_minor),
     currency: r.currency,
     amountText: formatAmount(Number(r.amount_minor), r.currency, { showPlus: true }),
-    baseBcvMinor: r.base_amount_bcv_minor == null ? null : Number(r.base_amount_bcv_minor),
-    baseP2pMinor: r.base_amount_p2p_minor == null ? null : Number(r.base_amount_p2p_minor),
+    baseOfficialMinor: r.base_amount_official_minor == null ? null : Number(r.base_amount_official_minor),
+    baseParallelMinor: r.base_amount_parallel_minor == null ? null : Number(r.base_amount_parallel_minor),
     baseManualMinor:
       r.base_amount_manual_minor == null ? null : Number(r.base_amount_manual_minor),
     rateSourceUsed: r.rate_source_used,
@@ -743,7 +759,7 @@ export async function recentTransactions(
  * whole month's spending would say nothing.
  */
 export async function budgetUsage(householdId: string, date: string, valuation: Valuation) {
-  const column = valuation === "bcv" ? sql`base_amount_bcv_minor` : sql`base_amount_p2p_minor`;
+  const column = valuation === "official" ? sql`base_amount_official_minor` : sql`base_amount_parallel_minor`;
 
   const { rows } = await db.execute<{
     id: string;

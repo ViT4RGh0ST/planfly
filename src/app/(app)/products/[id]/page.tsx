@@ -9,7 +9,7 @@ import { ProductSplit } from "@/components/product-split";
 import { productHistory, productRawTexts } from "@/lib/services/products";
 import { toSlug } from "@/lib/services/resolve-entities";
 import { formatDayYear } from "@/lib/dates";
-import type { Valuation } from "@/lib/services/reports";
+import { valuationFrom, type Valuation } from "@/lib/services/reports";
 import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export default async function ProductPage({
   const t = await getTranslations();
   const { id } = await params;
   const query = await searchParams;
-  const valuation: Valuation = query.rate === "bcv" ? "bcv" : "p2p";
+  const valuation: Valuation = valuationFrom(query.rate);
 
   const history = await productHistory(ctx.householdId, id);
   if (!history) notFound();
@@ -43,15 +43,15 @@ export default async function ProductPage({
 
   const points = history.points;
   const withRate = points.filter((p) =>
-    valuation === "bcv" ? p.unitPriceBcvMinor != null : p.unitPriceP2pMinor != null,
+    valuation === "official" ? p.unitPriceOfficialMinor != null : p.unitPriceParallelMinor != null,
   );
   const first = withRate[0];
   const last = withRate[withRate.length - 1];
   const change =
     first && last && withRate.length > 1
-      ? (((valuation === "bcv" ? last.unitPriceBcvMinor! : last.unitPriceP2pMinor!) -
-          (valuation === "bcv" ? first.unitPriceBcvMinor! : first.unitPriceP2pMinor!)) /
-          (valuation === "bcv" ? first.unitPriceBcvMinor! : first.unitPriceP2pMinor!)) *
+      ? (((valuation === "official" ? last.unitPriceOfficialMinor! : last.unitPriceParallelMinor!) -
+          (valuation === "official" ? first.unitPriceOfficialMinor! : first.unitPriceParallelMinor!)) /
+          (valuation === "official" ? first.unitPriceOfficialMinor! : first.unitPriceParallelMinor!)) *
         100
       : null;
 
@@ -69,7 +69,7 @@ export default async function ProductPage({
   const byPlace = new Map<string, { place: string; minor: number; on: string }>();
   for (const point of withRate) {
     if (!point.place) continue;
-    const minor = (valuation === "bcv" ? point.unitPriceBcvMinor : point.unitPriceP2pMinor)!;
+    const minor = (valuation === "official" ? point.unitPriceOfficialMinor : point.unitPriceParallelMinor)!;
     const seen = byPlace.get(point.place);
     // The latest price at each place, not the lowest it ever was: what you can
     // act on is what it costs there now.
@@ -135,7 +135,7 @@ export default async function ProductPage({
           points={withRate.map((p) => ({
             date: p.occurredOn,
             value:
-              (valuation === "bcv" ? p.unitPriceBcvMinor! : p.unitPriceP2pMinor!) / 100,
+              (valuation === "official" ? p.unitPriceOfficialMinor! : p.unitPriceParallelMinor!) / 100,
           }))}
           currency={ctx.baseCurrency}
           valuation={valuation}
@@ -168,9 +168,9 @@ export default async function ProductPage({
                   {formatAmount(p.unitPriceMinor, p.currency)}
                 </p>
                 <p className="text-xs tabular-nums text-muted-foreground">
-                  {(valuation === "bcv" ? p.unitPriceBcvMinor : p.unitPriceP2pMinor) != null
+                  {(valuation === "official" ? p.unitPriceOfficialMinor : p.unitPriceParallelMinor) != null
                     ? formatAmount(
-                        (valuation === "bcv" ? p.unitPriceBcvMinor : p.unitPriceP2pMinor)!,
+                        (valuation === "official" ? p.unitPriceOfficialMinor : p.unitPriceParallelMinor)!,
                         ctx.baseCurrency,
                       )
                     : t("ui.products.noRate")}

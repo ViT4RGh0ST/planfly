@@ -90,7 +90,7 @@ describe("the v1 API against the database", { skip: hasDb() ? false : "no Postgr
     const body = await res.json();
     assert.equal(res.status, 201);
     assert.match(body.summary, /Bs\. 7\.800,00/, "el resumen viene formateado del servidor");
-    assert.equal(body.base.bcvMinor, -1000);
+    assert.equal(body.base.officialMinor, -1000);
   });
 
   it("an identity id in the body is rejected", async () => {

@@ -206,7 +206,7 @@ async function main() {
    */
   const base = process.env.SEED_BASE_CURRENCY ?? "USD";
   for (const currency of CURRENCIES.filter((c) => c.rateAges === false)) {
-    for (const variant of ["bcv", "p2p"]) {
+    for (const variant of ["official", "parallel"]) {
       await db
         .insert(exchangeRates)
         .values({
@@ -249,7 +249,7 @@ async function main() {
         baseCurrency: "USD",
         // P2P by default: in Venezuela it is the rate you actually buy at, and
         // valuing at BCV systematically inflates what you think you have.
-        defaultRateSource: "p2p",
+        defaultRateSource: "parallel",
         // From the environment: the household inherits the installation's timezone.
         // With the wrong one, a 21:00 expense is booked on the following day.
         timezone: process.env.TZ ?? "America/Caracas",

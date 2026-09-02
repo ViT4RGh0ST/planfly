@@ -90,9 +90,9 @@ export const GET = withToken("context:read", async ({ principal }) => {
   lines.push(categoryList.filter((c) => c.kind === "expense").map(named).join(", "));
   lines.push("", t("api.context.incomeCategories"));
   lines.push(categoryList.filter((c) => c.kind === "income").map((c) => c.name).join(", "));
-  if (rates.bcv || rates.p2p) {
+  if (rates.official || rates.parallel) {
     lines.push("", t("api.context.ratesToday"));
-    for (const source of ["bcv", "p2p"] as const) {
+    for (const source of ["official", "parallel"] as const) {
       const rate = rates[source];
       if (rate) {
         lines.push(
@@ -147,8 +147,8 @@ export const GET = withToken("context:read", async ({ principal }) => {
     })),
     rates,
     net_worth: {
-      bcv_minor: position.totalBcvMinor,
-      p2p_minor: position.totalP2pMinor,
+      bcv_minor: position.totalOfficialMinor,
+      p2p_minor: position.totalParallelMinor,
       currency: position.baseCurrency,
     },
   });

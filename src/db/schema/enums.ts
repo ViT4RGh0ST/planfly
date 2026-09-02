@@ -1,11 +1,11 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
 /** Source of an exchange rate. `manual` is the one the user writes by hand. */
-export const rateSourceEnum = pgEnum("rate_source", ["bcv", "p2p", "manual"]);
+export const rateSourceEnum = pgEnum("rate_source", ["official", "parallel", "manual"]);
 
 /** Which of the stamped rates valued this line. `none` = the line is already
  *  in the base currency, or there was no rate when it was recorded. */
-export const rateSourceUsedEnum = pgEnum("rate_source_used", ["bcv", "p2p", "manual", "none"]);
+export const rateSourceUsedEnum = pgEnum("rate_source_used", ["official", "parallel", "manual", "none"]);
 
 export const householdRoleEnum = pgEnum("household_role", ["owner", "member", "viewer"]);
 

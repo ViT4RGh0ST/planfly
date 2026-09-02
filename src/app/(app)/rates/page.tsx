@@ -59,7 +59,7 @@ export default async function RatesPage() {
       // the figures above, net worth and findStored, all of which prefer it.
       //
       // With a CASE and not with `asc(source)`: `source` is a Postgres enum and
-      // orders by its declaration order — bcv, p2p, manual — so asking for
+      // orders by its declaration order — official, parallel, manual — so asking for
       // ascending puts the automatic one first, exactly the wrong way round.
       // Ordering an enum by its name is a silent trap.
       .orderBy(
@@ -75,7 +75,7 @@ export default async function RatesPage() {
   ]);
 
   // Grouped by date so the chart has one series per source.
-  const byDate = new Map<string, { date: string; bcv?: number; p2p?: number }>();
+  const byDate = new Map<string, { date: string; official?: number; parallel?: number }>();
   for (const row of history) {
     const entry = byDate.get(row.effectiveOn) ?? { date: row.effectiveOn };
     // The slot, not the source: a hand-set rate fills the same column as the
@@ -83,47 +83,47 @@ export default async function RatesPage() {
     // history exactly on the days it had to be written by hand.
     const slot = row.source === "manual" ? row.variant : row.source;
     // The first to arrive rules, and the query order puts the manual one first.
-    if (slot === "bcv" && entry.bcv === undefined) entry.bcv = Number(row.rate);
-    if (slot === "p2p" && entry.p2p === undefined) entry.p2p = Number(row.rate);
+    if (slot === "official" && entry.official === undefined) entry.official = Number(row.rate);
+    if (slot === "parallel" && entry.parallel === undefined) entry.parallel = Number(row.rate);
     byDate.set(row.effectiveOn, entry);
   }
   const series = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 
   const spread =
-    current.bcv && current.p2p
-      ? (Number(current.p2p.rate) / Number(current.bcv.rate) - 1) * 100
+    current.official && current.parallel
+      ? (Number(current.parallel.rate) / Number(current.official.rate) - 1) * 100
       : null;
 
   const columns = [
     {
-      key: "bcv",
+      key: "official",
       label: t("ui.rates.official"),
-      value: current.bcv ? formatRate(current.bcv.rate) : null,
-      tone: "text-bcv",
-      note: current.bcv
-        ? current.bcv.manual
-          ? t("ui.rates.setByHandOn", { date: formatDay(current.bcv.effectiveOn, ctx.locale) })
-          : current.bcv.effectiveOn > date
-            ? t("ui.rates.valueDateAhead", { date: formatDay(current.bcv.effectiveOn, ctx.locale) })
-            : t("ui.rates.valueDate", { date: formatDay(current.bcv.effectiveOn, ctx.locale) })
-        : isSlotConfigured("bcv")
+      value: current.official ? formatRate(current.official.rate) : null,
+      tone: "text-official",
+      note: current.official
+        ? current.official.manual
+          ? t("ui.rates.setByHandOn", { date: formatDay(current.official.effectiveOn, ctx.locale) })
+          : current.official.effectiveOn > date
+            ? t("ui.rates.valueDateAhead", { date: formatDay(current.official.effectiveOn, ctx.locale) })
+            : t("ui.rates.valueDate", { date: formatDay(current.official.effectiveOn, ctx.locale) })
+        : isSlotConfigured("official")
           ? t("ui.rates.sourceSilent")
           : t("ui.rates.noSource"),
-      stale: current.bcv ? current.bcv.effectiveOn < date : true,
+      stale: current.official ? current.official.effectiveOn < date : true,
     },
     {
-      key: "p2p",
+      key: "parallel",
       label: t("ui.rates.parallel"),
-      value: current.p2p ? formatRate(current.p2p.rate) : null,
-      tone: "text-p2p",
-      note: current.p2p
-        ? current.p2p.manual
-          ? t("ui.rates.setByHandOn", { date: formatDay(current.p2p.effectiveOn, ctx.locale) })
-          : t("ui.rates.whatYoudBePaid", { date: formatDay(current.p2p.effectiveOn, ctx.locale) })
-        : isSlotConfigured("p2p")
+      value: current.parallel ? formatRate(current.parallel.rate) : null,
+      tone: "text-parallel",
+      note: current.parallel
+        ? current.parallel.manual
+          ? t("ui.rates.setByHandOn", { date: formatDay(current.parallel.effectiveOn, ctx.locale) })
+          : t("ui.rates.whatYoudBePaid", { date: formatDay(current.parallel.effectiveOn, ctx.locale) })
+        : isSlotConfigured("parallel")
           ? t("ui.rates.sourceSilent")
           : t("ui.rates.noSource"),
-      stale: current.p2p?.stale ?? true,
+      stale: current.parallel?.stale ?? true,
     },
     {
       key: "spread",
@@ -192,34 +192,34 @@ export default async function RatesPage() {
           <div className="flex flex-wrap gap-x-14 gap-y-8">
             {pair.hasOfficial && (
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.12em] text-bcv">
+                <p className="text-xs font-medium uppercase tracking-[0.12em] text-official">
                   {t("ui.rates.official")}
                 </p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight">
-                  {rates.bcv ? formatRate(rates.bcv.rate) : "—"}
+                  {rates.official ? formatRate(rates.official.rate) : "—"}
                 </p>
               </div>
             )}
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.12em] text-p2p">
+              <p className="text-xs font-medium uppercase tracking-[0.12em] text-parallel">
                 {t("ui.rates.parallel")}
               </p>
               <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight">
-                {rates.p2p ? formatRate(rates.p2p.rate) : "—"}
+                {rates.parallel ? formatRate(rates.parallel.rate) : "—"}
               </p>
               <p
                 className={cn(
                   "mt-1 max-w-[28ch] text-xs",
-                  rates.p2p ? "text-muted-foreground" : "text-caution",
+                  rates.parallel ? "text-muted-foreground" : "text-caution",
                 )}
               >
-                {rates.p2p
-                  ? rates.p2p.manual
+                {rates.parallel
+                  ? rates.parallel.manual
                     ? t("ui.rates.setByHandOn", {
-                        date: formatDay(rates.p2p.effectiveOn, ctx.locale),
+                        date: formatDay(rates.parallel.effectiveOn, ctx.locale),
                       })
                     : t("ui.rates.whatYoudBePaid", {
-                        date: formatDay(rates.p2p.effectiveOn, ctx.locale),
+                        date: formatDay(rates.parallel.effectiveOn, ctx.locale),
                       })
                   : t("ui.rates.sourceSilent")}
               </p>

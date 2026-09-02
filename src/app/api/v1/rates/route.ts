@@ -15,7 +15,7 @@ export const GET = withToken("reports:read", async ({ principal, req }) => {
 
   const t = getTranslator(normalizeLocale(principal.locale));
   const parts: string[] = [];
-  for (const source of ["bcv", "p2p"] as const) {
+  for (const source of ["official", "parallel"] as const) {
     const rate = rates[source];
     if (!rate) continue;
     parts.push(
@@ -26,10 +26,10 @@ export const GET = withToken("reports:read", async ({ principal, req }) => {
       }),
     );
   }
-  if (rates.bcv && rates.p2p) {
+  if (rates.official && rates.parallel) {
     parts.push(
       t("api.rates.spread", {
-        percent: ((Number(rates.p2p.rate) / Number(rates.bcv.rate) - 1) * 100).toFixed(1),
+        percent: ((Number(rates.parallel.rate) / Number(rates.official.rate) - 1) * 100).toFixed(1),
       }),
     );
   }
@@ -63,8 +63,8 @@ export const POST = withToken("transactions:write", async ({ principal }) => {
   return NextResponse.json({
     ok: true,
     date,
-    bcv: result.bcv ? { rate: result.bcv.value, effective_on: result.bcv.effectiveOn } : null,
-    p2p: result.p2p ? { rate: result.p2p.value, effective_on: result.p2p.effectiveOn } : null,
-    failures: [result.bcv ? null : "bcv", result.p2p ? null : "p2p"].filter(Boolean),
+    official: result.official ? { rate: result.official.value, effective_on: result.official.effectiveOn } : null,
+    parallel: result.parallel ? { rate: result.parallel.value, effective_on: result.parallel.effectiveOn } : null,
+    failures: [result.official ? null : "official", result.parallel ? null : "parallel"].filter(Boolean),
   });
 });

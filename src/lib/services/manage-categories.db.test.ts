@@ -148,7 +148,7 @@ describe("managing categories", { skip: hasDb() ? false : "no Postgres available
       category: "transporte", amount: "1.000,00", period: "monthly", today: DATE,
     });
 
-    const [row] = (await budgetUsage(home.id, DATE, "p2p")).filter(
+    const [row] = (await budgetUsage(home.id, DATE, "parallel")).filter(
       (b) => b.category === "Transporte",
     );
     assert.ok(row, "the budget on the parent must be in force");

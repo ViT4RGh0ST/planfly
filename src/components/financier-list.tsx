@@ -59,7 +59,7 @@ export function FinancierList({
   currencies: string[];
   baseCurrency: string;
   todayDate: string;
-  valuation: "bcv" | "p2p";
+  valuation: "official" | "parallel";
   rates: Record<string, { rate: string; effectiveOn: string; stale: boolean }>;
 }) {
   const t = useTranslations();
@@ -149,8 +149,8 @@ export function FinancierList({
                     {formatAmount(f.owedMinor, f.currency)}
                     {f.owedMinor !== 0 && (
                       <BothRates
-                        bcvMinor={convertToBase(f.owedMinor, f.currency, baseCurrency, rates.bcv?.rate)}
-                        p2pMinor={convertToBase(f.owedMinor, f.currency, baseCurrency, rates.p2p?.rate)}
+                        officialMinor={convertToBase(f.owedMinor, f.currency, baseCurrency, rates.official?.rate)}
+                        parallelMinor={convertToBase(f.owedMinor, f.currency, baseCurrency, rates.parallel?.rate)}
                         baseCurrency={baseCurrency}
                         valuation={valuation}
                         className="font-normal"

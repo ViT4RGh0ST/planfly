@@ -27,6 +27,7 @@ import {
   saveManualRate,
 } from "@/lib/rates/service";
 import { isSlotConfigured } from "@/lib/rates/load-provider";
+import type { RateSlot } from "@/lib/rates/provider";
 import { removeBudget, saveBudget as saveBudgetRule } from "@/lib/services/budgets";
 import {
   removeRecurringRule,
@@ -132,8 +133,8 @@ export async function createTransaction(
           : String(form.get("payee") ?? "") || undefined,
       rate: String(form.get("rate") ?? "") || undefined,
       rateSource: (String(form.get("rate_source") ?? "") || undefined) as
-        | "bcv"
-        | "p2p"
+        | "official"
+        | "parallel"
         | "manual"
         | undefined,
       paymentMethod: (String(form.get("payment_method") ?? "") || undefined) as
@@ -238,7 +239,7 @@ export async function transactionForEdit(id: string): Promise<EditableTransactio
     rates,
     // Only the USD/VES pair is solved: offering it on USDT would promise a
     // conversion that does not exist.
-    ratedCurrencies: rates.bcv || rates.p2p ? ["VES"] : [],
+    ratedCurrencies: rates.official || rates.parallel ? ["VES"] : [],
     items: existingItems.map((i) => ({
       // The raw text before the product name: it is what the receipt said, and
       // correcting a breakdown starts by comparing against what was read.
@@ -510,8 +511,8 @@ export async function editTransaction(
  * anything else is ignored and the service falls back to the usual ladder, which
  * is what it did before this datum existed.
  */
-function rateSourceOf(value: string | undefined): "bcv" | "p2p" | "manual" | undefined {
-  return value === "bcv" || value === "p2p" || value === "manual" ? value : undefined;
+function rateSourceOf(value: string | undefined): "official" | "parallel" | "manual" | undefined {
+  return value === "official" || value === "parallel" || value === "manual" ? value : undefined;
 }
 
 /** Corrects an entry's category and marks it reviewed. */
@@ -1106,7 +1107,7 @@ export async function createFinancedPurchase(
       occurredOn: text("occurred_on"),
       installmentCount: Number(text("installment_count") ?? "3"),
       frequency: (text("frequency") ?? "biweekly") as "biweekly" | "monthly",
-      rateSource: text("rate_source") as "bcv" | "p2p" | undefined,
+      rateSource: text("rate_source") as "official" | "parallel" | undefined,
       firstDueOn: text("first_due_on"),
       source: "form",
       createdByUserId: ctx.userId,
@@ -1234,12 +1235,23 @@ export async function refreshRates(): Promise<ActionState> {
   const t = getTranslator(normalizeLocale(ctx.locale));
   const result = await dailySnapshot(today(ctx.timezone));
 
-  const failures = [result.bcv ? null : "BCV", result.p2p ? null : "P2P"].filter(Boolean);
+  /*
+   * The slots that came back empty, kept AS SLOTS.
+   *
+   * This carried the institution's name — «BCV», «P2P» — and then asked
+   * `isSlotConfigured` by translating it back, a round trip through a display
+   * string that the rename walked straight into. What is being reasoned about is
+   * the slot; the name a person reads is the catalogue's business.
+   */
+  const failures: RateSlot[] = [
+    result.official ? null : ("official" as const),
+    result.parallel ? null : ("parallel" as const),
+  ].filter((slot): slot is RateSlot => slot !== null);
   revalidatePath("/", "layout");
 
   // "No source configured" is not a failure, and saying it as one sends people
   // hunting for a breakdown where something just needs plugging in — or the
-  const noSource = failures.filter((f) => !isSlotConfigured(f === "BCV" ? "bcv" : "p2p"));
+  const noSource = failures.filter((slot) => !isSlotConfigured(slot));
   const broken = failures.filter((f) => !noSource.includes(f));
 
   if (broken.length === 0 && noSource.length > 0) {
@@ -1248,12 +1260,12 @@ export async function refreshRates(): Promise<ActionState> {
       message:
         noSource.length === 2
           ? t("services.actions.rates.noSources")
-          : t("services.actions.rates.oneWithoutSource", { source: noSource[0]! }),
+          : t("services.actions.rates.oneWithoutSource", { source: t(`domain.rateSlot.${noSource[0]!}`) }),
     };
   }
   if (broken.length === 2) return { ok: false, message: t("services.actions.rates.bothBroken") };
   if (broken.length === 1) {
-    return { ok: true, message: t("services.actions.rates.oneBroken", { source: broken[0]! }) };
+    return { ok: true, message: t("services.actions.rates.oneBroken", { source: t(`domain.rateSlot.${broken[0]!}`) }) };
   }
   return { ok: true, message: t("services.actions.rates.updated") };
 }
@@ -1271,7 +1283,7 @@ export async function setManualRate(_prev: ActionState, form: FormData): Promise
 
   try {
     const input = manualRateSchema.parse({
-      slot: String(form.get("slot") ?? "bcv"),
+      slot: String(form.get("slot") ?? "official"),
       rate: String(form.get("rate") ?? ""),
       effective_on: String(form.get("effective_on") ?? "") || undefined,
       note: String(form.get("note") ?? "") || undefined,
@@ -1409,8 +1421,8 @@ export async function takeSnapshot(): Promise<ActionState> {
     account: a.name,
     currency: a.currency,
     balance_minor: a.balanceMinor,
-    base_bcv_minor: a.baseBcvMinor,
-    base_p2p_minor: a.baseP2pMinor,
+    base_bcv_minor: a.baseOfficialMinor,
+    base_p2p_minor: a.baseParallelMinor,
   }));
 
   await db
@@ -1419,15 +1431,15 @@ export async function takeSnapshot(): Promise<ActionState> {
       householdId: ctx.householdId,
       snapshotOn: date,
       baseCurrency: ctx.baseCurrency,
-      totalBcvMinor: position.totalBcvMinor,
-      totalP2pMinor: position.totalP2pMinor,
+      totalOfficialMinor: position.totalOfficialMinor,
+      totalParallelMinor: position.totalParallelMinor,
       breakdown,
     })
     .onConflictDoUpdate({
       target: [netWorthSnapshots.householdId, netWorthSnapshots.snapshotOn],
       set: {
-        totalBcvMinor: position.totalBcvMinor,
-        totalP2pMinor: position.totalP2pMinor,
+        totalOfficialMinor: position.totalOfficialMinor,
+        totalParallelMinor: position.totalParallelMinor,
         breakdown,
       },
     });
@@ -1485,7 +1497,7 @@ export async function saveRecurring(
         // The currency the amount was written in, if it isn't the account's, and
         // which rate to convert it with on the day it fires.
         amountCurrency: field("amount_currency"),
-        rateSource: field("rate_source") as "bcv" | "p2p" | undefined,
+        rateSource: field("rate_source") as "official" | "parallel" | undefined,
         account: field("account"),
         toAccount: field("to_account"),
         // A transfer carries no category: it is the ledger's invariant.

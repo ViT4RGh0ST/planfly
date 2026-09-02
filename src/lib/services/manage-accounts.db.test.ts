@@ -48,7 +48,7 @@ describe("managing accounts", { skip: hasDb() ? false : "no Postgres available" 
 
   it("and that's why a debt lowers net worth", async () => {
     const n = await netWorth(e.home.id, DATE, "USD");
-    assert.ok(n.liabilitiesBcvMinor < 0, "los pasivos entran negativos al total");
+    assert.ok(n.liabilitiesOfficialMinor < 0, "los pasivos entran negativos al total");
   });
 
   it("a bank account is born an asset and its opening balance adds", async () => {

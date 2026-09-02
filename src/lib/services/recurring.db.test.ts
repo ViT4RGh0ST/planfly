@@ -97,7 +97,7 @@ describe("recurrences against the database", { skip: hasDb() ? false : "no Postg
   it("a valued one keeps the amount in its own currency and converts when recording", async () => {
     // «15 dollars debited in bolívares»: storing the bolívares expires, because
     // the same subscription costs another figure next month.
-    await rule("Suscripción", 21, { amount: "15,00", amountCurrency: "USD", rateSource: "p2p" });
+    await rule("Suscripción", 21, { amount: "15,00", amountCurrency: "USD", rateSource: "parallel" });
     await db
       .update(recurringRules)
       .set({ nextRunOn: "2026-08-20" })

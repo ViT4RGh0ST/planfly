@@ -1,4 +1,4 @@
-export type RateSource = "bcv" | "p2p" | "manual";
+export type RateSource = "official" | "parallel" | "manual";
 /** `none` is a line already in the household's currency: nothing to convert. */
 export type RateSourceUsed = RateSource | "none";
 
@@ -33,11 +33,11 @@ export function chooseRateSource(params: {
   preferred?: RateSource;
   /** The household's, when none was asked for. */
   fallback: RateSource;
-  baseBcvMinor: number | null;
-  baseP2pMinor: number | null;
+  baseOfficialMinor: number | null;
+  baseParallelMinor: number | null;
   baseManualMinor: number | null;
 }): { source: RateSourceUsed; baseMinor: number | null } {
-  const { baseBcvMinor: bcv, baseP2pMinor: p2p, baseManualMinor: manual } = params;
+  const { baseOfficialMinor: bcv, baseParallelMinor: p2p, baseManualMinor: manual } = params;
 
   if (params.isBaseCurrency) return { source: "none", baseMinor: null };
 
@@ -45,8 +45,8 @@ export function chooseRateSource(params: {
     ["manual", manual],
     // The parallel one before the official as a last resort: it is the one that
     // genuinely pays, and the one the product puts first everywhere.
-    ["p2p", p2p],
-    ["bcv", bcv],
+    ["parallel", p2p],
+    ["official", bcv],
   ];
   const valueOf = (s: RateSource) => candidates.find(([k]) => k === s)?.[1] ?? null;
 

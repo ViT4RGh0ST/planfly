@@ -73,12 +73,12 @@ type AmendLeg = {
   amount_text: string;
   currency: string;
   base_currency: string;
-  rate_bcv: string | null;
-  rate_p2p: string | null;
+  rate_official: string | null;
+  rate_parallel: string | null;
   rate_manual: string | null;
   rate_source_used: string;
-  base_amount_bcv_minor: number | null;
-  base_amount_p2p_minor: number | null;
+  base_amount_official_minor: number | null;
+  base_amount_parallel_minor: number | null;
   base_amount_manual_minor: number | null;
   /** Formatted, of the three above, the one `rate_source_used` picked. */
   base_amount_text: string | null;
@@ -289,12 +289,12 @@ async function describeAmend(
       amountMinor: transactionEntries.amountMinor,
       currency: transactionEntries.currency,
       baseCurrency: transactionEntries.baseCurrency,
-      rateBcv: transactionEntries.rateBcv,
-      rateP2p: transactionEntries.rateP2p,
+      rateOfficial: transactionEntries.rateOfficial,
+      rateParallel: transactionEntries.rateParallel,
       rateManual: transactionEntries.rateManual,
       rateSourceUsed: transactionEntries.rateSourceUsed,
-      baseAmountBcvMinor: transactionEntries.baseAmountBcvMinor,
-      baseAmountP2pMinor: transactionEntries.baseAmountP2pMinor,
+      baseAmountOfficialMinor: transactionEntries.baseAmountOfficialMinor,
+      baseAmountParallelMinor: transactionEntries.baseAmountParallelMinor,
       baseAmountManualMinor: transactionEntries.baseAmountManualMinor,
     })
     .from(transactionEntries)
@@ -355,12 +355,12 @@ async function describeAmend(
         amount_text: formatAmount(Math.abs(leg.amountMinor), leg.currency),
         currency: leg.currency,
         base_currency: leg.baseCurrency,
-        rate_bcv: leg.rateBcv ?? null,
-        rate_p2p: leg.rateP2p ?? null,
+        rate_official: leg.rateOfficial ?? null,
+        rate_parallel: leg.rateParallel ?? null,
         rate_manual: leg.rateManual ?? null,
         rate_source_used: leg.rateSourceUsed,
-        base_amount_bcv_minor: leg.baseAmountBcvMinor ?? null,
-        base_amount_p2p_minor: leg.baseAmountP2pMinor ?? null,
+        base_amount_official_minor: leg.baseAmountOfficialMinor ?? null,
+        base_amount_parallel_minor: leg.baseAmountParallelMinor ?? null,
         base_amount_manual_minor: leg.baseAmountManualMinor ?? null,
         base_amount_text: usedBaseText(leg),
       })),
@@ -507,15 +507,15 @@ function nameIn(body: Record<string, unknown>, key: "account" | "category"): str
 function usedBaseText(leg: {
   baseCurrency: string;
   rateSourceUsed: string;
-  baseAmountBcvMinor: number | null;
-  baseAmountP2pMinor: number | null;
+  baseAmountOfficialMinor: number | null;
+  baseAmountParallelMinor: number | null;
   baseAmountManualMinor: number | null;
 }): string | null {
   const minor =
-    leg.rateSourceUsed === "bcv"
-      ? leg.baseAmountBcvMinor
-      : leg.rateSourceUsed === "p2p"
-        ? leg.baseAmountP2pMinor
+    leg.rateSourceUsed === "official"
+      ? leg.baseAmountOfficialMinor
+      : leg.rateSourceUsed === "parallel"
+        ? leg.baseAmountParallelMinor
         : leg.rateSourceUsed === "manual"
           ? leg.baseAmountManualMinor
           : null;
@@ -622,12 +622,12 @@ function amendFingerprint(preview: AmendPreview): string {
       amountMinor: leg.amount_minor,
       currency: leg.currency,
       baseCurrency: leg.base_currency,
-      rateBcv: leg.rate_bcv ?? null,
-      rateP2p: leg.rate_p2p ?? null,
+      rateOfficial: leg.rate_official ?? null,
+      rateParallel: leg.rate_parallel ?? null,
       rateManual: leg.rate_manual ?? null,
       rateSourceUsed: leg.rate_source_used,
-      baseAmountBcvMinor: leg.base_amount_bcv_minor ?? null,
-      baseAmountP2pMinor: leg.base_amount_p2p_minor ?? null,
+      baseAmountOfficialMinor: leg.base_amount_official_minor ?? null,
+      baseAmountParallelMinor: leg.base_amount_parallel_minor ?? null,
       baseAmountManualMinor: leg.base_amount_manual_minor ?? null,
     })),
     items: current.items.map((item) => ({

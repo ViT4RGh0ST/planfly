@@ -6,7 +6,7 @@ import { requireSession } from "@/lib/session";
 import { today } from "@/lib/dates";
 import { currentRates } from "@/lib/rates/service";
 import { productCatalog } from "@/lib/services/products";
-import type { Valuation } from "@/lib/services/reports";
+import { valuationFrom, type Valuation } from "@/lib/services/reports";
 import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +31,7 @@ export default async function ProductsPage({
   const ctx = await requireSession();
   const t = await getTranslations();
   const params = await searchParams;
-  const valuation: Valuation = params.rate === "bcv" ? "bcv" : "p2p";
+  const valuation: Valuation = valuationFrom(params.rate);
   const date = today(ctx.timezone);
 
   const [catalog, rates] = await Promise.all([

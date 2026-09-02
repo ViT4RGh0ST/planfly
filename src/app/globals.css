@@ -36,8 +36,8 @@
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --color-caution: var(--caution);
-  --color-bcv: var(--bcv);
-  --color-p2p: var(--p2p);
+  --color-official: var(--official);
+  --color-parallel: var(--parallel);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -94,12 +94,12 @@
   --positive: oklch(0.52 0.15 155);
   --negative: oklch(0.55 0.18 22);
   --caution: oklch(0.58 0.14 85);
-  --bcv: oklch(0.52 0.15 248);
+  --official: oklch(0.52 0.15 248);
   /* 0.60 gave 3.99:1 on the white card, below the 4.5:1 WCAG 1.4.3 asks of
      small text — and the source's tag is painted at 11px on every row of the
      history. 0.55 raises it to 4.9:1 keeping hue and chroma, so it is still the
      same amber. The dark one already had plenty of room (8.8:1). */
-  --p2p: oklch(0.55 0.15 82);
+  --parallel: oklch(0.55 0.15 82);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -152,8 +152,8 @@
   --positive: oklch(0.78 0.15 155);
   --negative: oklch(0.72 0.16 22);
   --caution: oklch(0.80 0.14 85);
-  --bcv: oklch(0.72 0.14 248);
-  --p2p: oklch(0.77 0.15 82);
+  --official: oklch(0.72 0.14 248);
+  --parallel: oklch(0.77 0.15 82);
   /* A second neutral layer: the sidebar had exactly the same value as the
      content cards, so chassis and content read as the same plane. It now goes
      darker than the background and slightly cooler, so it recedes without

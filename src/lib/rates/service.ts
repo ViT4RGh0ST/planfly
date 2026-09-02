@@ -33,15 +33,15 @@ export type ResolvedRate = {
 };
 
 export type DailyRates = {
-  bcv: ResolvedRate | null;
-  p2p: ResolvedRate | null;
+  official: ResolvedRate | null;
+  parallel: ResolvedRate | null;
 };
 
 /** Stores (or updates) a rate. Idempotent by (pair, source, variant, date). */
 export async function saveRate(params: {
   baseCurrency: string;
   quoteCurrency: string;
-  source: "bcv" | "p2p" | "manual";
+  source: "official" | "parallel" | "manual";
   variant?: string;
   value: number | string;
   effectiveOn: string;
@@ -259,40 +259,40 @@ export async function resolveRates(params: {
 }): Promise<DailyRates> {
   const { quoteCurrency, baseCurrency, date, isToday } = params;
 
-  if (quoteCurrency === baseCurrency) return { bcv: null, p2p: null };
+  if (quoteCurrency === baseCurrency) return { official: null, parallel: null };
 
   // For now only the USD/VES pair makes sense; other currencies fall to null and
   // the entry gets flagged for review, which is the honest behaviour.
   if (baseCurrency !== "USD" || quoteCurrency !== "VES") {
     const ages = await rateAges(quoteCurrency);
-    const [bcv, p2p] = await Promise.all([
-      findStored(baseCurrency, quoteCurrency, "bcv", date, ages),
-      findStored(baseCurrency, quoteCurrency, "p2p", date, ages),
+    const [official, parallel] = await Promise.all([
+      findStored(baseCurrency, quoteCurrency, "official", date, ages),
+      findStored(baseCurrency, quoteCurrency, "parallel", date, ages),
     ]);
-    return { bcv, p2p };
+    return { official, parallel };
   }
 
-  let [bcv, p2p] = await Promise.all([
-    findStored("USD", "VES", "bcv", date, true),
-    findStored("USD", "VES", "p2p", date, true),
+  let [official, parallel] = await Promise.all([
+    findStored("USD", "VES", "official", date, true),
+    findStored("USD", "VES", "parallel", date, true),
   ]);
 
   // We only go out to the network if the entry is from today: backfilling an old
   // date with today's rate would falsify the history.
   if (isToday) {
-    const missingBcv = !bcv || bcv.stale;
-    const missingP2p = !p2p || p2p.stale;
-    if (missingBcv || missingP2p) {
-      const [freshBcv, freshP2p] = await Promise.all([
-        missingBcv ? refreshSlot("bcv", date) : Promise.resolve(null),
-        missingP2p ? refreshSlot("p2p", date) : Promise.resolve(null),
+    const missingOfficial = !official || official.stale;
+    const missingParallel = !parallel || parallel.stale;
+    if (missingOfficial || missingParallel) {
+      const [freshOfficial, freshParallel] = await Promise.all([
+        missingOfficial ? refreshSlot("official", date) : Promise.resolve(null),
+        missingParallel ? refreshSlot("parallel", date) : Promise.resolve(null),
       ]);
-      if (freshBcv) bcv = freshBcv;
-      if (freshP2p) p2p = freshP2p;
+      if (freshOfficial) official = freshOfficial;
+      if (freshParallel) parallel = freshParallel;
     }
   }
 
-  return { bcv, p2p };
+  return { official, parallel };
 }
 
 /** Is the rate too far from the date to be trusted? */
@@ -321,7 +321,7 @@ export async function lastSnapshotAt(): Promise<Date | null> {
      -- slot is already covered: if a hand-written rate counted, the day somebody
      -- writes one it would stop going out for the source's. Nothing would fail;
      -- the real rate would simply stop being stored, and that does not show.
-     WHERE source IN ('bcv','p2p')
+     WHERE source IN ('official','parallel')
   `);
   const value = rows[0]?.observed_at;
   return value ? new Date(value) : null;
@@ -366,7 +366,7 @@ export async function pairsInUse(): Promise<Array<RatePair>> {
 }
 
 export async function dailySnapshot(date: string): Promise<DailyRates> {
-  const [bcv, p2p] = await Promise.all([refreshSlot("bcv", date), refreshSlot("p2p", date)]);
+  const [official, parallel] = await Promise.all([refreshSlot("official", date), refreshSlot("parallel", date)]);
 
   /*
    * And the market rate for every other currency in use.
@@ -388,7 +388,7 @@ export async function dailySnapshot(date: string): Promise<DailyRates> {
    */
   for (const pair of await pairsInUse()) {
     if (pair.base === "USD" && pair.quote === "VES") continue;
-    for (const slot of pair.hasOfficial ? (["bcv", "p2p"] as const) : (["p2p"] as const)) {
+    for (const slot of pair.hasOfficial ? (["official", "parallel"] as const) : (["parallel"] as const)) {
       try {
         await refreshSlot(slot, date, { base: pair.base, quote: pair.quote });
       } catch (err) {
@@ -400,7 +400,7 @@ export async function dailySnapshot(date: string): Promise<DailyRates> {
     }
   }
 
-  return { bcv, p2p };
+  return { official, parallel };
 }
 
 /**
@@ -431,12 +431,12 @@ export async function currentRates(
                variant,
                source = 'manual' AS is_manual,
                -- The box: what is hand-written is anchored by the variant
-               -- column, so 'manual' + 'bcv' counts as that day's official one.
+               -- column, so 'manual' + 'official' counts as that day's official one.
                CASE WHEN source = 'manual' THEN variant ELSE source::text END AS slot
           FROM exchange_rates
          WHERE base_currency = ${pair.base} AND quote_currency = ${pair.quote}
-           AND (source IN ('bcv','p2p')
-                OR (source = 'manual' AND variant IN ('bcv','p2p')))
+           AND (source IN ('official','parallel')
+                OR (source = 'manual' AND variant IN ('official','parallel')))
       ) x
     -- Same rule as findStored, and they have to stay the same: value date
     -- earlier than or equal to first, nearest after that, and on a tie the
@@ -525,7 +525,7 @@ export async function removeManualRate(
   /*
    * If that rate has already valued entries, it is not deleted.
    *
-   * The `rate_bcv_id` and `rate_p2p_id` columns point here with `ON DELETE SET
+   * The `rate_official_id` and `rate_parallel_id` columns point here with `ON DELETE SET
    * NULL`: deleting it would leave the entries with their dollar equivalent
    * already computed but with nothing saying where it came from. The amount
    * would still be right and the provenance would say "none", which is the kind
@@ -537,7 +537,7 @@ export async function removeManualRate(
   const { rows: uses } = await db.execute<{ n: number }>(sql`
     SELECT count(*)::int AS n
       FROM transaction_entries
-     WHERE rate_bcv_id = ${id} OR rate_p2p_id = ${id}
+     WHERE rate_official_id = ${id} OR rate_parallel_id = ${id}
   `);
   if ((uses[0]?.n ?? 0) > 0) {
     throw new Error(
@@ -612,7 +612,7 @@ export async function p2pTopOfDay(date: string): Promise<
     .from(exchangeRates)
     .where(
       and(
-        eq(exchangeRates.source, "p2p"),
+        eq(exchangeRates.source, "parallel"),
         eq(exchangeRates.quoteCurrency, "VES"),
         eq(exchangeRates.effectiveOn, date),
       ),

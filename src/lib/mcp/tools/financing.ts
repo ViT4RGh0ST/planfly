@@ -167,7 +167,7 @@ const financingInputSchema = z.object({
         "carries no list of its own. Never substitute one the person did not ask for.",
     ),
   rate_source: z
-    .enum(["bcv", "p2p"])
+    .enum(["official", "parallel"])
     .optional()
     .describe("Which rate to convert with when there is a total_currency. Ask if they do not say."),
   down_payment: z

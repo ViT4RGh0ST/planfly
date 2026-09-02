@@ -1,6 +1,6 @@
 {
-  "id": "3a112ed0-0f2a-4e95-ad43-bcdcc77a5f55",
-  "prevId": "361b39e4-60b8-4a0a-ae1e-ea71638d965f",
+  "id": "667935c9-6f6d-42aa-a451-f23097b8dabe",
+  "prevId": "7bbb8203-0c0c-49d6-b3d3-6ea1f6bb724c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -692,7 +692,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'p2p'"
+          "default": "'parallel'"
         },
         "timezone": {
           "name": "timezone",
@@ -1538,14 +1538,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "rate_bcv": {
-          "name": "rate_bcv",
+        "rate_official": {
+          "name": "rate_official",
           "type": "numeric(24, 10)",
           "primaryKey": false,
           "notNull": false
         },
-        "rate_p2p": {
-          "name": "rate_p2p",
+        "rate_parallel": {
+          "name": "rate_parallel",
           "type": "numeric(24, 10)",
           "primaryKey": false,
           "notNull": false
@@ -1556,14 +1556,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "rate_bcv_id": {
-          "name": "rate_bcv_id",
+        "rate_official_id": {
+          "name": "rate_official_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "rate_p2p_id": {
-          "name": "rate_p2p_id",
+        "rate_parallel_id": {
+          "name": "rate_parallel_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -1583,14 +1583,14 @@
           "notNull": true,
           "default": false
         },
-        "base_amount_bcv_minor": {
-          "name": "base_amount_bcv_minor",
+        "base_amount_official_minor": {
+          "name": "base_amount_official_minor",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
-        "base_amount_p2p_minor": {
-          "name": "base_amount_p2p_minor",
+        "base_amount_parallel_minor": {
+          "name": "base_amount_parallel_minor",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
@@ -1727,12 +1727,12 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "transaction_entries_rate_bcv_id_exchange_rates_id_fk": {
-          "name": "transaction_entries_rate_bcv_id_exchange_rates_id_fk",
+        "transaction_entries_rate_official_id_exchange_rates_id_fk": {
+          "name": "transaction_entries_rate_official_id_exchange_rates_id_fk",
           "tableFrom": "transaction_entries",
           "tableTo": "exchange_rates",
           "columnsFrom": [
-            "rate_bcv_id"
+            "rate_official_id"
           ],
           "columnsTo": [
             "id"
@@ -1740,12 +1740,12 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "transaction_entries_rate_p2p_id_exchange_rates_id_fk": {
-          "name": "transaction_entries_rate_p2p_id_exchange_rates_id_fk",
+        "transaction_entries_rate_parallel_id_exchange_rates_id_fk": {
+          "name": "transaction_entries_rate_parallel_id_exchange_rates_id_fk",
           "tableFrom": "transaction_entries",
           "tableTo": "exchange_rates",
           "columnsFrom": [
-            "rate_p2p_id"
+            "rate_parallel_id"
           ],
           "columnsTo": [
             "id"
@@ -2306,14 +2306,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "total_bcv_minor": {
-          "name": "total_bcv_minor",
+        "total_official_minor": {
+          "name": "total_official_minor",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
-        "total_p2p_minor": {
-          "name": "total_p2p_minor",
+        "total_parallel_minor": {
+          "name": "total_parallel_minor",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
@@ -3646,14 +3646,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "base_amount_bcv_minor": {
-          "name": "base_amount_bcv_minor",
+        "base_amount_official_minor": {
+          "name": "base_amount_official_minor",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
-        "base_amount_p2p_minor": {
-          "name": "base_amount_p2p_minor",
+        "base_amount_parallel_minor": {
+          "name": "base_amount_parallel_minor",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
@@ -5088,8 +5088,8 @@
       "name": "rate_source",
       "schema": "public",
       "values": [
-        "bcv",
-        "p2p",
+        "official",
+        "parallel",
         "manual"
       ]
     },
@@ -5097,8 +5097,8 @@
       "name": "rate_source_used",
       "schema": "public",
       "values": [
-        "bcv",
-        "p2p",
+        "official",
+        "parallel",
         "manual",
         "none"
       ]

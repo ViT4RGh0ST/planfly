@@ -120,7 +120,7 @@ export function TransactionForm({
    * the other. What cannot happen is a USDT account: that pair is not resolved
    * and offering it would promise a conversion that does not exist.
    */
-  const hasRates = Boolean(rates.bcv || rates.p2p);
+  const hasRates = Boolean(rates.official || rates.parallel);
   const convertible =
     hasRates &&
     Boolean(accountCurrency) &&

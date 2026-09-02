@@ -12,8 +12,8 @@ type AccountRow = {
   currency: string;
   balanceMinor: number;
   balanceText: string;
-  baseBcvMinor: number | null;
-  baseP2pMinor: number | null;
+  baseOfficialMinor: number | null;
+  baseParallelMinor: number | null;
 };
 
 /**
@@ -36,7 +36,7 @@ export function AccountList({
 }: {
   accounts: AccountRow[];
   baseCurrency: string;
-  valuation: "bcv" | "p2p";
+  valuation: "official" | "parallel";
   /** With no currencies there is no form to offer: the list stays read-only. */
   currencies?: string[];
 }) {
@@ -50,7 +50,7 @@ export function AccountList({
   return (
     <ul className="divide-y divide-border">
       {accounts.map((account) => {
-        const inBase = valuation === "bcv" ? account.baseBcvMinor : account.baseP2pMinor;
+        const inBase = valuation === "official" ? account.baseOfficialMinor : account.baseParallelMinor;
         const isLiability = account.nature === "liability";
         const empty = account.balanceMinor === 0;
 

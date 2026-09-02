@@ -48,7 +48,7 @@ async function homeOf(householdId: string): Promise<{
   baseCurrency: string;
   today: string;
   locale: Locale;
-  defaultRateSource: "bcv" | "p2p";
+  defaultRateSource: "official" | "parallel";
 }> {
   const [row] = await db
     .select({
@@ -73,13 +73,13 @@ async function homeOf(householdId: string): Promise<{
      * Which rate the household converts with when the call does not say.
      *
      * `totalInFinancierCurrency` reads this same column and treats anything
-     * that is not «bcv» as p2p — «manual» is not a source a purchase can be
-     * quoted at — so the same narrowing is done here. It is read rather than
-     * assumed because the preview has to NAME the rate the write will use: BCV
-     * and P2P are some 15% apart on the same purchase, and a yes given without
+     * that is not «official» as parallel — «manual» is not a source a purchase
+     * can be quoted at — so the same narrowing is done here. It is read rather
+     * than assumed because the preview has to NAME the rate the write will use:
+     * the two are some 15% apart on the same purchase, and a yes given without
      * knowing which one decides is a yes to either figure.
      */
-    defaultRateSource: row?.defaultRateSource === "bcv" ? "bcv" : "p2p",
+    defaultRateSource: row?.defaultRateSource === "official" ? "official" : "parallel",
   };
 }
 
@@ -456,14 +456,18 @@ async function quotes(
   baseCurrency: string,
   date: string,
   todayHere: string,
-): Promise<{ currency: string; bcv: string | null; p2p: string | null }> {
+): Promise<{ currency: string; official: string | null; parallel: string | null }> {
   const resolved = await resolveRates({
     quoteCurrency: currency,
     baseCurrency,
     date,
     isToday: date === todayHere,
   });
-  return { currency, bcv: resolved.bcv?.value ?? null, p2p: resolved.p2p?.value ?? null };
+  return {
+    currency,
+    official: resolved.official?.value ?? null,
+    parallel: resolved.parallel?.value ?? null,
+  };
 }
 
 export const payInstallmentOperation: McpOperation = {
@@ -593,8 +597,8 @@ export const recordFinancedPurchaseOperation: McpOperation = {
       on: string;
       base_currency: string;
       source: string;
-      written: { currency: string; bcv: string | null; p2p: string | null };
-      financier: { currency: string; bcv: string | null; p2p: string | null };
+      written: { currency: string; official: string | null; parallel: string | null };
+      financier: { currency: string; official: string | null; parallel: string | null };
     } | null;
 
     return JSON.stringify({
@@ -620,8 +624,8 @@ export const recordFinancedPurchaseOperation: McpOperation = {
             on: rate.on,
             base_currency: rate.base_currency,
             source: rate.source,
-            written: [rate.written.currency, rate.written.bcv, rate.written.p2p],
-            financier: [rate.financier.currency, rate.financier.bcv, rate.financier.p2p],
+            written: [rate.written.currency, rate.written.official, rate.written.parallel],
+            financier: [rate.financier.currency, rate.financier.official, rate.financier.parallel],
           }
         : null,
       effective_on: preview.effective_on,

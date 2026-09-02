@@ -124,7 +124,7 @@ Dates do follow it.
   "ok": true,
   "transactionId": "…",
   "summary": "Gasto de Bs. 12.008,70 (≈ $ 13,70 P2P) en Mercado desde Efectivo Bs.",
-  "base": { "currency": "USD", "bcvMinor": -1554, "p2pMinor": -1370, "sourceUsed": "p2p" },
+  "base": { "currency": "USD", "officialMinor": -1554, "parallelMinor": -1370, "sourceUsed": "parallel" },
   "needsReview": false,
   "warnings": []
 }

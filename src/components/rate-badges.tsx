@@ -16,8 +16,11 @@ export function RateBadges({ rates }: { rates: Rates }) {
   const t = useTranslations();
   const locale = useLocale();
   const items = [
-    { key: "bcv", label: "BCV", data: rates.bcv, tone: "text-bcv" },
-    { key: "p2p", label: "P2P", data: rates.p2p, tone: "text-p2p" },
+    // The slot's own name, not an institution's: this badge sits on screens that
+    // add up every currency the household holds, and «BCV» is the name of one
+    // country's central bank.
+    { key: "official", label: t("domain.rateSlotShort.official"), data: rates.official, tone: "text-official" },
+    { key: "parallel", label: t("domain.rateSlotShort.parallel"), data: rates.parallel, tone: "text-parallel" },
   ].filter((item) => item.data);
 
   if (items.length === 0) {

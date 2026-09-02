@@ -30,34 +30,34 @@ import { useLocale, useTranslations } from "next-intl";
  * shows a dash instead of a zero that would read as "you have nothing".
  */
 export function NetWorth({
-  bcvMinor,
-  p2pMinor,
-  assetsBcvMinor,
-  assetsP2pMinor,
-  liabilitiesBcvMinor,
-  liabilitiesP2pMinor,
+  officialMinor,
+  parallelMinor,
+  assetsOfficialMinor,
+  assetsParallelMinor,
+  liabilitiesOfficialMinor,
+  liabilitiesParallelMinor,
   currency,
   spreadPercent,
   accountCount,
   coverage,
   committed,
 }: {
-  bcvMinor: number;
-  p2pMinor: number;
-  assetsBcvMinor: number;
-  assetsP2pMinor: number;
-  liabilitiesBcvMinor: number;
-  liabilitiesP2pMinor: number;
+  officialMinor: number;
+  parallelMinor: number;
+  assetsOfficialMinor: number;
+  assetsParallelMinor: number;
+  liabilitiesOfficialMinor: number;
+  liabilitiesParallelMinor: number;
   currency: string;
   spreadPercent: number | null;
   /** Accounts that count towards net worth, balance or no balance. */
   accountCount: number;
-  coverage: { bcv: Coverage; p2p: Coverage };
+  coverage: { official: Coverage; parallel: Coverage };
   /** Upcoming unpaid installments. Null when there are none. */
   committed: CommittedReport | null;
 }) {
   const t = useTranslations();
-  const [rate, setRate] = useQueryState("rate", { defaultValue: "p2p", shallow: false });
+  const [rate, setRate] = useQueryState("rate", { defaultValue: "parallel", shallow: false });
   const [pending, startTransition] = useTransition();
 
   /*
@@ -67,7 +67,7 @@ export function NetWorth({
    * instantly and navigation only confirms it; what genuinely depends on the
    * server — the derived sections — dims meanwhile.
    */
-  const [active, setOptimistic] = useOptimistic<Valuation>(rate === "bcv" ? "bcv" : "p2p");
+  const [active, setOptimistic] = useOptimistic<Valuation>(rate === "official" ? "official" : "parallel");
 
   const choose = (option: Valuation) =>
     startTransition(() => {
@@ -75,8 +75,8 @@ export function NetWorth({
       void setRate(option);
     });
 
-  const assets = active === "bcv" ? assetsBcvMinor : assetsP2pMinor;
-  const liabilities = active === "bcv" ? liabilitiesBcvMinor : liabilitiesP2pMinor;
+  const assets = active === "official" ? assetsOfficialMinor : assetsParallelMinor;
+  const liabilities = active === "official" ? liabilitiesOfficialMinor : liabilitiesParallelMinor;
   const missing = coverage[active];
   // Accounts that move the needle. All of them being at zero is not a hole: net
   // worth genuinely is zero, and covering it with a dash would lie the other way.
@@ -109,20 +109,20 @@ export function NetWorth({
 
   const options = [
     {
-      key: "p2p" as const,
-      minor: p2pMinor,
+      key: "parallel" as const,
+      minor: parallelMinor,
       title: t("ui.netWorth.option.p2pTitle"),
       note: t("ui.netWorth.option.p2pNote"),
-      accent: "text-p2p",
-      rule: "bg-p2p",
+      accent: "text-parallel",
+      rule: "bg-parallel",
     },
     {
-      key: "bcv" as const,
-      minor: bcvMinor,
+      key: "official" as const,
+      minor: officialMinor,
       title: t("ui.netWorth.option.bcvTitle"),
       note: t("ui.netWorth.option.bcvNote"),
-      accent: "text-bcv",
-      rule: "bg-bcv",
+      accent: "text-official",
+      rule: "bg-official",
     },
   ];
 
@@ -297,7 +297,7 @@ function Committed({
   const t = useTranslations();
   const locale = useLocale();
   const { count, overdueCount, lastDueOn, unvalued } = committed;
-  const minor = valuation === "bcv" ? committed.bcvMinor : committed.p2pMinor;
+  const minor = valuation === "official" ? committed.officialMinor : committed.parallelMinor;
   const blind = unvalued[valuation];
   const shown = count - blind;
 

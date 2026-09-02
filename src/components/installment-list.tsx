@@ -56,7 +56,7 @@ export function InstallmentList({
   accounts: { name: string; currency: string }[];
   todayDate: string;
   baseCurrency: string;
-  valuation: "bcv" | "p2p";
+  valuation: "official" | "parallel";
   /** TODAY's rates: what paying the installment would cost now, not what was agreed. */
   rates: Rates;
 }) {
@@ -77,8 +77,8 @@ export function InstallmentList({
    * committed: a pending installment is a claim on what you have today.
    */
   const inBase = (minor: number) => ({
-    bcvMinor: convertToBase(minor, plan.currency, baseCurrency, rates.bcv?.rate),
-    p2pMinor: convertToBase(minor, plan.currency, baseCurrency, rates.p2p?.rate),
+    officialMinor: convertToBase(minor, plan.currency, baseCurrency, rates.official?.rate),
+    parallelMinor: convertToBase(minor, plan.currency, baseCurrency, rates.parallel?.rate),
   });
 
   const run = (fn: () => Promise<{ ok: boolean; message: string } | null>) =>

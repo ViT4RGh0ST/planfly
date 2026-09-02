@@ -16,7 +16,7 @@ import {
   financingPlansView,
   upcomingInstallments,
 } from "@/lib/services/financing";
-import type { Valuation } from "@/lib/services/reports";
+import { valuationFrom, type Valuation } from "@/lib/services/reports";
 import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export default async function FinancingPage({
   const ctx = await requireSession();
   const t = await getTranslations();
   const params = await searchParams;
-  const valuation: Valuation = params.rate === "bcv" ? "bcv" : "p2p";
+  const valuation: Valuation = valuationFrom(params.rate);
   const date = today(ctx.timezone);
 
   const [plans, financiers, upcoming, accountList, categoryList, rates, currencyList] =
@@ -76,7 +76,7 @@ export default async function FinancingPage({
 
   // `currentRates` only resolves USD/VES: offering conversion on a USDT account
   // would promise something that afterwards does not happen.
-  const ratedCurrencies = rates.bcv || rates.p2p ? ["VES"] : [];
+  const ratedCurrencies = rates.official || rates.parallel ? ["VES"] : [];
 
   const payFrom = accountList.filter((a) => a.nature === "asset");
 
@@ -156,8 +156,8 @@ export default async function FinancingPage({
                 <span className="flex items-baseline gap-2 tabular-nums">
                   <span>{formatAmount(installment.amountMinor, installment.currency)}</span>
                   <BothRates
-                    bcvMinor={convertToBase(installment.amountMinor, installment.currency, ctx.baseCurrency, rates.bcv?.rate)}
-                    p2pMinor={convertToBase(installment.amountMinor, installment.currency, ctx.baseCurrency, rates.p2p?.rate)}
+                    officialMinor={convertToBase(installment.amountMinor, installment.currency, ctx.baseCurrency, rates.official?.rate)}
+                    parallelMinor={convertToBase(installment.amountMinor, installment.currency, ctx.baseCurrency, rates.parallel?.rate)}
                     baseCurrency={ctx.baseCurrency}
                     valuation={valuation}
                   />

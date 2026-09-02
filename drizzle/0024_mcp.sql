@@ -148,6 +148,24 @@ CREATE TABLE "oauth_resource" (
 	CONSTRAINT "oauth_resource_identifier_unique" UNIQUE("identifier")
 );
 --> statement-breakpoint
+ALTER TABLE "transaction_entries" DROP CONSTRAINT "transaction_entries_rate_bcv_id_exchange_rates_id_fk";
+--> statement-breakpoint
+ALTER TABLE "transaction_entries" DROP CONSTRAINT "transaction_entries_rate_p2p_id_exchange_rates_id_fk";
+--> statement-breakpoint
+ALTER TABLE "households" ALTER COLUMN "default_rate_source" SET DEFAULT 'parallel';--> statement-breakpoint
+--
+-- better-auth 1.7 scopes an account's identity by issuer, and drizzle-kit writes
+-- this as a single `ADD COLUMN ... NOT NULL`: right for an empty database, and a
+-- failure on every installation that has ever logged in. Nullable, backfilled,
+-- then NOT NULL.
+--
+-- `local:<provider>` is the synthetic issuer better-auth builds for a provider
+-- with none of its own, so email and password is `local:credential`. Derived
+-- from provider_id rather than written out, so an installation carrying some
+-- other local provider is filled in correctly too.
+ALTER TABLE "account" ADD COLUMN "issuer" text;--> statement-breakpoint
+UPDATE "account" SET "issuer" = 'local:' || "provider_id" WHERE "issuer" IS NULL;--> statement-breakpoint
+ALTER TABLE "account" ALTER COLUMN "issuer" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "mcp_pending_operations" ADD CONSTRAINT "mcp_pending_operations_household_id_households_id_fk" FOREIGN KEY ("household_id") REFERENCES "public"."households"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "mcp_pending_operations" ADD CONSTRAINT "mcp_pending_operations_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "mcp_pending_operations" ADD CONSTRAINT "mcp_pending_operations_token_id_api_tokens_id_fk" FOREIGN KEY ("token_id") REFERENCES "public"."api_tokens"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -167,4 +185,7 @@ CREATE INDEX "mcp_pending_operations_lookup_idx" ON "mcp_pending_operations" USI
 CREATE INDEX "mcp_pending_operations_expiry_idx" ON "mcp_pending_operations" USING btree ("expires_at");--> statement-breakpoint
 CREATE INDEX "oauth_client_user_idx" ON "oauth_client" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "oauth_client_discovery_unique" ON "oauth_client" USING btree ("client_discovery_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "oauth_client_resource_unique" ON "oauth_client_resource" USING btree ("client_id","resource_id");
+CREATE UNIQUE INDEX "oauth_client_resource_unique" ON "oauth_client_resource" USING btree ("client_id","resource_id");--> statement-breakpoint
+ALTER TABLE "transaction_entries" ADD CONSTRAINT "transaction_entries_rate_official_id_exchange_rates_id_fk" FOREIGN KEY ("rate_official_id") REFERENCES "public"."exchange_rates"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "transaction_entries" ADD CONSTRAINT "transaction_entries_rate_parallel_id_exchange_rates_id_fk" FOREIGN KEY ("rate_parallel_id") REFERENCES "public"."exchange_rates"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "account_issuer_account_id_key" ON "account" USING btree ("issuer","account_id");

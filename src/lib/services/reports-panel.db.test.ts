@@ -78,26 +78,26 @@ describe("the dashboard figures", { skip: hasDb() ? false : "no Postgres availab
       account: "efectivo", occurredOn: DATE, source: "form",
     });
 
-    const r = await periodSummary(e.home.id, PERIOD, TZ, "bcv");
+    const r = await periodSummary(e.home.id, PERIOD, TZ, "official");
     assert.equal(r.expenseMinor, 300, "Bs 2.400,00 a 800 son $ 3,00");
     assert.equal(r.incomeMinor, 500, "Bs 4.000,00 a 800 son $ 5,00");
     assert.equal(r.expenseCount, 2);
     assert.equal(r.incomeCount, 1);
 
     // The valuation recalculates nothing: it picks another already-written column.
-    const p2p = await periodSummary(e.home.id, PERIOD, TZ, "p2p");
+    const p2p = await periodSummary(e.home.id, PERIOD, TZ, "parallel");
     assert.equal(p2p.expenseMinor, 240, "los mismos Bs 2.400,00 a 1.000 son $ 2,40");
   });
 
   it("a transfer is neither spending nor income in any total", async () => {
     // Moving money from one of your own accounts to another would inflate the
     // month with money that never left the house. The costliest silent mistake.
-    const before = await periodSummary(e.home.id, PERIOD, TZ, "bcv");
+    const before = await periodSummary(e.home.id, PERIOD, TZ, "official");
     await recordTransaction({
       householdId: e.home.id, kind: "transfer", amount: "1.000,00", currency: "VES",
       account: "efectivo", toAccount: "tarjeta", occurredOn: DATE, source: "form",
     });
-    const after = await periodSummary(e.home.id, PERIOD, TZ, "bcv");
+    const after = await periodSummary(e.home.id, PERIOD, TZ, "official");
     assert.deepEqual(
       [after.expenseMinor, after.incomeMinor],
       [before.expenseMinor, before.incomeMinor],
@@ -106,20 +106,20 @@ describe("the dashboard figures", { skip: hasDb() ? false : "no Postgres availab
     // The ledger's sign: an expense comes in negative and income positive, so the
     // set total is what was left, not what was spent.
     const totals = await filteredTotals(e.home.id, {});
-    assert.equal(totals.bcvMinor, 200, "ingresos 5,00 menos gastos 3,00, sin la transferencia");
+    assert.equal(totals.officialMinor, 200, "ingresos 5,00 menos gastos 3,00, sin la transferencia");
   });
 
   it("an entry outside the period stays out, even if it's from yesterday", async () => {
     await expense({ monto: "8.000,00", date: "2026-07-31", descripcion: "de julio" });
-    const august = await periodSummary(e.home.id, PERIOD, TZ, "bcv");
+    const august = await periodSummary(e.home.id, PERIOD, TZ, "official");
     assert.equal(august.expenseCount, 2, "julio se queda en julio");
 
-    const july = await periodSummary(e.home.id, "2026-07", TZ, "bcv");
+    const july = await periodSummary(e.home.id, "2026-07", TZ, "official");
     assert.equal(july.expenseMinor, 1000, "Bs 8.000,00 a 800 son $ 10,00");
   });
 
   it("spending by category adds up in the base currency, not the account's", async () => {
-    const rows = await spendingByCategory(e.home.id, PERIOD, TZ, "bcv");
+    const rows = await spendingByCategory(e.home.id, PERIOD, TZ, "official");
     const mercado = rows.categories.find((c) => c.name === "Mercado");
     assert.ok(mercado, "la categoría aparece");
     assert.equal(mercado!.totalMinor, 300, "sus dos gastos, en dólares");
@@ -135,11 +135,11 @@ describe("the dashboard figures", { skip: hasDb() ? false : "no Postgres availab
     assert.equal(n, rows.length, "el recuento y la lista ven lo mismo");
 
     const totals = await filteredTotals(e.home.id, filter);
-    assert.equal(totals.bcvMinor, 0, "solo tiene la pata de una transferencia, que no cuenta");
+    assert.equal(totals.officialMinor, 0, "solo tiene la pata de una transferencia, que no cuenta");
   });
 
   it("the facets go in base currency: mixing them painted bolívares as dollars", async () => {
-    const f = await transactionFacets(e.home.id, {}, "bcv");
+    const f = await transactionFacets(e.home.id, {}, "official");
     const efectivo = f.accounts.find((a) => a.value === "Efectivo Bs");
     assert.ok(efectivo, "la cuenta con movimientos aparece");
     assert.ok(efectivo!.count > 0, "con su recuento");
@@ -147,7 +147,7 @@ describe("the dashboard figures", { skip: hasDb() ? false : "no Postgres availab
 
     // The accounts facet is NOT filtered by the chosen account: if it were,
     // picking one would hide the rest and there would be no way back.
-    const withFilter = await transactionFacets(e.home.id, { account: e.cash.id }, "bcv");
+    const withFilter = await transactionFacets(e.home.id, { account: e.cash.id }, "official");
     assert.equal(withFilter.accounts.length, f.accounts.length);
   });
 
@@ -162,7 +162,7 @@ describe("the dashboard figures", { skip: hasDb() ? false : "no Postgres availab
       today: DATE,
     });
 
-    const bcv = await budgetUsage(e.home.id, DATE, "bcv");
+    const bcv = await budgetUsage(e.home.id, DATE, "official");
     const row = bcv.find((b) => b.category === "Mercado");
     assert.ok(row, "el presupuesto aparece");
     assert.equal(row!.budgetMinor, 1000, "el tope, $ 10,00");
@@ -175,7 +175,7 @@ describe("the dashboard figures", { skip: hasDb() ? false : "no Postgres availab
     assert.ok(row!.totalDays >= 28, "un mes entero");
     assert.ok(row!.expectedPace > 0 && row!.expectedPace <= 100);
 
-    const p2p = await budgetUsage(e.home.id, DATE, "p2p");
+    const p2p = await budgetUsage(e.home.id, DATE, "parallel");
     assert.equal(
       p2p.find((b) => b.category === "Mercado")!.spentMinor,
       240,
@@ -220,8 +220,8 @@ describe("the dashboard figures", { skip: hasDb() ? false : "no Postgres availab
      */
     // The JUMP is measured and not the total: that way the test says what this
     // row contributed without depending on what the previous ones had piled up.
-    const beforeBcv = (await periodSummary(e.home.id, PERIOD, TZ, "bcv")).expenseMinor;
-    const beforeP2p = (await periodSummary(e.home.id, PERIOD, TZ, "p2p")).expenseMinor;
+    const beforeBcv = (await periodSummary(e.home.id, PERIOD, TZ, "official")).expenseMinor;
+    const beforeP2p = (await periodSummary(e.home.id, PERIOD, TZ, "parallel")).expenseMinor;
 
     await recordTransaction({
       householdId: e.home.id, kind: "expense", amount: "1.000,00", currency: "VES",
@@ -229,13 +229,13 @@ describe("the dashboard figures", { skip: hasDb() ? false : "no Postgres availab
       rate: "500", rateSource: "manual",
     });
 
-    const bcv = await periodSummary(e.home.id, PERIOD, TZ, "bcv");
+    const bcv = await periodSummary(e.home.id, PERIOD, TZ, "official");
     assert.equal(bcv.expenseMinor - beforeBcv, 200, "Bs 1.000,00 a la tasa escrita (500) son $ 2,00");
 
     // The same figure by the other path. If $ 1,00 came out here — the day's —
     // two screens would count the same expense differently, which is exactly
     // what `valued()` exists to prevent.
-    const p2p = await periodSummary(e.home.id, PERIOD, TZ, "p2p");
+    const p2p = await periodSummary(e.home.id, PERIOD, TZ, "parallel");
     assert.equal(p2p.expenseMinor - beforeP2p, 200, "la de la fila manda en las dos valuaciones");
   });
 });

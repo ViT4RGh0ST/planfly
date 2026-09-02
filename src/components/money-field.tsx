@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { useLocale, useTranslations } from "next-intl";
 
 export type Rates = Record<string, { rate: string; effectiveOn: string; stale: boolean }>;
-export type RateChoice = "bcv" | "p2p";
+export type RateChoice = "official" | "parallel";
 
 /**
  * Typing an amount in the currency you think in, not the one you pay in.
@@ -156,7 +156,7 @@ export function MoneyField({
        * has to say $ 40,00 again.
        */
       const equivalents = convertible
-        ? (["p2p", "bcv"] as const)
+        ? (["parallel", "official"] as const)
             .filter((key) => rates[key])
             .map((key) => {
               const rate = Number(rates[key].rate);
@@ -222,7 +222,7 @@ export function MoneyField({
           <span className="text-xs text-muted-foreground">
             {t("ui.moneyField.convertFrom", { currency: fromCurrency })}
           </span>
-          {(["p2p", "bcv"] as const)
+          {(["parallel", "official"] as const)
             .filter((key) => rates[key])
             .map((key) => (
               <button
@@ -236,7 +236,7 @@ export function MoneyField({
                   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                 )}
               >
-                <span className={key === "bcv" ? "text-bcv" : "text-p2p"}>
+                <span className={key === "official" ? "text-official" : "text-parallel"}>
                   {isQuoteAccount ? "×" : "÷"} {key.toUpperCase()}
                 </span>{" "}
                 <span className="tabular-nums text-muted-foreground">
@@ -267,7 +267,7 @@ export function MoneyField({
             {computed.equivalents.map((eq) => (
               <span key={eq.key} className="whitespace-nowrap">
                 {" · "}
-                <span className={eq.key === "bcv" ? "text-bcv" : "text-p2p"}>
+                <span className={eq.key === "official" ? "text-official" : "text-parallel"}>
                   {eq.key.toUpperCase()}
                 </span>{" "}
                 <span className="tabular-nums">{eq.text}</span>

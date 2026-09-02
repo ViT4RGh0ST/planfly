@@ -36,20 +36,23 @@ export const GET = withToken("reports:read", async ({ principal, req }) => {
   const timezone = principal.timezone;
   const base = principal.baseCurrency;
   const date = today(timezone);
-  const valuation = input.valuation ?? "p2p";
-  const valuationLabel = valuation === "bcv" ? "BCV" : "P2P";
+  const valuation = input.valuation ?? "parallel";
   // The household's language, not the request's: what comes back from here gets
   // repeated verbatim in a chat that is already happening in one of the two.
   const t = getTranslator(normalizeLocale(principal.locale));
+  // The slot said in that language: this label travels into a summary the bot
+  // repeats verbatim, and an institution's name is wrong for every currency but
+  // one.
+  const valuationLabel = t(`domain.rateSlotShort.${valuation}`);
 
   switch (input.report) {
     case "net_worth":
     case "balances": {
       const position = await netWorth(principal.householdId, date, base);
-      const total = valuation === "bcv" ? position.totalBcvMinor : position.totalP2pMinor;
+      const total = valuation === "official" ? position.totalOfficialMinor : position.totalParallelMinor;
 
       const lines = position.accounts.map((a) => {
-        const inBase = valuation === "bcv" ? a.baseBcvMinor : a.baseP2pMinor;
+        const inBase = valuation === "official" ? a.baseOfficialMinor : a.baseParallelMinor;
         return t("api.reports.netWorth.line", {
           account: a.name,
           balance: a.balanceText,
@@ -64,13 +67,13 @@ export const GET = withToken("reports:read", async ({ principal, req }) => {
         t("api.reports.netWorth.total", { valuation: valuationLabel, amount: formatAmount(total, base) }),
         t("api.reports.netWorth.assets", {
           amount: formatAmount(
-            valuation === "bcv" ? position.assetsBcvMinor : position.assetsP2pMinor,
+            valuation === "official" ? position.assetsOfficialMinor : position.assetsParallelMinor,
             base,
           ),
         }),
         t("api.reports.netWorth.liabilities", {
           amount: formatAmount(
-            valuation === "bcv" ? position.liabilitiesBcvMinor : position.liabilitiesP2pMinor,
+            valuation === "official" ? position.liabilitiesOfficialMinor : position.liabilitiesParallelMinor,
             base,
           ),
         }),
@@ -78,8 +81,8 @@ export const GET = withToken("reports:read", async ({ principal, req }) => {
         ...lines,
         "",
         t("api.reports.netWorth.bothRates", {
-          bcv: formatAmount(position.totalBcvMinor, base),
-          p2p: formatAmount(position.totalP2pMinor, base),
+          official: formatAmount(position.totalOfficialMinor, base),
+          parallel: formatAmount(position.totalParallelMinor, base),
         }),
       ].join("\n");
 

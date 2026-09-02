@@ -12,8 +12,8 @@
 export type ReviewableRow = {
   category: string | null;
   confidence: number | null;
-  baseBcvMinor: number | null;
-  baseP2pMinor: number | null;
+  baseOfficialMinor: number | null;
+  baseParallelMinor: number | null;
   currency: string;
   source: string;
 };
@@ -51,7 +51,7 @@ export function reviewReasons(row: ReviewableRow, baseCurrency: string): ReviewR
   if (row.confidence != null && row.confidence < 0.7) reasons.push("lowConfidence");
   // Against the household's currency, not against a hard-coded "USD": it was
   // right by luck because today the base IS the dollar.
-  if (row.currency !== baseCurrency && row.baseBcvMinor == null && row.baseP2pMinor == null) {
+  if (row.currency !== baseCurrency && row.baseOfficialMinor == null && row.baseParallelMinor == null) {
     reasons.push("noRate");
   }
   if (row.source === "ocr") reasons.push("fromPhoto");

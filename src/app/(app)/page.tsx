@@ -18,7 +18,7 @@ import {
   periodSummary,
   recentTransactions,
   spendingByCategory,
-  type Valuation,
+  type Valuation, valuationFrom,
 } from "@/lib/services/reports";
 import { getTranslations } from "next-intl/server";
 
@@ -32,11 +32,19 @@ export const dynamic = "force-dynamic";
  * with no visible provenance is worth less than an honest hole, and that applies
  * even when the number is right.
  */
-function ValuationTag({ valuation }: { valuation: Valuation }) {
+function ValuationTag({ valuation, label }: { valuation: Valuation; label: string }) {
+  /*
+   * The slot, not the institution.
+   *
+   * It said «BCV» and «P2P», which is right for the bolívar and wrong for every
+   * other currency the same dashboard now adds up: a household holding pesos saw
+   * its total tagged with the name of Venezuela's central bank. The rates screen
+   * still names the institution beside each figure, where it belongs.
+   */
   return (
-    <span className={valuation === "bcv" ? "text-bcv" : "text-p2p"}>
+    <span className={valuation === "official" ? "text-official" : "text-parallel"}>
       {" · "}
-      {valuation === "bcv" ? "BCV" : "P2P"}
+      {label}
     </span>
   );
 }
@@ -60,7 +68,7 @@ export default async function Dashboard({
   const ctx = await requireSession();
   const t = await getTranslations();
   const params = await searchParams;
-  const valuation: Valuation = params.rate === "bcv" ? "bcv" : "p2p";
+  const valuation: Valuation = valuationFrom(params.rate);
   const date = today(ctx.timezone);
   const base = ctx.baseCurrency;
 
@@ -86,8 +94,8 @@ export default async function Dashboard({
   const hiddenTotalMinor = hidden.reduce((sum, c) => sum + c.totalMinor, 0);
 
   const spread =
-    rates.bcv && rates.p2p
-      ? (Number(rates.p2p.rate) / Number(rates.bcv.rate) - 1) * 100
+    rates.official && rates.parallel
+      ? (Number(rates.parallel.rate) / Number(rates.official.rate) - 1) * 100
       : null;
 
   return (
@@ -103,12 +111,12 @@ export default async function Dashboard({
       </header>
 
       <NetWorth
-        bcvMinor={position.totalBcvMinor}
-        p2pMinor={position.totalP2pMinor}
-        assetsBcvMinor={position.assetsBcvMinor}
-        assetsP2pMinor={position.assetsP2pMinor}
-        liabilitiesBcvMinor={position.liabilitiesBcvMinor}
-        liabilitiesP2pMinor={position.liabilitiesP2pMinor}
+        officialMinor={position.totalOfficialMinor}
+        parallelMinor={position.totalParallelMinor}
+        assetsOfficialMinor={position.assetsOfficialMinor}
+        assetsParallelMinor={position.assetsParallelMinor}
+        liabilitiesOfficialMinor={position.liabilitiesOfficialMinor}
+        liabilitiesParallelMinor={position.liabilitiesParallelMinor}
         currency={base}
         spreadPercent={spread}
         accountCount={position.accounts.length}
@@ -139,7 +147,7 @@ export default async function Dashboard({
           className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
         >
           {t("ui.dashboard.accounts")}
-          <ValuationTag valuation={valuation} />
+          <ValuationTag valuation={valuation} label={t(`domain.rateSlotShort.${valuation}`)} />
         </h2>
         <AccountList accounts={position.accounts} baseCurrency={base} valuation={valuation} />
       </section>
@@ -152,7 +160,7 @@ export default async function Dashboard({
           className="mb-4 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
         >
           {t("ui.dashboard.thisMonth")}
-          <ValuationTag valuation={valuation} />
+          <ValuationTag valuation={valuation} label={t(`domain.rateSlotShort.${valuation}`)} />
         </h2>
         <MonthFlow
           incomeMinor={summary.incomeMinor}
@@ -198,7 +206,7 @@ export default async function Dashboard({
             className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
           >
             {t("ui.dashboard.latest")}
-            <ValuationTag valuation={valuation} />
+            <ValuationTag valuation={valuation} label={t(`domain.rateSlotShort.${valuation}`)} />
           </h2>
           <Link
             href="/transactions"

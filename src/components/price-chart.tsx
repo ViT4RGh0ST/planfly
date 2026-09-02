@@ -29,14 +29,14 @@ export function PriceChart({
 }: {
   points: Array<{ date: string; value: number }>;
   currency: string;
-  valuation: "bcv" | "p2p";
+  valuation: "official" | "parallel";
 }) {
   const t = useTranslations();
   const locale = useLocale();
   const config = {
     value: {
       label: t("ui.products.chartLegend", { valuation: valuation.toUpperCase() }),
-      color: valuation === "bcv" ? "var(--bcv)" : "var(--p2p)",
+      color: valuation === "official" ? "var(--bcv)" : "var(--p2p)",
     },
   } satisfies ChartConfig;
 
