@@ -1,6 +1,10 @@
 import type { McpTool } from "@/lib/mcp/registry";
 import { accountTool } from "@/lib/mcp/tools/account";
+import { amendTool } from "@/lib/mcp/tools/amend";
 import { budgetTool } from "@/lib/mcp/tools/budget";
+import { financingTool } from "@/lib/mcp/tools/financing";
+import { productTool } from "@/lib/mcp/tools/product";
+import { recurringTool } from "@/lib/mcp/tools/recurring";
 import {
   confirmTransactionTool,
   contextTool,
@@ -22,7 +26,11 @@ export const NATIVE: readonly McpTool[] = [
   previewTransactionTool,
   confirmTransactionTool,
   accountTool,
+  amendTool,
   budgetTool,
+  financingTool,
+  productTool,
+  recurringTool,
 ];
 
 /** The always-on ones, listed natively even in gateway mode. */
@@ -64,12 +72,30 @@ export type ToolSummary = {
  * «presupuesto». Ranking only over English prose would answer nothing and send
  * the model off to improvise a tool name.
  */
+/**
+ * Words that carry no intent, in both languages.
+ *
+ * Matching is by substring, so that «cuenta» finds «cuentas» and «install»
+ * finds «installment» — and that is exactly what makes an article poisonous.
+ * «pagar una cuota» ranked `planfly_account` above `planfly_financing`, because
+ * «una» is a substring of «unarchives» in the account tool's first sentence. The
+ * article scored as high as the noun that actually says what the person wants.
+ *
+ * They are dropped rather than the matching being narrowed to whole words:
+ * prefix matching is worth more here than these words could ever be.
+ */
+const NOISE = new Set([
+  "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "en", "a",
+  "al", "y", "o", "que", "por", "para", "con", "mi", "mis", "me", "se", "lo",
+  "the", "a", "an", "of", "to", "in", "on", "for", "and", "or", "my", "i",
+]);
+
 export function search(query: string | undefined, limit: number, offset = 0) {
   const tokens = (query ?? "")
     .toLowerCase()
     .split(/\s+/)
     .map((token) => token.trim())
-    .filter(Boolean);
+    .filter((token) => token && !NOISE.has(token));
 
   const scored = NATIVE.filter((tool) => tool.gatewayRoutable !== false)
     .map((tool) => {

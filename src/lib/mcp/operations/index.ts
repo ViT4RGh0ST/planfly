@@ -1,4 +1,8 @@
 import type { McpOperation } from "@/lib/mcp/operation";
+import { amendTransactionOperation } from "./amend-transaction";
+import { CREATE_RECURRENCE, createRecurrenceOperation } from "./create-recurrence";
+import { payInstallmentOperation, recordFinancedPurchaseOperation } from "./financing";
+import { mergeProductsOperation, splitProductOperation } from "./product";
 import { recordTransactionOperation } from "./record-transaction";
 
 /**
@@ -12,4 +16,10 @@ import { recordTransactionOperation } from "./record-transaction";
  */
 export const MCP_OPERATIONS: Record<string, McpOperation> = {
   record_transaction: recordTransactionOperation,
+  amend_transaction: amendTransactionOperation,
+  pay_installment: payInstallmentOperation,
+  record_financed_purchase: recordFinancedPurchaseOperation,
+  merge_products: mergeProductsOperation,
+  split_product: splitProductOperation,
+  [CREATE_RECURRENCE]: createRecurrenceOperation,
 };

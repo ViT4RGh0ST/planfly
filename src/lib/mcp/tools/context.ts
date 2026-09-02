@@ -4,6 +4,8 @@ import { z } from "zod";
 import { withInternalPrincipal } from "@/lib/api/handler";
 import { hasScope, type Principal } from "@/lib/api-token";
 import { McpConfirmationError } from "@/lib/mcp/operation";
+import { InvalidAmountError } from "@/lib/money";
+import { InvalidProductError } from "@/lib/services/products";
 import { InvalidTransactionError } from "@/lib/services/record-transaction";
 
 /**
@@ -94,9 +96,39 @@ export function mcpErrorResult(error: unknown): ToolResult {
   if (error instanceof InvalidTransactionError) {
     return toolResult({ ok: false, error: error.code, message: error.message, detail: error.detail }, true);
   }
+  /*
+   * The two the HTTP handler words and this one did not.
+   *
+   * A tool that parses an amount or a product name itself — the ones that build
+   * a preview before any route is called — raised these straight past every
+   * branch here and out as «planfly could not complete the request». RULES tells
+   * the model to read which fields it was asked for and call again; that answer
+   * names none, so its only move is to repeat the identical call.
+   */
+  if (error instanceof InvalidAmountError) {
+    return toolResult(
+      {
+        ok: false,
+        error: "invalid_amount",
+        message: error.message,
+        detail: { input: error.input, reason: error.reason },
+      },
+      true,
+    );
+  }
+  if (error instanceof InvalidProductError) {
+    return toolResult({ ok: false, error: "invalid_product", message: error.message }, true);
+  }
   if (error instanceof z.ZodError) {
     return toolResult(
-      { ok: false, error: "invalid_input", message: "The tool input did not match its schema." },
+      {
+        ok: false,
+        error: "invalid_input",
+        message: "The tool input did not match its schema.",
+        // Which key, and what was wrong with it. Without this the sentence is
+        // unactionable — the same reason `planfly_use_tool` treeifies its own.
+        detail: z.treeifyError(error),
+      },
       true,
     );
   }

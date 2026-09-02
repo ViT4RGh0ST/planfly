@@ -31,6 +31,28 @@ export type McpOperation = {
   ): Promise<Record<string, unknown>>;
   /** The values that, if they changed, mean the person approved something else. */
   fingerprint(preview: Record<string, unknown>): string;
+  /**
+   * Whether running this twice with the same confirmation id is harmless.
+   *
+   * The gate claims the confirmation before it writes, and it used to hand the
+   * claim BACK whenever the write threw — so as not to strand an approval on a
+   * failure that never reached the database. That is only safe for an operation
+   * carrying an idempotency key, and `record_transaction` is the only one that
+   * does: `mcp:<confirmation id>` makes a second attempt land on the same
+   * ledger row.
+   *
+   * Everything else writes plainly. Recording a financed purchase is three
+   * writes and only the third is in a transaction, so a failure at the second
+   * leaves the first committed — and a released claim lets the next confirm
+   * write that expense AGAIN, once per attempt, with the debt shown growing and
+   * nothing failing. A recurring rule is a bare insert: a retry gives two rules
+   * billing the same thing every month, unattended.
+   *
+   * So it defaults to false, and the choice under uncertainty is to keep the
+   * claim. A stranded approval costs one more preview and says so out loud; a
+   * duplicate is silent and is found when the month does not add up.
+   */
+  retryable?: boolean;
 };
 
 export class McpConfirmationError extends Error {

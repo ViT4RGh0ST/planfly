@@ -138,8 +138,23 @@ describe("the MCP catalogue", () => {
       const found = search(query, 8).tools.map((row) => row.name);
       assert.ok(found.length > 0, `search found nothing for «${query}»`);
     }
-    assert.equal(search("cuenta", 8).tools[0].name, "planfly_account");
-    assert.equal(search("presupuesto", 8).tools[0].name, "planfly_budget");
+    /*
+     * The whole sentence a person says, not the one keyword out of it.
+     *
+     * Matching is by substring so that «cuenta» finds «cuentas», which also means
+     * an article can score: «pagar una cuota» ranked the ACCOUNT tool first,
+     * because «una» is inside «unarchives» in its first sentence. A search that
+     * answers with the wrong tool is worse than one that answers nothing — the
+     * model calls it, is refused, and improvises.
+     */
+    const first = (query: string) => search(query, 8).tools[0]?.name;
+    assert.equal(first("cuenta"), "planfly_account");
+    assert.equal(first("presupuesto"), "planfly_budget");
+    assert.equal(first("pagar una cuota"), "planfly_financing");
+    assert.equal(first("corregir el ultimo gasto"), "planfly_amend");
+    assert.equal(first("el alquiler de todos los meses"), "planfly_recurring");
+    assert.equal(first("abrir una cuenta nueva"), "planfly_account");
+    assert.equal(first("mismo producto dos veces"), "planfly_product");
     // No query is the whole catalogue, not nothing.
     assert.equal(search(undefined, 20).tools.length, NATIVE.length);
   });

@@ -15,6 +15,13 @@ export const recordTransactionOperation: McpOperation = {
       toRecordInput(principal, confirmationId, input as McpTransactionDraftInput, dryRun),
     ) as Promise<Record<string, unknown>>,
   fingerprint: (preview) => approvalFingerprint(preview as unknown as RecordTransactionResult),
+  /*
+   * Alone among the operations, and only because of the idempotency key:
+   * `toRecordInput` sets `mcp:<confirmation id>`, so a second attempt with the
+   * same confirmation lands on the same ledger row rather than a second one.
+   * That is what makes handing the claim back on a failed write safe here.
+   */
+  retryable: true,
 };
 
 function toRecordInput(

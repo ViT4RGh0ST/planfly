@@ -169,7 +169,26 @@ export async function confirmMcpOperation(
    * person was reviewing. Store the fresh preview and require another explicit
    * confirmation rather than recording a different financial outcome.
    */
-  if (operation.fingerprint(preview) !== operation.fingerprint(refreshed)) {
+  /*
+   * A stored preview this operation can no longer read counts as changed.
+   *
+   * The shape of a preview is the operation's own, and it moves when the
+   * operation is improved — a confirmation staged fifteen minutes before a
+   * deploy is read afterwards by the new code. Letting the fingerprint throw
+   * turned that into «planfly could not complete the request», against which a
+   * model can only retry the identical call. Treating it as changed shows the
+   * refreshed figures and asks again, which is what actually happened.
+   */
+  const readable = (value: Record<string, unknown>): string | null => {
+    try {
+      return operation.fingerprint(value);
+    } catch {
+      return null;
+    }
+  };
+  const approved = readable(preview);
+
+  if (approved === null || approved !== operation.fingerprint(refreshed)) {
     await db
       .update(mcpPendingOperations)
       .set({ preview: refreshed })
@@ -215,17 +234,35 @@ export async function confirmMcpOperation(
   try {
     return await operation.run(principal, payload.input, pending.id, false);
   } catch (error) {
-    // Do not strand an approval if the write failed before the service could
-    // commit. The idempotency key still prevents duplicate ledger rows.
-    await db
-      .update(mcpPendingOperations)
-      .set({ confirmedAt: null })
-      .where(
-        and(
-          eq(mcpPendingOperations.id, pending.id),
-          eq(mcpPendingOperations.confirmedAt, claimedAt),
-        ),
-      );
+    /*
+     * The claim goes back ONLY to an operation that can survive running twice.
+     *
+     * It used to go back always, on the reasoning that an approval should not be
+     * stranded by a write that never reached the database — with «the
+     * idempotency key still prevents duplicate ledger rows» as the warrant. Only
+     * `record_transaction` has that key.
+     *
+     * For the others the release was the bug. Recording a financed purchase is
+     * three writes and only the third is in a transaction: a failure at the
+     * second leaves the first committed, the claim goes back, the next confirm
+     * writes that expense again — once per attempt, debt climbing, nothing
+     * failing anywhere.
+     *
+     * So an operation that has not declared itself retryable keeps its
+     * confirmation consumed and the person previews afresh. That is the loud
+     * failure rather than the quiet one.
+     */
+    if (operation.retryable) {
+      await db
+        .update(mcpPendingOperations)
+        .set({ confirmedAt: null })
+        .where(
+          and(
+            eq(mcpPendingOperations.id, pending.id),
+            eq(mcpPendingOperations.confirmedAt, claimedAt),
+          ),
+        );
+    }
     throw error;
   }
 }
