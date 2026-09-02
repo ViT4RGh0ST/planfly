@@ -3,177 +3,23 @@ import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { mcpPendingOperations } from "@/db/schema";
 import type { Principal } from "@/lib/api-token";
-import {
-  mcpTransactionDraftSchema,
-  type McpTransactionDraftInput,
-} from "@/lib/validation";
-import {
-  recordTransaction,
-  type RecordTransactionResult,
-} from "@/lib/services/record-transaction";
+import { McpConfirmationError } from "@/lib/mcp/operation";
+import { MCP_OPERATIONS } from "@/lib/mcp/operations";
+import { mcpTransactionDraftSchema } from "@/lib/validation";
+import type { RecordTransactionResult } from "@/lib/services/record-transaction";
 
 const CONFIRMATION_TTL_MS = 15 * 60 * 1_000;
 
-/**
- * What a confirmable operation has to be able to do.
+/*
+ * The mechanics of the handshake, and nothing about any one operation.
  *
- * The gate was written for one operation and hard-coded its name, so the three
- * other writes that need it — correcting an entry, paying an installment,
- * merging two products — each arrived wanting to widen the same `if`. Three
- * widenings of one check is three chances for one of them to skip the
- * fingerprint, which is the part that stops a person approving one figure and
- * a different one being written.
- *
- * `run` with `dryRun` computes without storing. Not every service can do that —
- * only `recordTransaction` simulates today — so an operation that cannot must
- * return, instead, a description of what it is about to change, built from the
- * state it depends on. The fingerprint is then over THAT state: if the
- * installment's amount or the account's balance moved between the preview and
- * the yes, the yes was for something else.
+ * Which operations there are lives in `@/lib/mcp/operations`; each supplies its
+ * own `run` and its own `fingerprint`. What is here is the part that must never
+ * be written twice: stage, expire, compare the fingerprint, claim before
+ * writing.
  */
-export type McpOperation = {
-  run(
-    principal: Principal,
-    input: unknown,
-    confirmationId: string,
-    dryRun: boolean,
-  ): Promise<Record<string, unknown>>;
-  /** The values that, if they changed, mean the person approved something else. */
-  fingerprint(preview: Record<string, unknown>): string;
-};
-
-/**
- * The operations a confirmation can hold.
- *
- * `mcp_pending_operations.operation` is text and not an enum precisely so this
- * list can grow without a migration; what may not grow is the number of places
- * that decide whether a confirmation is valid.
- */
-export const MCP_OPERATIONS: Record<string, McpOperation> = {
-  /*
-   * Recording an entry, which is the one the gate was written for and the only
-   * one whose service can genuinely simulate itself: `recordTransaction` with
-   * `dryRun` resolves the account, the category and the day's rates, computes
-   * both equivalents, and stores nothing.
-   */
-  record_transaction: {
-    run: (principal, input, confirmationId, dryRun) =>
-      recordTransaction(
-        toRecordInput(principal, confirmationId, input as McpTransactionDraftInput, dryRun),
-      ) as Promise<Record<string, unknown>>,
-    fingerprint: (preview) => approvalFingerprint(preview as unknown as RecordTransactionResult),
-  },
-};
-
-export class McpConfirmationError extends Error {
-  constructor(
-    message: string,
-    readonly code: "not_found" | "expired" | "already_confirmed" | "preview_changed",
-    /** The refreshed preview, whatever shape that operation's previews have. */
-    readonly preview?: Record<string, unknown>,
-  ) {
-    super(message);
-  }
-}
-
-function toRecordInput(
-  principal: Principal,
-  confirmationId: string,
-  input: McpTransactionDraftInput,
-  dryRun: boolean,
-) {
-  return {
-    householdId: principal.householdId,
-    kind: input.kind,
-    amount: input.amount,
-    currency: input.currency,
-    account: input.account,
-    toAccount: input.to_account,
-    toAmount: input.to_amount,
-    category: input.category,
-    description: input.description,
-    occurredOn: input.occurred_on,
-    notes: input.notes,
-    rate: input.rate,
-    rateSource: input.rate_source,
-    paymentMethod: input.payment_method,
-    confidence: input.confidence,
-    attachmentPath: input.attachment_path,
-    items: input.items,
-    // A conversation must stop on an accidental duplicate and let the person
-    // decide whether it truly is another purchase.
-    onDuplicate: input.allow_duplicate ? ("warn" as const) : ("reject" as const),
-    source: "mcp" as const,
-    sourceRef: confirmationId,
-    createdByUserId: principal.userId,
-    createdViaTokenId: principal.tokenId ?? undefined,
-    /*
-     * WHICH credential wrote it, not just that MCP did.
-     *
-     * An OAuth principal is not a row in `api_tokens`, so `created_via_token_id`
-     * is null for it and the entry would carry no trace of the client at all.
-     * The confirmation row knows, but that one is deliberately transient — see
-     * `purgeExpiredConfirmations`. This column is where the durable answer goes.
-     */
-    createdByAgent: principal.credentialId,
-    idempotencyKey: `mcp:${confirmationId}`,
-    dryRun,
-  };
-}
-
-/** Values that can change the financial outcome after a preview. */
-function approvalFingerprint(preview: RecordTransactionResult): string {
-  const match = (value: RecordTransactionResult["resolved"]["account"]) =>
-    value
-      ? { id: value.id, name: value.name, currency: value.currency, score: value.score, via: value.via }
-      : null;
-
-  return JSON.stringify({
-    kind: preview.kind,
-    occurredOn: preview.occurredOn,
-    description: preview.description,
-    amount: { minor: preview.amount.minor, currency: preview.amount.currency },
-    base: {
-      currency: preview.base.currency,
-      bcvMinor: preview.base.bcvMinor,
-      p2pMinor: preview.base.p2pMinor,
-      manualMinor: preview.base.manualMinor,
-      usedMinor: preview.base.usedMinor,
-      sourceUsed: preview.base.sourceUsed,
-    },
-    rates: {
-      bcv: preview.rates.bcv,
-      p2p: preview.rates.p2p,
-      manual: preview.rates.manual,
-      effectiveOn: preview.rates.effectiveOn,
-      stale: preview.rates.stale,
-    },
-    // `jsonb` does not preserve object-key order. Pick and order the fields
-    // explicitly so the persisted preview compares by value, not serialization.
-    resolved: {
-      account: match(preview.resolved.account),
-      toAccount: match(preview.resolved.toAccount),
-      category: preview.resolved.category
-        ? {
-            id: preview.resolved.category.id,
-            name: preview.resolved.category.name,
-            score: preview.resolved.category.score,
-            via: preview.resolved.category.via,
-          }
-        : null,
-    },
-    needsReview: preview.needsReview,
-    items: preview.items.map((item) => ({
-      product: item.product,
-      quantity: item.quantity,
-      unit: item.unit,
-      total: item.total,
-      isNew: item.isNew,
-    })),
-    unitemizedMinor: preview.unitemizedMinor,
-    warnings: preview.warnings,
-  });
-}
+export { McpConfirmationError } from "@/lib/mcp/operation";
+export type { McpOperation } from "@/lib/mcp/operation";
 
 /**
  * Stages any confirmable operation. THE only way one is staged.

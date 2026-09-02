@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { withInternalPrincipal } from "@/lib/api/handler";
 import { hasScope, type Principal } from "@/lib/api-token";
-import { McpConfirmationError } from "@/lib/mcp/transactions";
+import { McpConfirmationError } from "@/lib/mcp/operation";
 import { InvalidTransactionError } from "@/lib/services/record-transaction";
 
 /**
