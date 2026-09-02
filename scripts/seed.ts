@@ -386,8 +386,8 @@ async function main() {
     console.log("  │ TOKEN (shown ONCE only — save it now):");
     console.log(`  │ ${plain}`);
     console.log("  │");
-    console.log("  │ It goes in ~/.openclaw/openclaw.json, under");
-    console.log("  │ plugins.entries.planfly.config.apiToken");
+    console.log("  │ It goes in ~/.openclaw/openclaw.json, as the bearer of");
+    console.log("  │ the planfly MCP server: mcp.servers.planfly.headers");
     console.log("  └─────────────────────────────────────────────────────────────\n");
   }
 

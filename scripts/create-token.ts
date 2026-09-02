@@ -10,8 +10,8 @@
  *   npm run token:create -- read-only context:read,reports:read
  *
  * The plain text is shown ONCE only: only the sha256 stays in the database.
- * After rotating it, put it in ~/.openclaw/openclaw.json
- * (plugins.entries.planfly.config.apiToken) and restart the gateway.
+ * After rotating it, put it in ~/.openclaw/openclaw.json as the Authorization
+ * header of the `planfly` MCP server, and restart the gateway.
  */
 import { and, eq, isNull } from "drizzle-orm";
 
@@ -108,7 +108,7 @@ async function main() {
   console.log(`│ ${plain}`);
   console.log("│");
   console.log("│ Put it in ~/.openclaw/openclaw.json →");
-  console.log("│   plugins.entries.planfly.config.apiToken");
+  console.log('│   mcp.servers.planfly.headers.Authorization = "Bearer <this>"');
   console.log("│ then:");
   console.log("│   docker compose restart openclaw-gateway   (wherever openclaw lives)");
   console.log("└──────────────────────────────────────────────────────────────\n");
