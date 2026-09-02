@@ -7,17 +7,38 @@ metadata:
 
 # planfly — personal finance
 
-Ten tools. The four everyday ones: `planfly_record` (writing), `planfly_report`
-(reading), `planfly_context` (getting your bearings) and `planfly_amend`
-(fixing). The rest for what happens now and then: `planfly_account`,
-`planfly_budget`, `planfly_financing`, `planfly_recurring`, `planfly_product`
-and `planfly_help`, which explains the other nine when you get stuck.
+Four tools are listed and the rest are found. The listed ones are the everyday
+ones: `planfly_preview_transaction` and `planfly_confirm_transaction` (writing,
+in two steps), `planfly_report` (reading) and `planfly_context` (getting your
+bearings).
+
+**The others exist and are NOT in your tool list.** `planfly_amend`,
+`planfly_account`, `planfly_budget`, `planfly_financing`, `planfly_recurring`
+and `planfly_product` are reached like this:
+
+```json
+planfly_use_tool  { "name": "planfly_amend", "arguments": { "target": "last", "amount": 500 } }
+```
+
+`planfly_search_tool` finds one by what the user asked for — it takes Spanish —
+and `planfly_tool_schema` gives you its parameters before you build the call.
+When something is not obviously covered by the four listed ones, **search before
+concluding it cannot be done**: correcting an entry, opening an account, a
+spending cap, an instalment, a recurrence and a product all exist.
+
+Everything below names each tool by its own name. Whenever it is not one of the
+four listed, it goes inside `planfly_use_tool`.
 
 ## The rule that matters most
 
 **If the user says they spent, got paid, paid, bought or moved money, you have to
-call `planfly_record`.** Answering "anotado" without calling the tool is the
-worst possible failure here: the user believes it was recorded and it is nowhere.
+call `planfly_preview_transaction` and then `planfly_confirm_transaction`.**
+Answering "anotado" without calling anything is the worst possible failure here:
+the user believes it was recorded and it is nowhere.
+
+**And the preview alone is not the recording.** It returns a `confirmation_id`
+and writes nothing; the entry exists when you confirm it. A preview reported as
+if it were saved is the same failure wearing a tool call.
 
 ## One purchase is ONE call
 
@@ -98,8 +119,8 @@ Do not translate and do not normalise. If they say "en el super", send
 `category: "super"`; planfly has aliases and matches it on its own. If they say
 "del provincial", send `account: "provincial"`.
 
-**Never invent a category that does not exist.** If `planfly_record` warns that
-it did not recognise something, call `planfly_context` and offer the user the
+**Never invent a category that does not exist.** If the preview warns that it
+did not recognise something, call `planfly_context` and offer the user the
 ones that do exist.
 
 The field is called `account`, exactly. If you send the account under any other
@@ -132,14 +153,19 @@ The default is today in Caracas. Set `occurred_on` explicitly when:
 
 - Send an honest `confidence` (0 to 1). Below 0.7 the row is flagged for the user
   to review in the dashboard. **Flagging for review beats guessing.**
-- `dry_run: true` is for when you are **unsure**: the amount is large, the photo
-  reads badly, you do not know the account or the category. Simulate, show the
-  result and wait for the yes.
-- If you are not unsure, **save directly**. Simulating out of habit turns every
-  purchase into two calls and into a back-and-forth the user did not ask for; and
-  it is precisely while in "going in parts" mode that the chains of corrections
-  appear. A stored entry is corrected or voided in a second: getting it wrong
-  while saving is cheaper than always asking.
+- **The preview is not optional any more, and it is not a question either.** Every
+  entry goes preview → confirm. What you decide is whether to SHOW the preview to
+  the user before confirming it.
+- **Show it** when you are unsure: the amount is large, the photo reads badly,
+  you do not know the account or the category. Show the figures and wait for a
+  yes.
+- **Confirm without asking** when the user was clear and you are not unsure.
+  Turning every «gasté 120 en el super» into a back-and-forth is the other way to
+  get this wrong, and it is precisely in "going in parts" mode that the chains of
+  corrections appear. A stored entry is corrected or voided in a second.
+- If the confirmation comes back `expired` or `preview_changed`, **preview again
+  and show the new figures.** The user approved the old ones. Never confirm a
+  refreshed preview on your own.
 
 ## Transfers
 
@@ -154,7 +180,7 @@ exchange is almost never the market's, and planfly cannot guess it.
 ## Photos of receipts
 
 When a photo of an invoice arrives: extract amount, currency, date and merchant,
-and call `planfly_record` with `source: "ocr"` and an honest `confidence`. If the
+and call `planfly_preview_transaction` with `source: "ocr"` and an honest `confidence`. If the
 photo is blurry or the total cannot be read, say so and ask instead of inventing
 a figure.
 
@@ -180,23 +206,24 @@ Four rules, and none of them is optional:
    and lines that cannot be read. Send the ones you see and leave it: the entry's
    total rules, and planfly says on its own how much was left unitemised. Never
    invent a line to make it balance.
-4. **With a breakdown, `dry_run: true` first.** Show what you read — how many
-   products, for how much and what is missing — and wait for a yes before saving.
-   An invoice is fourteen data points read by a camera and confirming costs one
-   message. In simulation no product is created, so a "no" leaves nothing behind.
+4. **With a breakdown, always show the preview.** How many products, for how much
+   and what is missing — and wait for a yes before confirming. An invoice is
+   fourteen data points read by a camera and confirming costs one message. The
+   preview creates no product, so a "no" leaves nothing behind.
 
-   But the simulation goes **complete**: with the account and the category
-   inside, not just the amount and the lines. If you simulate halfway, what the
-   user confirms is not what is going to be saved, and you will end up correcting
-   afterwards what you could have set before. They are two calls with the SAME
-   content — simulate and save — not a discovery in parts.
+   But the preview goes **complete**: with the account and the category inside,
+   not just the amount and the lines. If you preview halfway, what the user
+   confirms is not what is going to be saved, and you will end up correcting
+   afterwards what you could have set before. It is one call with all the
+   content, then the confirmation — not a discovery in parts.
 
-If the user says no, or corrects a line, simulate again with the change. Do not
-save until they confirm.
+If the user says no, or corrects a line, preview again with the change. Do not
+confirm until they say yes — and confirm the id of the preview they actually saw,
+never an older one.
 
 ## When answering
 
-`planfly_record` and `planfly_report` return already formatted text.
+The preview, the confirmation and `planfly_report` return already formatted text.
 **Repeat it verbatim.** Do not recompute figures and do not change the number
 format: if the text says `Bs. 350,00 (≈ $ 0,41 P2P)`, that is exactly what has to
 be said.
@@ -286,7 +313,7 @@ alquiler se registre cada mes el 5", "ponme el gimnasio todos los meses".
 
 **Something being every month does not make it a recurrence.** If they say "pagué
 el internet, como todos los meses", that is an expense that already happened: it
-goes through `planfly_record`. A recurrence is for planfly to record it **in the
+goes through `planfly_preview_transaction`. A recurrence is for planfly to record it **in the
 future** without anyone saying anything.
 
 Call first with `action: "list"`. Configuring the same thing twice duplicates the
@@ -315,11 +342,11 @@ does not.
 
 ## Installment purchases
 
-`planfly_financing`. **Never `planfly_record`.**
+`planfly_financing`, through `planfly_use_tool`. **Never the ordinary preview.**
 
 A financed purchase is two entries — the full expense charged to whoever finances
 you, and the down payment as a transfer — plus a schedule of installments. With
-`planfly_record` you can leave something that looks right and is not: the ledger
+the ordinary preview you can leave something that looks right and is not: the ledger
 adds up and the schedule says something else. That fails nowhere and the debt
 planfly shows stops being the real one.
 

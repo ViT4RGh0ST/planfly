@@ -270,9 +270,12 @@ yes.
 
 ### With openclaw
 
-There is a ready-made plugin in [`openclaw/planfly-plugin/`](openclaw/), with ten
-tools and a `SKILL.md` teaching the model when to use each one and how to read an
-invoice. It is installed by copying it to the gateway's extensions directory:
+Two halves. The **tools** come from the MCP endpoint above — openclaw speaks it
+natively, so it is a `mcp.servers.planfly` entry in the gateway's configuration
+with the URL and a `plfy_` token. And the **skill**, in
+[`openclaw/planfly-plugin/`](openclaw/), which is what teaches the model when to
+record, how to read a local invoice, and the mistakes that once cost eleven
+entries for one grocery run.
 
 ```bash
 npm run openclaw:install
@@ -280,6 +283,11 @@ npm run openclaw:install
 
 And you have to **restart the gateway** afterwards: editing the repository
 changes nothing until the installed copy changes.
+
+The plugin used to carry ten tools of its own — a hand-written HTTP client and
+ten schemas, a second implementation of routes that already existed. Whichever of
+the two was forgotten did not fail; it dropped the datum in silence and answered
+201. [`openclaw/README.md`](openclaw/) has the exact configuration.
 
 ### With any other
 
