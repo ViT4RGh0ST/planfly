@@ -427,11 +427,30 @@ async function resolveRequested(
     account = toAmendMatch(match, await currencyOfAccount(match.id));
   }
 
+  if (wantedCategory && kind === "transfer") {
+    /*
+     * Refused HERE, before anybody is asked to approve it.
+     *
+     * `updateTransaction` throws `transfer_has_no_category` before it resolves
+     * anything, so a category on a transfer is an instruction the write will
+     * ALWAYS reject. Previewing it anyway showed `changes: {category: 'Mercado'}`
+     * beside `resolved.category: null` — which reads exactly like «no category
+     * was asked for» — the person said yes, the gate claimed the confirmation,
+     * and the refusal landed after the approval, where it reads as their yes
+     * having failed rather than as the request never having been possible.
+     *
+     * The rule is the service's and so is the sentence: the same message key,
+     * in the household's language, so the two cannot come to tell the same
+     * person different things.
+     */
+    throw new InvalidTransactionError(
+      t("services.updateTransaction.transferHasNoCategory"),
+      "transfer_has_no_category",
+    );
+  }
+
   let category: AmendMatch | null = null;
-  // A transfer has no category, and `updateTransaction` refuses one before it
-  // resolves anything. Repeating that refusal here would be a second copy of a
-  // rule; resolving anyway would show a match the write is never going to use.
-  if (wantedCategory && kind !== "transfer") {
+  if (wantedCategory) {
     const match = await resolveCategory(
       principal.householdId,
       wantedCategory,

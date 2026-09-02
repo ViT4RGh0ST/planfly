@@ -1,12 +1,14 @@
+import { sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import type { z } from "zod";
 
 import { GET as productsRead, POST as productsWrite } from "@/app/api/v1/products/route";
+import { db } from "@/db";
 import { withInternalPrincipal } from "@/lib/api/handler";
 import type { Principal } from "@/lib/api-token";
 import type { McpOperation } from "@/lib/mcp/operation";
 import { RouteRefusal } from "@/lib/mcp/tools/context";
-import { resolveProduct } from "@/lib/services/products";
+import { productRawTexts, resolveProduct } from "@/lib/services/products";
 import { normalize, toSlug } from "@/lib/services/resolve-entities";
 import { mergeProductsSchema, splitProductSchema } from "@/lib/validation";
 
@@ -18,10 +20,10 @@ import { mergeProductsSchema, splitProductSchema } from "@/lib/validation";
  * inside a transaction, and asking them for a dry run would mean writing that
  * update twice. So `run` with `dryRun` returns, instead, a DESCRIPTION of what
  * is about to change, read from the state each one depends on — which rows the
- * free text resolves to, and how many line items carry the price series that
- * moves. The fingerprint is over that state, and that is what makes the yes
- * mean something: a merge rewrites which product every past line item points at
- * and there is no route back from here.
+ * free text resolves to, and how many line items each write will really move.
+ * The fingerprint is over that state, and that is what makes the yes mean
+ * something: a merge rewrites which product every past line item points at and
+ * there is no route back from here.
  *
  * The confirmation id is not carried into either write. A merge has no
  * idempotency key — nothing lands in the ledger to key it by — so what stops a
@@ -93,18 +95,14 @@ async function writeProducts(
 }
 
 /**
- * One point is one line item that a purchase brought.
+ * One point is one line item a LIVE purchase brought.
  *
- * It is what the price history shows, so it is the number a person can check.
- * Lines of a voided entry are not in it and they do move with the product; they
- * carry no price and no series, which is why this is still the honest count.
+ * It is what the price history shows, so it is the number a person can check
+ * against the screen. It is NOT the number either write moves: both move every
+ * row, and a voided entry's lines are rows.
  */
-function lineItems(body: Record<string, unknown>): number {
+function pricedLineItems(body: Record<string, unknown>): number {
   return Array.isArray(body.points) ? body.points.length : 0;
-}
-
-function rawTextGroups(body: Record<string, unknown>): RawTextGroup[] {
-  return Array.isArray(body.raw_texts) ? (body.raw_texts as RawTextGroup[]) : [];
 }
 
 function catalogueEntries(body: Record<string, unknown>): CatalogueEntry[] {
@@ -112,55 +110,53 @@ function catalogueEntries(body: Record<string, unknown>): CatalogueEntry[] {
 }
 
 /**
- * The letters `unaccent` transliterates and NFD does not decompose.
+ * The line items as the two writes count them, asked of Postgres in their words.
  *
- * They are two different things: NFD splits a letter from its combining mark, so
- * it covers á and ñ; `unaccent` reads a dictionary, so it also turns ª into a
- * and ß into ss, which carry no mark to split off. Every one of those is a place
- * where the key below and the split's own SQL key stop agreeing, and here a
- * disagreement is not a miss but a count.
+ * `splitProduct` selects EVERY row of `transaction_items` carrying the product —
+ * there is no join to `transactions`, so a voided entry's lines are in it — and
+ * moves the ones whose `lower(unaccent(btrim(raw_text)))` equals the key,
+ * answering «{n} purchases moved». `mergeProducts` moves the same set, all of
+ * it. The route and the price history count only live lines, and previewing
+ * THAT number is the false figure this exists to kill: the person approves «3
+ * line items move», the write answers «23 purchases moved», and nothing on the
+ * screen reconciles the two.
  *
- * These are all of them up to U+017F — Latin-1 and Latin Extended-A, everything
- * a Spanish keyboard or a receipt scanner can put in a line item. Past that the
- * dictionary is IPA and African Latin, and a divergence there ends as a count of
- * zero, which is refused rather than approved.
+ * It is the same expression and not an approximation of it. What stood here
+ * before rebuilt `unaccent` in TypeScript from a table of letters, and its JS
+ * `trim()` stripped a tab or a non-breaking space that `btrim()`'s default set —
+ * the plain space, and nothing else — leaves in place: the preview then counted
+ * a line the write would not move, and the split moved fewer than were approved.
+ *
+ * `total` also decides a refusal. `splitProduct` throws «that is all of its
+ * lines» when every row matches, and only this count can see it coming: the
+ * rows it counts include the ones no read of the price history can show.
  */
-const UNACCENT_LETTERS: Record<string, string> = {
-  "ª": "a", "µ": "μ", "º": "o", "ß": "ss", "æ": "ae", "ð": "d", "ø": "o", "þ": "th",
-  "đ": "d", "ħ": "h", "ı": "i", "ĳ": "ij", "ĸ": "q", "ŀ": "l", "ł": "l", "ŋ": "n",
-  "œ": "oe", "ŧ": "t", "ſ": "s",
-};
-
-const UNACCENT_LETTER = new RegExp(`[${Object.keys(UNACCENT_LETTERS).join("")}]`, "gu");
-
-/**
- * A receipt line as the split's own SQL compares it: lowercased and unaccented,
- * with its punctuation intact.
- *
- * The two sides are deliberately asymmetric — the text given is compared through
- * `normalize`, which also drops punctuation — and reproducing that asymmetry is
- * what makes the previewed count the count the split will really move, rather
- * than the count it ought to move.
- *
- * It APPROXIMATES `unaccent`: NFD for what carries a mark, the table above for
- * the letters that do not, and nothing for the rest of a 2,600-line dictionary.
- * What keeps the approximation from lying is that it can only ever match less
- * than the SQL does, and a preview that matches nothing is refused.
- */
-function receiptKey(text: string): string {
-  return text
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(UNACCENT_LETTER, (letter) => UNACCENT_LETTERS[letter]);
+async function lineItemCounts(
+  householdId: string,
+  productId: string,
+  key?: string,
+): Promise<{ total: number; matching: number }> {
+  const matches =
+    key === undefined ? sql`false` : sql`lower(unaccent(btrim(i.raw_text))) = ${key}`;
+  const { rows } = await db.execute<{ total: string; matching: string }>(sql`
+    SELECT count(*)::text AS total,
+           count(*) FILTER (WHERE ${matches})::text AS matching
+      FROM transaction_items i
+     WHERE i.household_id = ${householdId} AND i.product_id = ${productId}
+  `);
+  return { total: Number(rows[0]?.total ?? 0), matching: Number(rows[0]?.matching ?? 0) };
 }
 
 type ProductSide = {
   id: string;
   /** The name it resolved to, which is rarely the name that was asked for. */
   name: string;
+  /** Every line item on it: what a merge moves, and what a split counts against. */
   lineItems: number;
+  /** Of those, the ones a split by this text would carry. Zero when no text was given. */
+  matching: number;
+  /** Those a live purchase brought — the size of the price history. */
+  priced: number;
   body: Record<string, unknown>;
 };
 
@@ -173,7 +169,12 @@ type ProductSide = {
  * same text against the same matcher in the same instant, so they agree; if the
  * row disappeared between them, that is the one case below.
  */
-async function productSide(principal: Principal, text: string): Promise<ProductSide> {
+async function productSide(
+  principal: Principal,
+  text: string,
+  /** The split's key, when there is one. Both counts come from ONE read for a reason. */
+  key?: string,
+): Promise<ProductSide> {
   const [body, match] = await Promise.all([
     readProducts(principal, { product: text }),
     // `create: false`: describing a merge must never seed the catalogue with
@@ -192,7 +193,49 @@ async function productSide(principal: Principal, text: string): Promise<ProductS
     );
   }
 
-  return { id: match.id, name: match.name, lineItems: lineItems(body), body };
+  /*
+   * One read, not two. Asking for the total and for the matching count
+   * separately lets a purchase recorded in between answer a different total to
+   * each, and the preview would then show «3 of 5 move» over counts that never
+   * held at the same instant.
+   */
+  const counts = await lineItemCounts(principal.householdId, match.id, key);
+  return {
+    id: match.id,
+    name: match.name,
+    lineItems: counts.total,
+    matching: counts.matching,
+    priced: pricedLineItems(body),
+    body,
+  };
+}
+
+/**
+ * A product as the person has to be told it, with both counts and why they part.
+ *
+ * Two numbers because there are two, and giving only one lies whichever is
+ * chosen: `line_items` is what the write moves and answers with, and
+ * `line_items_with_price` is what the price history shows, which is the one the
+ * person can check against the screen. When they differ the difference is said
+ * out loud, in the payload and not in a comment: a comment reaches whoever opens
+ * this file next, never the model that has to explain the figure.
+ */
+function sidePayload(side: ProductSide): Record<string, unknown> {
+  const voided = side.lineItems - side.priced;
+  return {
+    product_id: side.id,
+    product: side.name,
+    line_items: side.lineItems,
+    line_items_with_price: side.priced,
+    ...(voided > 0
+      ? {
+          note:
+            `${voided} of «${side.name}»'s ${side.lineItems} line items belong to voided ` +
+            `entries: they carry no price, so the history shows ${side.priced}. They move ` +
+            "with the rest all the same, and the count Planfly answers with includes them.",
+        }
+      : {}),
+  };
 }
 
 async function mergePreview(
@@ -203,67 +246,116 @@ async function mergePreview(
     productSide(principal, draft.from),
     productSide(principal, draft.into),
   ]);
-  const moving = from.lineItems;
 
   return {
     operation: "merge_products",
-    from: { product_id: from.id, product: from.name, line_items: moving },
-    into: { product_id: into.id, product: into.name, line_items: into.lineItems },
-    line_items_moving: moving,
+    from: sidePayload(from),
+    into: sidePayload(into),
+    /** Every row of the origin, because that is what the UPDATE moves. */
+    line_items_moving: from.lineItems,
     /** There is no route back: the origin's row is deleted, series and all. */
     reversible: false,
   };
+}
+
+/** A refusal worded for whoever asked, carrying the list the text has to come from. */
+function splitRefusal(message: string, groups: RawTextGroup[]): RouteRefusal {
+  return new RouteRefusal(
+    { ok: false, error: "invalid_product", message, known_raw_texts: groups },
+    422,
+  );
 }
 
 async function splitPreview(
   principal: Principal,
   draft: SplitDraft,
 ): Promise<Record<string, unknown>> {
-  const [source, catalogue] = await Promise.all([
-    productSide(principal, draft.product),
-    readProducts(principal, {}),
-  ]);
   const cleaned = draft.raw_text.trim();
   const lineKey = normalize(cleaned);
-  const groups = rawTextGroups(source.body);
+  const destinationSlug = toSlug(cleaned);
+
   /*
-   * Lines of a voided entry are not in these counts and they do move with the
-   * split, for the same reason as in a merge: what is being approved is a price
-   * series, and a voided line carries none.
+   * `splitProduct` refuses a text with no letter or digit — there is no name to
+   * give the new product — and it would refuse it AFTER the yes. Worse, the key
+   * of such a text is the empty string, which is what a line item with a blank
+   * `raw_text` compares equal to, so the count below could even be a number.
    */
-  const moving = groups
-    .filter((group) => receiptKey(group.text) === lineKey)
-    .reduce((total, group) => total + group.times, 0);
+  if (!destinationSlug) {
+    throw splitRefusal(
+      `«${draft.raw_text}» has no letter or digit in it, so there is no product to split ` +
+        "into. Copy the line item exactly as it came out on the receipt. Nothing was changed.",
+      [],
+    );
+  }
+
+  const [source, catalogue] = await Promise.all([
+    productSide(principal, draft.product, lineKey),
+    readProducts(principal, {}),
+  ]);
+
+  /*
+   * The list comes from the service and not from the route's answer.
+   *
+   * `GET` omits `raw_texts` entirely when the product has fewer than two
+   * distinct line items — reasonable on a price question, wrong here: it left
+   * the preview unable to tell «that text is not on the list» from «no list was
+   * sent», and the refusal it wrote then blamed a shortage of line items for a
+   * split the service would have accepted.
+   */
+  const rawTexts = await productRawTexts(principal.householdId, source.id);
+  const groups: RawTextGroup[] = rawTexts.map((r) => ({ text: r.rawText, times: r.count }));
+
+  /*
+   * The product's own name is not one of its line items.
+   *
+   * `splitProduct` compares the slug it would create against the source's and
+   * throws, because that is a rename and not a split. Nothing ever renames a
+   * product — `products.name` is written on insert and never updated — so its
+   * slug is its name's, and the check can be made here, before the approval is
+   * spent on a refusal.
+   */
+  if (destinationSlug === toSlug(source.name)) {
+    throw splitRefusal(
+      `«${cleaned}» is the name of «${source.name}» itself, not one of the line items it has ` +
+        "arrived under. A split pulls a line item out and leaves the product behind; renaming " +
+        "it is another thing. Nothing was changed.",
+      groups,
+    );
+  }
 
   /*
    * Nothing to move is refused here, not previewed as zero.
    *
    * The write refuses it as well — `splitProduct` throws when no line matches —
-   * so a zero can at best be approved into an error. At worst it is not a zero:
-   * `receiptKey` only approximates `unaccent`, and where the two part company
-   * the preview counts none while the SQL matches every one of them, so the
-   * person approves «no line item moves» and a price series leaves the product.
-   * Refusing makes both cases the same refusal, carrying the list the text has
-   * to be copied from.
+   * so a zero can at best be approved into an error, and the person reads that
+   * error as their yes having failed. Refusing here carries the list the text
+   * has to be copied from, which is the only way out of it.
    */
-  if (moving === 0) {
-    throw new RouteRefusal(
-      {
-        ok: false,
-        error: "invalid_product",
-        // The route sends no list at all when the product has fewer than two
-        // distinct line items, and then «that text is not on the list» would
-        // point at a list that was never shown. It is the other refusal: a split
-        // pulls one line item out and leaves the rest, so it needs two.
-        message:
-          groups.length === 0
-            ? `Planfly knows of no second line item on «${source.name}»: a split pulls one ` +
-              "out and leaves the rest, so it needs at least two. Nothing was changed."
-            : `«${cleaned}» is not one of the line items «${source.name}» has arrived under, ` +
-              "so there is nothing to pull out; nothing was changed.",
-        known_raw_texts: groups,
-      },
-      422,
+  if (source.matching === 0) {
+    throw splitRefusal(
+      groups.length === 0
+        ? `No line item of «${source.name}» reads «${cleaned}», and none of its purchases ` +
+            "recorded the receipt's text at all, so there is nothing to pull out by. Nothing " +
+            "was changed."
+        : `«${cleaned}» is not one of the line items «${source.name}» has arrived under, ` +
+            "so there is nothing to pull out; nothing was changed.",
+      groups,
+    );
+  }
+
+  /*
+   * And everything moving is refused too, for the same reason: `splitProduct`
+   * throws «that is all of its lines» and would throw it after the yes. It is
+   * `total` and not the history's count that decides it — the write counts the
+   * voided entries' lines on both sides of that comparison, and they are the
+   * ones that can make the difference between a rename and a split.
+   */
+  if (source.matching === source.lineItems) {
+    throw splitRefusal(
+      `«${cleaned}» is every one of «${source.name}»'s ${source.lineItems} line items: pulling ` +
+        "them all out would leave it empty, which is renaming it and not splitting it. " +
+        "Nothing was changed.",
+      groups,
     );
   }
 
@@ -274,16 +366,16 @@ async function splitPreview(
    * catalogue's names are enough to recognise it, EXCEPT that the catalogue
    * hides what is archived, and that one this cannot see at all.
    */
-  const destinationSlug = toSlug(cleaned);
   const target = catalogueEntries(catalogue).find(
     (entry) => toSlug(entry.name) === destinationSlug,
   );
 
   return {
     operation: "split_product",
-    from: { product_id: source.id, product: source.name, line_items: source.lineItems },
+    from: sidePayload(source),
     raw_text: draft.raw_text,
-    line_items_moving: moving,
+    /** Exactly the rows the UPDATE will carry, so it is the number the write answers with. */
+    line_items_moving: source.matching,
     into: {
       product: target?.name ?? cleaned,
       /*
@@ -294,7 +386,7 @@ async function splitPreview(
        * series it already had. Nothing readable from here can tell the two
        * apart, so the preview says it does not know instead of saying none.
        */
-      line_items: target?.times_bought ?? null,
+      line_items_with_price: target?.times_bought ?? null,
       in_catalogue: target != null,
       ...(target
         ? {}
@@ -338,6 +430,11 @@ function branch(value: unknown, field: string, keys: string[]): Record<string, u
  * different pair, and the merge does not undo. The two counts and the number
  * moving, because «12 line items join these 30» is the figure the person is
  * answering: a purchase recorded in between moves a series nobody looked at.
+ *
+ * `line_items_with_price` is deliberately NOT in here: an entry voided between
+ * the preview and the yes moves that number and moves nothing else — the same
+ * rows still join the same product — and spending the approval on it would send
+ * the person back to approve an identical merge.
  */
 function mergeFingerprint(preview: Record<string, unknown>): string {
   return JSON.stringify({
@@ -362,7 +459,8 @@ function mergeFingerprint(preview: Record<string, unknown>): string {
  * `known_raw_texts` is deliberately NOT in here. It is context for the person,
  * and another variant appearing on the source changes neither which lines move
  * nor where they land; fingerprinting it would spend the approval on a change
- * that is not the one being approved.
+ * that is not the one being approved. Neither is the source's
+ * `line_items_with_price`, for the reason given above the merge's.
  */
 function splitFingerprint(preview: Record<string, unknown>): string {
   return JSON.stringify({
@@ -370,7 +468,7 @@ function splitFingerprint(preview: Record<string, unknown>): string {
     from: branch(preview.from, "from", ["product_id", "product", "line_items"]),
     raw_text: preview.raw_text,
     line_items_moving: preview.line_items_moving,
-    into: branch(preview.into, "into", ["product", "line_items", "in_catalogue"]),
+    into: branch(preview.into, "into", ["product", "line_items_with_price", "in_catalogue"]),
   });
 }
 

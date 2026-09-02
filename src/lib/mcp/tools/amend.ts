@@ -81,8 +81,11 @@ const amendInputSchema = z.object({
     .max(500)
     .optional()
     .describe(
-      "Required with action='void', and only there. Why the entry is being voided, in the person's " +
-        "own words: 'it was charged twice', 'the purchase was cancelled'. It is kept with the record.",
+      "Required with action='void', and ONLY there: sent on a correction it is refused, because " +
+        "nothing on that path reads it. Why the entry is being voided, in the person's own words: " +
+        "'it was charged twice', 'the purchase was cancelled'. It is shown in the preview the person " +
+        "approves; the record itself keeps planfly's own wording, so do not report these words back " +
+        "as stored text.",
     ),
   account: z
     .string()
@@ -262,6 +265,33 @@ export const amendTool = defineTool({
           ok: true,
           result: await confirmMcpOperation(principal, input.confirmation_id, "amend_transaction"),
         });
+      }
+
+      if (input.reason && input.action !== "void") {
+        /*
+         * `reason` is read on the void path and nowhere else: `staged("correct", …)`
+         * and `staged("approve", …)` pass none, and it is not a correction field,
+         * so on either of those it reaches neither the payload nor the preview.
+         *
+         * Dropping it in silence is the reporting drift this tool exists to
+         * avoid. `asked` is true on a correction, so none of the other refusals
+         * fires; the preview comes back reading `reason: null`, the model — which
+         * cannot see its own arguments — reports that the person's words were
+         * recorded against the entry, and nothing anywhere holds them. Refused at
+         * the door, before a person is asked to approve anything.
+         */
+        return ctx.result(
+          {
+            ok: false,
+            error: "reason_without_void",
+            message:
+              "reason belongs to action='void' and nowhere else. On a correction nothing reads it, so " +
+              "it would be dropped while you told the person it was written down. If the entry is to be " +
+              "voided, send action='void' with that reason and no field. If it is to be corrected, send " +
+              "the field without reason: the why goes in what you say to them, not in this call.",
+          },
+          true,
+        );
       }
 
       if (input.action === "void") {

@@ -75,6 +75,20 @@ function withBody(
 }
 
 /**
+ * The six actions, written once.
+ *
+ * The enum below and `FIELDS` are both keyed to this tuple, so a seventh action
+ * added to one and not the other stops compiling. Keyed to `string` it did not:
+ * `FIELDS[input.action]` came back undefined and `spec.required` threw a
+ * TypeError out of `superRefine` — i.e. out of the `.parse` the gateway itself
+ * calls, which is not a validation error and does not reach `mcpErrorResult`.
+ * The tool would stop accepting ANY call for that action, and the answer the
+ * model gets names no field it could correct.
+ */
+const ACTIONS = ["list", "purchase", "pay", "unpay", "void", "confirm"] as const;
+type FinancingAction = (typeof ACTIONS)[number];
+
+/**
  * Which fields belong to which action, enforced instead of ignored.
  *
  * Every branch below builds its body from named keys, so a field belonging to
@@ -86,7 +100,7 @@ function withBody(
  * and nothing in the answer says the date was dropped. The route's own
  * `rejectUnknownKeys` cannot help here, because this tool constructs the body.
  */
-const FIELDS: Record<string, { required: string[]; optional: string[] }> = {
+const FIELDS: Record<FinancingAction, { required: string[]; optional: string[] }> = {
   list: { required: [], optional: [] },
   purchase: {
     required: ["financier", "total", "installments"],
@@ -115,7 +129,7 @@ const FIELDS: Record<string, { required: string[]; optional: string[] }> = {
  */
 const financingInputSchema = z.object({
   action: z
-    .enum(["list", "purchase", "pay", "unpay", "void", "confirm"])
+    .enum(ACTIONS)
     .describe(
       "purchase = buy in installments · pay = pay an installment · unpay = undo a payment · " +
         "void = void the whole purchase · list = what is owed · confirm = commit a purchase or a " +

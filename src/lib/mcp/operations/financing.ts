@@ -88,6 +88,15 @@ type AccountSnapshot = {
   id: string;
   name: string;
   currency: string;
+  /**
+   * asset or liability, read because the write reads it.
+   *
+   * `recordFinancedPurchase` refuses a financier that is not a liability —
+   * whoever finances you is who you owe — and the refusal used to arrive only
+   * after the person had approved a preview describing the purchase as if it
+   * were going to happen.
+   */
+  nature: "asset" | "liability";
   score: number;
   via: string;
   balance: string;
@@ -112,7 +121,7 @@ async function snapshotAccount(
   if (!match) return null;
 
   const [row] = await db
-    .select({ currency: accounts.currency })
+    .select({ currency: accounts.currency, nature: accounts.nature })
     .from(accounts)
     .where(eq(accounts.id, match.id))
     .limit(1);
@@ -124,6 +133,7 @@ async function snapshotAccount(
     id: match.id,
     name: match.name,
     currency,
+    nature: row?.nature ?? "asset",
     score: match.score,
     via: match.via,
     balance: formatAmount(balanceMinor, currency),
@@ -181,6 +191,36 @@ async function describePayment(
     );
   }
 
+  /*
+   * The quota is transferred IN THE PLAN'S CURRENCY, whatever account is named,
+   * so an origin in another currency is a refusal the write can only ever make:
+   * `payInstallment` passes `currency: plan.currency` and `recordTransaction`
+   * throws `currency_mismatch` against the origin's own.
+   *
+   * The bias above only PREFERS an account of that currency — it falls back to
+   * the general search, deliberately, so that «efectivo» naming the dollar cash
+   * gets the currency error rather than «no such account». Without this the
+   * fallback reached the person as a preview: they approve paying Bs 1.000 from
+   * Efectivo $, and the refusal lands after their yes, where it reads as the
+   * payment having failed for some reason of planfly's.
+   */
+  if (from.currency !== plan.currency) {
+    throw new InvalidTransactionError(
+      t("services.recordTransaction.currencyMismatch", {
+        amountCurrency: plan.currency,
+        account: from.name,
+        accountCurrency: from.currency,
+      }),
+      "currency_mismatch",
+      {
+        input: input.from_account,
+        field: "from_account",
+        amountCurrency: plan.currency,
+        accountCurrency: from.currency,
+      },
+    );
+  }
+
   return {
     installment: {
       id: installment.id,
@@ -225,6 +265,29 @@ async function describePurchase(
     );
   }
 
+  /*
+   * A financier that is not a liability, refused here and not after the yes.
+   *
+   * `recordFinancedPurchase` reads `accounts.nature` and refuses anything but a
+   * liability — with an asset account, owing somebody money would RAISE what you
+   * have. That refusal is decided by state the preview has already read, so
+   * staging it means describing a purchase that cannot happen, taking somebody's
+   * approval for it, and then answering the confirm with an error: from where
+   * they sit, planfly failed while recording it, and the natural next move is to
+   * record the purchase by hand as a plain expense — which leaves the debt
+   * wrong forever, exactly what this tool exists to prevent.
+   *
+   * The wording is the service's own, so the person is told the same thing here
+   * as there: change the account's type, do not invent another financier.
+   */
+  if (financier.nature !== "liability") {
+    throw new InvalidTransactionError(
+      t("services.financing.financierNotLiability", { account: financier.name }),
+      "financier_not_liability",
+      { input: input.financier, field: "financier" },
+    );
+  }
+
   const downAccount = input.down_payment_account
     ? await snapshotAccount(principal.householdId, input.down_payment_account, financier.currency)
     : null;
@@ -233,6 +296,75 @@ async function describePurchase(
       t("services.recordTransaction.accountNotFound", { input: input.down_payment_account }),
       "account_not_found",
       { input: input.down_payment_account, field: "down_payment_account" },
+    );
+  }
+
+  /*
+   * The down payment, checked against the account it would leave from BEFORE
+   * anything is staged. This is the one that costs money.
+   *
+   * `recordFinancedPurchase` is three writes and only the third is inside a
+   * transaction: the expense against the financier is committed first, and the
+   * down payment's transfer second. The transfer is written in the FINANCIER's
+   * currency against the down-payment account, so a down account in another
+   * currency — or one that resolves to the financier itself — throws after the
+   * expense is already in the ledger. What is left behind is a Bs 4.000 expense
+   * against Cashea with no plan and no schedule attached: the debt shown is not
+   * the debt owed, `action='list'` does not show it because there is no plan,
+   * and nothing logs it. The confirmation is consumed (`retryable` is not set),
+   * so the second attempt cannot even overwrite it.
+   *
+   * The bias when resolving above only PREFERS the financier's currency; it
+   * falls back to any account of that name. So the comparison has to be made,
+   * not assumed. Both refusals are worded exactly as `recordTransaction` words
+   * them, because they are its refusals, arriving before the yes instead of
+   * after it.
+   *
+   * The real cure is one transaction around the three writes, in
+   * `services/financing.ts`. This is the half that can be done from here.
+   */
+  if (downAccount && downAccount.id === financier.id) {
+    throw new InvalidTransactionError(
+      t("services.recordTransaction.sameAccount"),
+      "same_account",
+      { input: input.down_payment_account, field: "down_payment_account" },
+    );
+  }
+  if (downAccount && downAccount.currency !== financier.currency) {
+    throw new InvalidTransactionError(
+      t("services.recordTransaction.currencyMismatch", {
+        amountCurrency: financier.currency,
+        account: downAccount.name,
+        accountCurrency: downAccount.currency,
+      }),
+      "currency_mismatch",
+      {
+        input: input.down_payment_account,
+        field: "down_payment_account",
+        amountCurrency: financier.currency,
+        accountCurrency: downAccount.currency,
+      },
+    );
+  }
+
+  /*
+   * A down payment with no account to take it from.
+   *
+   * The service refuses this one before it writes anything, so no orphan is left
+   * — but the preview would still have named a down payment, been approved, and
+   * come back refused. It is read in the financier's currency because that is
+   * where the service reads it too, and only its being non-zero is decided here:
+   * how much it is worth stays the service's arithmetic.
+   */
+  const downMinor =
+    input.down_payment == null
+      ? 0
+      : Math.abs(parseAmountToMinor(input.down_payment, financier.currency));
+  if (downMinor > 0 && !input.down_payment_account) {
+    throw new InvalidTransactionError(
+      t("services.financing.missingDownPaymentAccount"),
+      "missing_down_payment_account",
+      { field: "down_payment_account" },
     );
   }
 
@@ -303,12 +435,7 @@ async function describePurchase(
       // Always read in the financier's currency, whatever the price was written
       // in — that is what the service does, and it is what leaves the account.
       down_payment_text:
-        input.down_payment == null
-          ? null
-          : formatAmount(
-              Math.abs(parseAmountToMinor(input.down_payment, financier.currency)),
-              financier.currency,
-            ),
+        input.down_payment == null ? null : formatAmount(downMinor, financier.currency),
       installments: input.installments,
       frequency: input.frequency ?? "biweekly",
       first_due_on: input.first_due_on ?? null,

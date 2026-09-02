@@ -12,12 +12,14 @@ import {
 import { defineTool } from "@/lib/mcp/registry";
 import type { McpToolContext } from "@/lib/mcp/tools/context";
 import { previewMcpOperation, confirmMcpOperation } from "@/lib/mcp/transactions";
+import { parseAmountToMinor } from "@/lib/money";
 import {
   daysFor,
   InvalidRecurrenceError,
   removeRecurringRule,
   setRecurringActive,
 } from "@/lib/services/recurring";
+import { resolveAccount } from "@/lib/services/resolve-entities";
 import { createRecurringSchema } from "@/lib/validation";
 
 /**
@@ -99,8 +101,12 @@ const recurringInputSchema = z.object({
     .enum(["bcv", "p2p"])
     .optional()
     .describe(
-      "Which rate to convert with when there is an amount_currency. Ask the user if they do " +
-        "not say: between BCV and P2P there is more than 14% and it is not a detail.",
+      "Which rate to convert with when there is an amount_currency — and, when there is none, " +
+        "which rate still values the entry in the household's own currency, every time the " +
+        "account it posts to keeps a different one. It is never inert: sent or omitted, one of " +
+        "the two is used, and omitting it takes whichever the household is set to on the day. " +
+        "Ask the user if they do not say: between BCV and P2P there is more than 14% and it is " +
+        "not a detail.",
     ),
   account: z
     .string()
@@ -108,10 +114,12 @@ const recurringInputSchema = z.object({
     .optional()
     .describe(
       "Which account it leaves from (or arrives at). By name or nickname, as it comes back from " +
-        "planfly_context. Always send it: a name that matches nothing writes the money " +
-        "elsewhere, and sending none at all makes every occurrence fall back to whichever " +
-        "account the household happens to list first. It is required whenever there is an " +
-        "amount_currency, because what the amount is converted INTO is this account's currency.",
+        "planfly_context, never invented: a name that matches no account is refused here, " +
+        "because it would be refused again on every single occurrence and the rule would post " +
+        "nothing at all, month after month. Send it always — omitting it does not refuse " +
+        "anything: every occurrence falls back to whichever account the household happens to " +
+        "list first, in silence. It is required whenever there is an amount_currency, because " +
+        "what the amount is converted INTO is this account's currency.",
     ),
   to_account: z
     .string()
@@ -252,7 +260,11 @@ export const recurringTool = defineTool({
        * a month later is either an entry in the wrong currency or a rule that
        * has never posted anything.
        */
-      const refusal = refuseImpossibleRule(draft, normalizeLocale(principal.locale));
+      const refusal = await refuseImpossibleRule(
+        principal.householdId,
+        draft,
+        normalizeLocale(principal.locale),
+      );
       if (refusal) return ctx.result({ ok: false, ...refusal }, true);
 
       /*
@@ -310,15 +322,36 @@ type CreateDraft = z.infer<typeof createRecurringSchema>;
  * `rejectUnknownKeys` cannot see any of them, because none of the keys is
  * unknown.
  *
- * It returns the refusal rather than throwing it, except for the cadence's own
- * days: that one is `daysFor` throwing the service's own sentence, which the
- * `catch` in `run` hands back whole. Restating it here would be a second copy of
- * a wording that has to match what the rule will actually do.
+ * It returns the refusal rather than throwing it, except for the two that are a
+ * service's own sentence — the cadence's days from `daysFor`, the amount from
+ * `parseAmountToMinor` — which the `catch` in `run` hands back whole. Restating
+ * either here would be a second copy of a wording that has to match what the
+ * rule will actually do.
  */
-function refuseImpossibleRule(
+async function refuseImpossibleRule(
+  householdId: string,
   draft: CreateDraft,
   locale: Locale,
-): { error: string; message: string } | null {
+): Promise<{ error: string; message: string } | null> {
+  /*
+   * The amount, read now with the same reader every occurrence will use.
+   *
+   * `createRecurringSchema` takes it as a string or a number and NOTHING parses
+   * it until an entry is being written, one date at a time, inside the service.
+   * So «15 dolares» is stored verbatim in the mould, the preview lists three
+   * catch-up dates, the person approves them — and then every one of those
+   * dates throws on the amount: a rule that looks created, advances its date
+   * every month and has recorded nothing, with one failure notice as the only
+   * trace. `parseAmountToMinor` throws `InvalidAmountError`, which `run`'s
+   * `catch` hands back naming the input and the reason.
+   *
+   * The currency passed here only decides how many decimals survive, so the
+   * account's own is not needed and is not resolved: what is being asked is
+   * whether this is a figure at all. The real conversion still happens on the
+   * day it fires, at that day's rate.
+   */
+  parseAmountToMinor(draft.amount, draft.amount_currency ?? draft.currency ?? "USD");
+
   /*
    * An amount thought in another currency, with no account to convert INTO.
    *
@@ -362,6 +395,39 @@ function refuseImpossibleRule(
       message:
         "A transfer rule needs `to_account`: which account the money arrives at. Without it " +
         "every occurrence would be refused and the rule would post nothing.",
+    };
+  }
+
+  /*
+   * A name that matches no account.
+   *
+   * When a name IS given the service does not fall back to another account: it
+   * throws `account_not_found`, on every occurrence, for ever. So a typo makes
+   * a rule that is created, returns 201, advances `next_run_on` month after
+   * month and records nothing — the person believes the rent is being posted
+   * and the only trace is one failure notice a month. The back-dated path
+   * already reports it as `account_recognised: false` in the preview, but a
+   * preview that reports it still lets the person approve a rule that will post
+   * nothing; the immediate path had no check at all.
+   *
+   * Resolved with the service's own `resolveAccount` and no preferred currency:
+   * when one is given it falls back to the unfiltered search anyway, so whether
+   * a name resolves AT ALL is the same question either way, and this refuses
+   * exactly when the write would.
+   */
+  for (const [field, name] of [
+    ["account", draft.account],
+    ["to_account", draft.to_account],
+  ] as const) {
+    if (!name) continue;
+    if (await resolveAccount(householdId, name)) continue;
+    return {
+      error: "account_not_found",
+      message:
+        `No account matches \`${field}\`: ${JSON.stringify(name)}. Every occurrence of this ` +
+        "rule would be refused for it, so the rule would post nothing at all. Take the name " +
+        "from planfly_context and send it exactly as it comes back there, or create the " +
+        "account first with planfly_account.",
     };
   }
 

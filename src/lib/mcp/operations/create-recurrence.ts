@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { POST as createRecurringRoute } from "@/app/api/v1/recurring/route";
 import { db } from "@/db";
-import { households } from "@/db/schema";
+import { accounts, households } from "@/db/schema";
 import { normalizeLocale } from "@/i18n/config";
 import { withInternalPrincipal } from "@/lib/api/handler";
 import type { Principal } from "@/lib/api-token";
@@ -13,7 +13,7 @@ import type { McpOperation } from "@/lib/mcp/operation";
 import { RouteRefusal } from "@/lib/mcp/tools/context";
 import { occurrencesBetween } from "@/lib/recurrence";
 import { daysFor } from "@/lib/services/recurring";
-import { resolveAccount, resolveCategory } from "@/lib/services/resolve-entities";
+import { type Match, resolveAccount, resolveCategory } from "@/lib/services/resolve-entities";
 import { createRecurringSchema } from "@/lib/validation";
 
 /**
@@ -68,8 +68,10 @@ const catchUpPreviewSchema = z.object({
   /** What the call asked for, which is null whenever it asked for nothing. */
   rate_source: z.string().nullable(),
   /**
-   * The source each occurrence will really convert at, household default and
-   * all. Null when there is no `amount_currency` and nothing converts.
+   * The source each occurrence will really be valued at, household default and
+   * all — whether or not the rule names an `amount_currency`. Null only when no
+   * rate can be read at all, because the entry posts in the household's own
+   * currency.
    */
   effective_rate_source: z.string().nullable(),
   account: z.string().nullable(),
@@ -183,7 +185,7 @@ async function describeCatchUp(principal: Principal, draft: CreateInput): Promis
     amount: String(draft.amount),
     amount_currency: draft.amount_currency ?? null,
     rate_source: draft.rate_source ?? null,
-    effective_rate_source: await effectiveRateSource(principal.householdId, draft),
+    effective_rate_source: await effectiveRateSource(principal.householdId, draft, account),
     account: draft.account ?? null,
     account_recognised: draft.account ? account !== null : null,
     to_account: draft.to_account ?? null,
@@ -216,25 +218,77 @@ async function describeCatchUp(principal: Principal, draft: CreateInput): Promis
  * converts a recurrence at P2P, and a preview that named `manual` would name a
  * source the write does not use.
  *
- * Null when there is no `amount_currency`, because then nothing converts at all
- * — pinning a default that changes nothing would refuse good confirmations.
- * Which account the amount lands in is deliberately not consulted: the account
- * is resolved again on the day, so this is the source IF it converts, the same
- * promise `account_recognised` makes about the name.
+ * And NOT only when the rule names an `amount_currency`. The mould stores
+ * `rateSource` either way, and `recordTransaction` reads it — or falls back to
+ * the household default — to value the entry's equivalent in the household's
+ * own currency every time the account it posts to keeps a different one. That
+ * equivalent is the figure every report adds up, and BCV against P2P moves it
+ * by more than 14%. A rule of 120 on a dollar account in a bolívar household
+ * names no currency at all and is valued by that setting on every caught-up
+ * date; with `null` pinned, the default could move between the reading and the
+ * yes, the refreshed preview would still match, and the fingerprint would see
+ * nothing.
+ *
+ * So the question is not «is there an amount_currency» but «can this rule need
+ * a rate at all», and `mayNeedARate` answers it. Null only when it provably
+ * cannot: pinning a source that changes no figure would refuse good
+ * confirmations for nothing. Which account the amount lands in is still read
+ * for its CURRENCY only — the account itself is resolved again on the day, so
+ * this stays the source IF a rate is read, the same promise
+ * `account_recognised` makes about the name.
  */
 async function effectiveRateSource(
   householdId: string,
   draft: CreateInput,
+  account: Match | null,
 ): Promise<string | null> {
-  if (!draft.amount_currency) return null;
-  if (draft.rate_source) return draft.rate_source;
-
   const [home] = await db
-    .select({ defaultRateSource: households.defaultRateSource })
+    .select({
+      baseCurrency: households.baseCurrency,
+      defaultRateSource: households.defaultRateSource,
+    })
     .from(households)
     .where(eq(households.id, householdId))
     .limit(1);
+
+  if (!(await mayNeedARate(draft, account, home?.baseCurrency))) return null;
+  if (draft.rate_source) return draft.rate_source;
   return home?.defaultRateSource === "bcv" ? "bcv" : "p2p";
+}
+
+/**
+ * Whether any occurrence of this rule can end up reading a rate.
+ *
+ * It is the household's base currency against the currency the entry will post
+ * in: equal, and the equivalent is the amount itself, no ladder is consulted
+ * and no source matters. Different — or unknown — and one is.
+ *
+ * Unknown counts as yes on purpose. With no `account` the write falls back to
+ * whichever account the household lists first, which nothing here can name;
+ * being wrong that way costs one refused confirmation and a second preview,
+ * and being wrong the other way costs the figure, silently, on every date.
+ */
+async function mayNeedARate(
+  draft: CreateInput,
+  account: Match | null,
+  baseCurrency: string | undefined,
+): Promise<boolean> {
+  if (draft.amount_currency) return true;
+  if (!baseCurrency) return true;
+
+  const posting = draft.currency ?? (account ? await currencyOfAccount(account.id) : undefined);
+  if (!posting) return true;
+  return posting.toUpperCase() !== baseCurrency.toUpperCase();
+}
+
+/** An account's currency, by the id the name resolved to. */
+async function currencyOfAccount(accountId: string): Promise<string | undefined> {
+  const [row] = await db
+    .select({ currency: accounts.currency })
+    .from(accounts)
+    .where(eq(accounts.id, accountId))
+    .limit(1);
+  return row?.currency;
 }
 
 /**
