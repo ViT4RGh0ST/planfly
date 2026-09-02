@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import type { McpServer } from "@modelcontextprotocol/server";
 
 import { DELETE, GET, POST } from "@/app/api/v1/budgets/route";
 import type { Principal } from "@/lib/api-token";
+import { defineTool } from "@/lib/mcp/registry";
 import type { McpToolContext } from "@/lib/mcp/tools/context";
 
 /**
@@ -49,132 +49,146 @@ function withBody(
   };
 }
 
-export function registerBudget(server: McpServer, ctx: McpToolContext): void {
-  /*
-   * The route's own body goes back whole — its message, its previous amount, its
-   * detail.suggestion. Only the error flag is added on top of it.
-   */
-  const reply = (payload: Record<string, unknown>) => ctx.result(payload, payload.ok === false);
+/*
+ * The schema is its own binding, because the gateway parses arguments with it
+ * too. The raw-shape shorthand the SDK still accepts cannot be called: a
+ * `{ field: z.string() }` record has no `.parse`.
+ */
+const budgetInputSchema = z.object({
+  action: z
+    .enum(["set", "list", "remove"])
+    .optional()
+    .describe(
+      "set sets or changes the cap · list shows them · remove takes it away. Defaults to set.",
+    ),
+  category: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "In the user's own words. Do not translate it; planfly matches it. " +
+        "Required to set and to remove, and never guessed: a cap on the wrong " +
+        "category silently changes which spending gets compared.",
+    ),
+  amount: z
+    .union([z.string().min(1), z.number()])
+    .optional()
+    .describe(
+      "The cap, in the household's base currency. It goes in the base currency on " +
+        "purpose: in the local one it would have to be rewritten every time the rate moves.",
+    ),
+  period: z
+    .enum(PERIODS)
+    .optional()
+    .describe(
+      "monthly = per month (what the server assumes when it is omitted) · " +
+        "biweekly = per fortnight, which is how people are paid here · yearly = per year · " +
+        "custom = a range of your own, with period_start and period_end. " +
+        "On remove, omitting it removes every budget that category has.",
+    ),
+  period_start: z
+    .string()
+    .optional()
+    .describe("Only with period='custom'. YYYY-MM-DD, first day included."),
+  period_end: z
+    .string()
+    .optional()
+    .describe("Only with period='custom'. YYYY-MM-DD, LAST day included."),
+});
 
-  server.registerTool(
-    "planfly_budget",
-    {
-      title: "Budgets",
-      description:
-        "Sets, changes or removes a spending cap by category. " +
-        "To CONSULT how spending is going against a cap use planfly_report with " +
-        "report='budgets'; this tool is for configuring them.",
-      annotations: {
-        readOnlyHint: false,
-        /*
-         * No preview/confirm gate, unlike the transaction tools, because a cap
-         * moves no money and repeating the call cannot duplicate anything:
-         * setting one is an upsert keyed by category, period and period start,
-         * so a second call lands on the same cap instead of a second one, and
-         * removing deactivates rather than deletes — the period that already
-         * passed keeps the cap it was compared against.
-         */
-        idempotentHint: true,
-        destructiveHint: false,
-        openWorldHint: false,
-      },
-      inputSchema: {
-        action: z
-          .enum(["set", "list", "remove"])
-          .optional()
-          .describe(
-            "set sets or changes the cap · list shows them · remove takes it away. Defaults to set.",
-          ),
-        category: z
-          .string()
-          .min(1)
-          .optional()
-          .describe(
-            "In the user's own words. Do not translate it; planfly matches it. " +
-              "Required to set and to remove, and never guessed: a cap on the wrong " +
-              "category silently changes which spending gets compared.",
-          ),
-        amount: z
-          .union([z.string().min(1), z.number()])
-          .optional()
-          .describe(
-            "The cap, in the household's base currency. It goes in the base currency on " +
-              "purpose: in the local one it would have to be rewritten every time the rate moves.",
-          ),
-        period: z
-          .enum(PERIODS)
-          .optional()
-          .describe(
-            "monthly = per month (what the server assumes when it is omitted) · " +
-              "biweekly = per fortnight, which is how people are paid here · yearly = per year · " +
-              "custom = a range of your own, with period_start and period_end. " +
-              "On remove, omitting it removes every budget that category has.",
-          ),
-        period_start: z
-          .string()
-          .optional()
-          .describe("Only with period='custom'. YYYY-MM-DD, first day included."),
-        period_end: z
-          .string()
-          .optional()
-          .describe("Only with period='custom'. YYYY-MM-DD, LAST day included."),
-      },
-    },
-    async (args) => {
-      try {
-        const action: Action = args.action ?? "set";
-        requireScopeFor(ctx, action);
+export const budgetTool = defineTool({
+  name: "planfly_budget",
+  title: "Budgets",
+  description:
+    "Sets, changes or removes a spending cap by category. " +
+    "To CONSULT how spending is going against a cap use planfly_report with " +
+    "report='budgets'; this tool is for configuring them.",
+  inputSchema: budgetInputSchema,
+  annotations: {
+    readOnlyHint: false,
+    /*
+     * No preview/confirm gate, unlike the transaction tools, because a cap
+     * moves no money and repeating the call cannot duplicate anything:
+     * setting one is an upsert keyed by category, period and period start,
+     * so a second call lands on the same cap instead of a second one, and
+     * removing deactivates rather than deletes — the period that already
+     * passed keeps the cap it was compared against.
+     */
+    idempotentHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
+  keywords: [
+    "budget", "cap", "limit", "spending limit", "set budget",
+    "presupuesto", "tope", "limite", "gastar", "cuanto",
+  ],
+  /* Both, because which one is required depends on the action. `run` decides. */
+  scopes: ["context:read", "budgets:write"],
+  examples: [
+    'Setting one: {"action": "set", "category": "mercado", "amount": 200}',
+    'Seeing them: {"action": "list"}',
+    "To see how the month is GOING against them, use planfly_report with report='budgets'.",
+  ],
+  run: async (args, ctx) => {
+    /*
+     * The route's own body goes back whole — its message, its previous amount,
+     * its detail.suggestion. Only the error flag is added on top of it.
+     */
+    const reply = (payload: Record<string, unknown>) => ctx.result(payload, payload.ok === false);
 
-        if (action === "list") {
-          return reply(await ctx.callRoute(PATH, GET));
-        }
+    try {
+      const action: Action = args.action ?? "set";
+      requireScopeFor(ctx, action);
 
-        if (action === "remove") {
-          /*
-           * removeBudgetSchema declares these two keys and nothing else. An
-           * amount or a range sent along would be a 400 naming a key that means
-           * nothing when removing, so they do not travel.
-           */
-          const body: Record<string, unknown> = { category: args.category };
-          if (args.period !== undefined) body.period = args.period;
-          return reply(await ctx.callRoute(PATH, withBody("DELETE", body, DELETE)));
-        }
-
-        /*
-         * A range outside period='custom' is the failure this codebase fears: the
-         * schema accepts both keys, so it would validate, and the service would
-         * derive the dates from the period and drop what was sent. Naming the
-         * field that makes them meaningful beats a 201 with the datum in the bin.
-         */
-        if (
-          args.period !== "custom" &&
-          (args.period_start !== undefined || args.period_end !== undefined)
-        ) {
-          return ctx.result(
-            {
-              ok: false,
-              error: "invalid_body",
-              message:
-                "period_start and period_end only mean something with period='custom'. " +
-                "A monthly, biweekly or yearly cap derives its range from the period itself: " +
-                "send period='custom' with both dates, or leave them out.",
-              detail: { fields: ["period_start", "period_end"], requires: "period=custom" },
-            },
-            true,
-          );
-        }
-
-        const body: Record<string, unknown> = { category: args.category, amount: args.amount };
-        if (args.period !== undefined) body.period = args.period;
-        if (args.period === "custom") {
-          body.period_start = args.period_start;
-          body.period_end = args.period_end;
-        }
-
-        return reply(await ctx.callRoute(PATH, withBody("POST", body, POST)));
-      } catch (err) {
-        return ctx.fail(err);
+      if (action === "list") {
+        return reply(await ctx.callRoute(PATH, GET));
       }
-    },
-  );
-}
+
+      if (action === "remove") {
+        /*
+         * removeBudgetSchema declares these two keys and nothing else. An
+         * amount or a range sent along would be a 400 naming a key that means
+         * nothing when removing, so they do not travel.
+         */
+        const body: Record<string, unknown> = { category: args.category };
+        if (args.period !== undefined) body.period = args.period;
+        return reply(await ctx.callRoute(PATH, withBody("DELETE", body, DELETE)));
+      }
+
+      /*
+       * A range outside period='custom' is the failure this codebase fears: the
+       * schema accepts both keys, so it would validate, and the service would
+       * derive the dates from the period and drop what was sent. Naming the
+       * field that makes them meaningful beats a 201 with the datum in the bin.
+       */
+      if (
+        args.period !== "custom" &&
+        (args.period_start !== undefined || args.period_end !== undefined)
+      ) {
+        return ctx.result(
+          {
+            ok: false,
+            error: "invalid_body",
+            message:
+              "period_start and period_end only mean something with period='custom'. " +
+              "A monthly, biweekly or yearly cap derives its range from the period itself: " +
+              "send period='custom' with both dates, or leave them out.",
+            detail: { fields: ["period_start", "period_end"], requires: "period=custom" },
+          },
+          true,
+        );
+      }
+
+      const body: Record<string, unknown> = { category: args.category, amount: args.amount };
+      if (args.period !== undefined) body.period = args.period;
+      if (args.period === "custom") {
+        body.period_start = args.period_start;
+        body.period_end = args.period_end;
+      }
+
+      return reply(await ctx.callRoute(PATH, withBody("POST", body, POST)));
+    } catch (err) {
+      return ctx.fail(err);
+    }
+  },
+});

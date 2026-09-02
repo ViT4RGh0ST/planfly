@@ -41,3 +41,29 @@ export const mcpAllowedOriginHostnames = [
 
 /** Host header allowlist; ports are intentionally ignored by the SDK helper. */
 export const mcpAllowedHosts = [mcpResourceUrl.hostname];
+
+export type McpMode = "native" | "gateway" | "both";
+
+const MODES: readonly McpMode[] = ["native", "gateway", "both"];
+
+/**
+ * How many tools this server lists.
+ *
+ * `gateway` — the default — lists the four a finance chat uses constantly plus
+ * the three discovery tools, and everything else is found through them. `native`
+ * lists all of them, which is the way back if a client copes badly with the
+ * indirection; `both` lists all of them AND the doors, for comparing the two
+ * while moving over.
+ *
+ * It changes what is LISTED and never what is reachable: `planfly_use_tool`
+ * routes over the whole catalogue in every mode, and every tool checks its own
+ * scope in every mode.
+ */
+export const mcpMode: McpMode = ((): McpMode => {
+  const configured = process.env.MCP_MODE?.trim().toLowerCase();
+  if (!configured) return "gateway";
+  if (!MODES.includes(configured as McpMode)) {
+    throw new Error(`MCP_MODE must be one of ${MODES.join(", ")}.`);
+  }
+  return configured as McpMode;
+})();

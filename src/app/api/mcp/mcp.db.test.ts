@@ -77,14 +77,59 @@ describe("the HTTP MCP route against the database", { skip: hasDb() ? false : "n
        * the expense.
        */
       [
-        "planfly_account",
-        "planfly_budget",
         "planfly_confirm_transaction",
         "planfly_context",
-        "planfly_help",
         "planfly_preview_transaction",
         "planfly_report",
+        "planfly_search_tool",
+        "planfly_tool_schema",
+        "planfly_use_tool",
       ],
+    );
+  });
+
+  it("keeps an unlisted tool reachable, and still behind its own scope", async () => {
+    /*
+     * The whole bargain of gateway mode in one test.
+     *
+     * `planfly_budget` is deliberately NOT in the list above — that is the point,
+     * it costs no tokens until somebody wants it. What must remain true is that
+     * it is still there, and that going in through the side door does not skip
+     * the lock: this token carries context:read but not budgets:write, and
+     * listing caps needs the first while setting one needs the second.
+     */
+    const { POST } = await import("./route");
+
+    const call = async (id: number, args: Record<string, unknown>) => {
+      const response = await POST(
+        mcpRequest(token, {
+          jsonrpc: "2.0",
+          id,
+          method: "tools/call",
+          params: { name: "planfly_use_tool", arguments: args },
+        }),
+      );
+      assert.equal(response.status, 200);
+      return JSON.parse((await mcpBody(response)).result.content[0].text);
+    };
+
+    // Discovery finds what the listing left out.
+    const found = await call(20, { name: "planfly_tool_schema" });
+    assert.equal(found.error, "unknown_tool", "the doors must not route to each other");
+
+    const listing = await call(21, { name: "planfly_budget", arguments: { action: "list" } });
+    assert.equal(listing.ok, true, "a routed read the token IS allowed did not go through");
+
+    const setting = await call(22, {
+      name: "planfly_budget",
+      arguments: { action: "set", category: "mercado", amount: 200 },
+    });
+    assert.equal(setting.error, "forbidden");
+    assert.equal(
+      setting.scope,
+      "budgets:write",
+      "routing through planfly_use_tool earned a write this credential does not have, " +
+        "or refused it without saying which scope was missing",
     );
   });
 

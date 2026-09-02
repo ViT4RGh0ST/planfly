@@ -14,10 +14,6 @@ import {
 
 const CONFIRMATION_TTL_MS = 15 * 60 * 1_000;
 
-type PendingTransaction = {
-  input: McpTransactionDraftInput;
-};
-
 /**
  * What a confirmable operation has to be able to do.
  *
@@ -231,55 +227,35 @@ export async function previewMcpOperation(
   }
 }
 
+/**
+ * Staging an entry, which is `previewMcpOperation` with the draft parsed first.
+ *
+ * It used to be a second copy of the whole thing — its own insert, its own
+ * delete-on-failure, its own TTL. Two copies of «write the row, simulate,
+ * remove it if the simulation threw» is the arrangement where one of them keeps
+ * a row that can still be confirmed after the simulation said no.
+ */
 export async function previewMcpTransaction(
   principal: Principal,
   rawInput: unknown,
 ): Promise<{ confirmationId: string; expiresAt: string; preview: RecordTransactionResult }> {
   const input = mcpTransactionDraftSchema.parse(rawInput);
-
-  /*
-   * Insert first to obtain the id which becomes the idempotency key and audit
-   * reference. A failed simulation is removed so it can never be confirmed.
-   */
-  const [pending] = await db
-    .insert(mcpPendingOperations)
-    .values({
-      householdId: principal.householdId,
-      userId: principal.userId,
-      tokenId: principal.tokenId,
-      credentialId: principal.credentialId,
-      operation: "record_transaction",
-      payload: { input } satisfies PendingTransaction,
-      preview: {},
-      expiresAt: new Date(Date.now() + CONFIRMATION_TTL_MS),
-    })
-    .returning({ id: mcpPendingOperations.id, expiresAt: mcpPendingOperations.expiresAt });
-
-  try {
-    const preview = await recordTransaction(toRecordInput(principal, pending.id, input, true));
-    await db
-      .update(mcpPendingOperations)
-      .set({ preview })
-      .where(eq(mcpPendingOperations.id, pending.id));
-    return { confirmationId: pending.id, expiresAt: pending.expiresAt.toISOString(), preview };
-  } catch (error) {
-    await db.delete(mcpPendingOperations).where(eq(mcpPendingOperations.id, pending.id));
-    throw error;
-  }
+  const staged = await previewMcpOperation(principal, "record_transaction", input);
+  return { ...staged, preview: staged.preview as unknown as RecordTransactionResult };
 }
 
-/** Confirms any staged operation. The transaction one is a caller of this. */
+/**
+ * Confirms any staged operation, whichever it is.
+ *
+ * Nothing in here is specific to recording an entry: the operation is looked up
+ * by the name the confirmation was staged under, and it supplies both its own
+ * `run` and its own `fingerprint`. `confirmMcpTransaction` is this function with
+ * the return value named.
+ */
 export async function confirmMcpOperation(
   principal: Principal,
   confirmationId: string,
 ): Promise<Record<string, unknown>> {
-  return confirmMcpTransaction(principal, confirmationId) as Promise<Record<string, unknown>>;
-}
-
-export async function confirmMcpTransaction(
-  principal: Principal,
-  confirmationId: string,
-): Promise<RecordTransactionResult> {
   const [pending] = await db
     .select()
     .from(mcpPendingOperations)
@@ -305,7 +281,7 @@ export async function confirmMcpTransaction(
     throw new McpConfirmationError("Confirmation operation is not supported.", "not_found");
   }
 
-  const payload = pending.payload as PendingTransaction;
+  const payload = pending.payload as { input: unknown };
   const preview = pending.preview as Record<string, unknown>;
   const refreshed = await operation.run(principal, payload.input, pending.id, true);
 
@@ -358,7 +334,7 @@ export async function confirmMcpTransaction(
   }
 
   try {
-    return (await operation.run(principal, payload.input, pending.id, false)) as RecordTransactionResult;
+    return await operation.run(principal, payload.input, pending.id, false);
   } catch (error) {
     // Do not strand an approval if the write failed before the service could
     // commit. The idempotency key still prevents duplicate ledger rows.
@@ -373,6 +349,14 @@ export async function confirmMcpTransaction(
       );
     throw error;
   }
+}
+
+/** The same thing, with the shape a transaction confirmation comes back in. */
+export async function confirmMcpTransaction(
+  principal: Principal,
+  confirmationId: string,
+): Promise<RecordTransactionResult> {
+  return (await confirmMcpOperation(principal, confirmationId)) as unknown as RecordTransactionResult;
 }
 
 /**

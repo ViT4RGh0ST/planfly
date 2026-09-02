@@ -1,7 +1,10 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 
 import { withInternalPrincipal } from "@/lib/api/handler";
 import { hasScope, type Principal } from "@/lib/api-token";
+import { McpConfirmationError } from "@/lib/mcp/transactions";
+import { InvalidTransactionError } from "@/lib/services/record-transaction";
 
 /**
  * What a tool is handed when it registers.
@@ -57,9 +60,67 @@ export function toolResult(value: Record<string, unknown>, isError = false): Too
   };
 }
 
+/**
+ * Every way a tool can fail, turned into an answer the caller can act on.
+ *
+ * It lived in the route handler while the classes it tests for lived here, and
+ * `instanceof` compares identities, not names: the route declared its OWN
+ * `RouteRefusal` and `McpScopeError`, so a refusal raised by `callRoute` — a
+ * different class with the same name — matched none of the branches and came
+ * back as «planfly could not complete the request». The route's own wording,
+ * and which scope was missing, were being discarded for exactly the tools that
+ * had been moved out into their own files.
+ *
+ * One copy, next to the classes it tests for, is the only arrangement where
+ * that cannot happen again.
+ */
+export function mcpErrorResult(error: unknown): ToolResult {
+  if (error instanceof RouteRefusal) {
+    // Everything the route said, including `existing`, `detail` and `suggestion`:
+    // those are what tell the model whether to ask the person or fix its own call.
+    return toolResult({ ok: false, ...error.payload }, true);
+  }
+  if (error instanceof McpConfirmationError) {
+    return toolResult(
+      {
+        ok: false,
+        error: error.code,
+        message: error.message,
+        ...(error.preview ? { preview: error.preview } : {}),
+      },
+      true,
+    );
+  }
+  if (error instanceof InvalidTransactionError) {
+    return toolResult({ ok: false, error: error.code, message: error.message, detail: error.detail }, true);
+  }
+  if (error instanceof z.ZodError) {
+    return toolResult(
+      { ok: false, error: "invalid_input", message: "The tool input did not match its schema." },
+      true,
+    );
+  }
+  if (error instanceof McpScopeError) {
+    return toolResult({ ok: false, error: "forbidden", message: error.message, scope: error.scope }, true);
+  }
+
+  console.error("[mcp] tool failed", error);
+  return toolResult(
+    { ok: false, error: "internal_error", message: "Planfly could not complete the request." },
+    true,
+  );
+}
+
+/**
+ * The context a tool runs with, built from the AUTHENTICATED credential.
+ *
+ * It is built once per request, before any argument is read, which is what
+ * makes `planfly_use_tool` safe: the tool name it takes chooses what runs and
+ * can never choose who it runs as.
+ */
 export function makeToolContext(
   principal: Principal,
-  fail: (error: unknown) => ToolResult,
+  fail: (error: unknown) => ToolResult = mcpErrorResult,
 ): McpToolContext {
   return {
     principal,

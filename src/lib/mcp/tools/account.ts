@@ -1,13 +1,10 @@
-import type { McpServer } from "@modelcontextprotocol/server";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { PATCH as accountsPatchRoute, POST as accountsPostRoute } from "@/app/api/v1/accounts/route";
 import { withInternalPrincipal } from "@/lib/api/handler";
 import type { Principal } from "@/lib/api-token";
-import type { McpToolContext } from "@/lib/mcp/tools/context";
-
-const toolOutputSchema = z.object({ ok: z.boolean() }).passthrough();
+import { defineTool } from "@/lib/mcp/registry";
 
 /**
  * The parameter wording is the bot plugin's, on purpose.
@@ -114,84 +111,89 @@ function withBody(
   );
 }
 
-export function registerAccount(server: McpServer, ctx: McpToolContext): void {
-  server.registerTool(
-    "planfly_account",
-    {
-      title: "Open or correct a Planfly account",
-      description:
-        "Opens, corrects, archives or unarchives an account: another bank, a card, a wallet, a loan or whoever fronts you money. " +
-        "Use it ONLY when the person explicitly asks to create, correct or retire an account. " +
-        "To correct or archive, the account is identified by NAME, not by id. " +
-        "Correcting the OPENING BALANCE is the most useful thing here: while the accounts lack one, net worth comes out negative. " +
-        "If they mention an account you do not recognise while recording an expense, do NOT create it: ask whether they want to open it. " +
-        "Call planfly_context first: opening 'Provincial' when 'Banco Provincial' exists splits the history in two, and it is also " +
-        "where the currencies this installation knows are listed. " +
-        "Creating answers 409 account_may_exist naming what it found, and the same call plus confirm:true then succeeds — " +
-        "surface that 409 as a question for the person, and never resend confirm on your own initiative.",
-      inputSchema: accountInputSchema,
-      outputSchema: toolOutputSchema,
-      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
-    },
-    async (input) => {
-      try {
-        const principal = ctx.requireScope("accounts:write");
+export const accountTool = defineTool({
+  name: "planfly_account",
+  title: "Open or correct a Planfly account",
+  description:
+    "Opens, corrects, archives or unarchives an account: another bank, a card, a wallet, a loan or whoever fronts you money. " +
+    "Use it ONLY when the person explicitly asks to create, correct or retire an account. " +
+    "To correct or archive, the account is identified by NAME, not by id. " +
+    "Correcting the OPENING BALANCE is the most useful thing here: while the accounts lack one, net worth comes out negative. " +
+    "If they mention an account you do not recognise while recording an expense, do NOT create it: ask whether they want to open it. " +
+    "Call planfly_context first: opening 'Provincial' when 'Banco Provincial' exists splits the history in two, and it is also " +
+    "where the currencies this installation knows are listed. " +
+    "Creating answers 409 account_may_exist naming what it found, and the same call plus confirm:true then succeeds — " +
+    "surface that 409 as a question for the person, and never resend confirm on your own initiative.",
+  inputSchema: accountInputSchema,
+  annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  keywords: [
+    "account", "bank", "card", "wallet", "open", "archive", "opening balance",
+    "cuenta", "banco", "tarjeta", "billetera", "abrir", "archivar", "saldo", "inicial", "cashea",
+  ],
+  scopes: ["accounts:write"],
+  examples: [
+    'Opening one: {"action": "create", "name": "Banco Mercantil", "type": "bank", "currency": "VES"}',
+    'Correcting what it starts with: {"action": "update", "account": "efectivo bs", "opening_balance": "5000"}',
+    "A 409 account_may_exist is a QUESTION for the person, not something to retry with confirm:true.",
+  ],
+  run: async (input, ctx) => {
+    try {
+      const principal = ctx.requireScope("accounts:write");
 
-        /*
-         * Two bodies, not one with an extra key.
-         *
-         * `action` and `account` are keys of the PATCH schema only, and `confirm`
-         * of the POST one only — `patchAccountSchema` is a partial of the create
-         * schema, so it would take `confirm` and quietly do nothing with it. The
-         * server rejects a key it does not know; a key it knows in the wrong
-         * branch is the one that passes and lands in the bin.
-         */
-        if (input.action !== "create") {
-          const patch = {
-            account: input.account,
-            action: input.action,
-            name: input.name,
-            type: input.type,
-            currency: input.currency,
-            opening_balance: input.opening_balance,
-            institution: input.institution,
-            aliases: input.aliases,
-          };
-          const patched = await ctx.callRoute("/api/v1/accounts", (req) =>
-            accountsPatchRoute(withBody(req, "PATCH", patch, principal)),
-          );
-          return ctx.result({ ok: true, ...patched });
-        }
-
-        /*
-         * `account` is not carried over into the create body, not even as a
-         * fallback for `name`. A model that fills `account` in on a create is
-         * guessing at the parameter; filling `name` in from it would be guessing
-         * at the account, and one of those opens an account under a name nobody
-         * wrote. The route's own answer — `name` is missing — is fixable.
-         */
-        const created = await ctx.callRoute("/api/v1/accounts", (req) =>
-          accountsPostRoute(
-            withBody(
-              req,
-              "POST",
-              {
-                name: input.name,
-                type: input.type,
-                currency: input.currency,
-                opening_balance: input.opening_balance,
-                institution: input.institution,
-                aliases: input.aliases,
-                confirm: input.confirm,
-              },
-              principal,
-            ),
-          ),
+      /*
+       * Two bodies, not one with an extra key.
+       *
+       * `action` and `account` are keys of the PATCH schema only, and `confirm`
+       * of the POST one only — `patchAccountSchema` is a partial of the create
+       * schema, so it would take `confirm` and quietly do nothing with it. The
+       * server rejects a key it does not know; a key it knows in the wrong
+       * branch is the one that passes and lands in the bin.
+       */
+      if (input.action !== "create") {
+        const patch = {
+          account: input.account,
+          action: input.action,
+          name: input.name,
+          type: input.type,
+          currency: input.currency,
+          opening_balance: input.opening_balance,
+          institution: input.institution,
+          aliases: input.aliases,
+        };
+        const patched = await ctx.callRoute("/api/v1/accounts", (req) =>
+          accountsPatchRoute(withBody(req, "PATCH", patch, principal)),
         );
-        return ctx.result({ ok: true, ...created });
-      } catch (error) {
-        return ctx.fail(error);
+        return ctx.result({ ok: true, ...patched });
       }
-    },
-  );
-}
+
+      /*
+       * `account` is not carried over into the create body, not even as a
+       * fallback for `name`. A model that fills `account` in on a create is
+       * guessing at the parameter; filling `name` in from it would be guessing
+       * at the account, and one of those opens an account under a name nobody
+       * wrote. The route's own answer — `name` is missing — is fixable.
+       */
+      const created = await ctx.callRoute("/api/v1/accounts", (req) =>
+        accountsPostRoute(
+          withBody(
+            req,
+            "POST",
+            {
+              name: input.name,
+              type: input.type,
+              currency: input.currency,
+              opening_balance: input.opening_balance,
+              institution: input.institution,
+              aliases: input.aliases,
+              confirm: input.confirm,
+            },
+            principal,
+          ),
+        ),
+      );
+      return ctx.result({ ok: true, ...created });
+    } catch (error) {
+      return ctx.fail(error);
+    }
+  },
+});
