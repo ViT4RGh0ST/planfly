@@ -148,6 +148,20 @@
       "when": 1788317913953,
       "tag": "0020_cop",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788323490809,
+      "tag": "0021_official_rate",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788323707429,
+      "tag": "0022_currency_names",
+      "breakpoints": true
     }
   ]
 }

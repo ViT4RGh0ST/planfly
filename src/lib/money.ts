@@ -10,9 +10,22 @@
  * and are handled as strings. Never put one through `parseFloat` to store it.
  */
 
-/** Minor units per currency. VES and USD use 2; USDT is deliberately treated as 2
- *  (the balance is carried in dollars rounded to the cent, not in the chain's 6
- *  decimals) so that it adds up with the rest without odd conversions. */
+/**
+ * Minor units per currency. VES and USD use 2; USDT is deliberately treated as 2
+ * (the balance is carried in dollars rounded to the cent, not in the chain's 6
+ * decimals) so that it adds up with the rest without odd conversions.
+ *
+ * This map and the `currencies` table say the same thing twice, and they are
+ * kept honest by `currencies-guard.db.test.ts` rather than by care. They cannot
+ * be collapsed into one: this file is pure and synchronous — a client component
+ * formats with it — and making it ask the database would drag a connection into
+ * the browser.
+ *
+ * The fallback of 2 is what makes a disagreement silent: a currency with none of
+ * its own is formatted and parsed with two decimals whatever the table says, so
+ * a currency written with zero — the Chilean peso, the yen — would be out by a
+ * hundred in both directions with nothing failing.
+ */
 export const MINOR_UNITS: Record<string, number> = {
   VES: 2,
   USD: 2,
@@ -211,7 +224,7 @@ export function minorToDecimalString(minor: number, currency: string): string {
 // USDT carries its own name and not `$`: in a table where dollar and Tether
 // accounts live side by side, the same symbol made two balances that are not
 // valued alike indistinguishable — USDT has no rate against the base.
-const SYMBOLS: Record<string, string> = { VES: "Bs.", USD: "$", USDT: "USDT", EUR: "€" };
+export const SYMBOLS: Record<string, string> = { VES: "Bs.", USD: "$", USDT: "USDT", EUR: "€" };
 
 /** Display format. The one point in the system where an amount becomes text. */
 export function formatAmount(

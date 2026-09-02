@@ -341,9 +341,11 @@ export async function lastSnapshotAt(): Promise<Date | null> {
  * Only the ones whose rate ages: a stablecoin against its own currency has its
  * row already and no market to ask.
  */
-async function pairsInUse(): Promise<Array<{ base: string; quote: string }>> {
-  const { rows } = await db.execute<{ base: string; quote: string }>(sql`
-    SELECT DISTINCT h.base_currency AS base, a.currency AS quote
+async function pairsInUse(): Promise<
+  Array<{ base: string; quote: string; hasOfficial: boolean }>
+> {
+  const { rows } = await db.execute<{ base: string; quote: string; has_official: boolean }>(sql`
+    SELECT DISTINCT h.base_currency AS base, a.currency AS quote, c.has_official
       FROM accounts a
       JOIN households h ON h.id = a.household_id
       JOIN currencies c ON c.code = a.currency
@@ -352,7 +354,7 @@ async function pairsInUse(): Promise<Array<{ base: string; quote: string }>> {
        AND c.rate_ages
      ORDER BY 1, 2
   `);
-  return rows;
+  return rows.map((r) => ({ base: r.base, quote: r.quote, hasOfficial: r.has_official }));
 }
 
 export async function dailySnapshot(date: string): Promise<DailyRates> {
@@ -361,11 +363,16 @@ export async function dailySnapshot(date: string): Promise<DailyRates> {
   /*
    * And the market rate for every other currency in use.
    *
-   * Only the parallel slot. The official one is somebody's central bank,
-   * configured for one country: asked about pesos it either answers nothing or —
-   * far worse, if a provider ignores the pair it was handed — answers with
-   * bolívares under a peso label. A rate that is wrong about which currency it
-   * describes is not a rate, it is a number that will be added to something.
+   * The official slot is asked ONLY where the currency says it has one. It is
+   * somebody's central bank, configured for one country: asked about pesos it
+   * either answers nothing or — far worse, if a provider ignores the pair it was
+   * handed — answers with bolívares under a peso label. A rate that is wrong
+   * about which currency it describes is not a rate, it is a number that will be
+   * added to something.
+   *
+   * That used to be written here as «only the parallel slot for anything that is
+   * not the bolívar», which was right by accident. It is `currencies.has_official`
+   * now, so a second country with an official source is a row and not an edit.
    *
    * One at a time and never fatal: they go to the same public endpoint, and a
    * market that does not answer today is a hole the product already knows how to
@@ -373,13 +380,15 @@ export async function dailySnapshot(date: string): Promise<DailyRates> {
    */
   for (const pair of await pairsInUse()) {
     if (pair.base === "USD" && pair.quote === "VES") continue;
-    try {
-      await refreshSlot("p2p", date, pair);
-    } catch (err) {
-      console.warn(
-        `[rates] ${pair.base}/${pair.quote} could not be captured:`,
-        (err as Error).message,
-      );
+    for (const slot of pair.hasOfficial ? (["bcv", "p2p"] as const) : (["p2p"] as const)) {
+      try {
+        await refreshSlot(slot, date, { base: pair.base, quote: pair.quote });
+      } catch (err) {
+        console.warn(
+          `[rates] ${pair.base}/${pair.quote} (${slot}) could not be captured:`,
+          (err as Error).message,
+        );
+      }
     }
   }
 

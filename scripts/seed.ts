@@ -10,6 +10,8 @@
  */
 import { and, eq } from "drizzle-orm";
 
+import { CURRENCIES } from "../src/lib/currencies";
+
 import { db, pool } from "../src/db";
 import {
   accounts,
@@ -49,13 +51,6 @@ const NAME = process.env.SEED_NAME ?? "Yo";
  * row is written once below; the bolívar moves every day, which is the reason
  * this whole product exists.
  */
-const CURRENCIES = [
-  { code: "USD", name: "Dólar estadounidense", symbol: "$", minorUnit: 2, isCrypto: false },
-  { code: "VES", name: "Bolívar", symbol: "Bs.", minorUnit: 2, isCrypto: false },
-  { code: "USDT", name: "Tether", symbol: "₮", minorUnit: 2, isCrypto: true, rateAges: false },
-  { code: "EUR", name: "Euro", symbol: "€", minorUnit: 2, isCrypto: false },
-];
-
 const ACCOUNTS = [
   { name: "Efectivo Bs", type: "cash", currency: "VES", aliases: ["efectivo", "bolos", "cash bs", "bolivares", "bs"], sortOrder: 1 },
   { name: "Efectivo USD", type: "cash", currency: "USD", aliases: ["efectivo dolares", "cash", "verdes", "dolares"], sortOrder: 2 },

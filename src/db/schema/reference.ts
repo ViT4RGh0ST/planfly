@@ -40,6 +40,20 @@ export const currencies = pgTable("currencies", {
    * its row, written once, and any day can be overridden by hand.
    */
   rateAges: boolean("rate_ages").notNull().default(true),
+  /**
+   * Whether an official rate exists for it at all.
+   *
+   * The product's shape is two answers at once — what the state says and what
+   * the street says — and that is the shape of Venezuela. Colombia has one
+   * market for the peso and no official figure to ask for. Without this the
+   * screen shows an empty official column beside the real one, which reads like
+   * a source that failed rather than a question that does not exist there.
+   *
+   * It defaults to true because the bolívar is the case the product was written
+   * for, and because assuming a currency has both is the assumption that shows
+   * a hole rather than the one that hides a figure.
+   */
+  hasOfficial: boolean("has_official").notNull().default(true),
 });
 
 /**
