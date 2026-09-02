@@ -101,6 +101,14 @@ export async function previewMcpTransaction(
 export async function confirmMcpOperation(
   principal: Principal,
   confirmationId: string,
+  /**
+   * Which operation(s) the CALLER believes it is confirming — a list, because a
+   * tool that stages more than one kind (paying an instalment, recording a
+   * financed purchase) confirms an id it staged without knowing which of its own
+   * two it was. The property being enforced is that the confirmation belongs to
+   * this tool, not that it is one exact operation.
+   */
+  expectedOperation: string | readonly string[],
 ): Promise<Record<string, unknown>> {
   const [pending] = await db
     .select()
@@ -122,6 +130,31 @@ export async function confirmMcpOperation(
   if (pending.expiresAt <= new Date()) {
     throw new McpConfirmationError("Confirmation expired. Create a fresh preview.", "expired");
   }
+  /*
+   * That this confirmation is for the thing being confirmed.
+   *
+   * The row is found by id and credential alone, and a credential holds several
+   * at once: a preview the person turned down is still there, unclaimed, for
+   * fifteen minutes. Without this, a tool handed the wrong id runs whatever that
+   * id was staged for — its own fingerprint passes, because it is compared
+   * against its own preview — and then reports it as its own success. The
+   * declined expense gets written and the person is told the products were
+   * merged.
+   *
+   * Each of the tools that hand-rolled this gate carried the check; centralising
+   * the gate is what dropped it. It is a required argument and not an optional
+   * one so that the next caller cannot omit it by accident.
+   *
+   * `not_found`, deliberately, and the same sentence: which operation an id was
+   * staged for is not something a caller needs told, and answering differently
+   * would make the refusal a way to enumerate what else is pending.
+   */
+  const expected =
+    typeof expectedOperation === "string" ? [expectedOperation] : expectedOperation;
+  if (!expected.includes(pending.operation)) {
+    throw new McpConfirmationError("Confirmation was not found.", "not_found");
+  }
+
   const operation = MCP_OPERATIONS[pending.operation];
   if (!operation) {
     throw new McpConfirmationError("Confirmation operation is not supported.", "not_found");
@@ -202,7 +235,11 @@ export async function confirmMcpTransaction(
   principal: Principal,
   confirmationId: string,
 ): Promise<RecordTransactionResult> {
-  return (await confirmMcpOperation(principal, confirmationId)) as unknown as RecordTransactionResult;
+  return (await confirmMcpOperation(
+    principal,
+    confirmationId,
+    "record_transaction",
+  )) as unknown as RecordTransactionResult;
 }
 
 /**

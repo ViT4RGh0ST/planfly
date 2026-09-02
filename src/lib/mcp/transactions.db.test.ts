@@ -6,6 +6,7 @@ import { db, pool } from "@/db";
 import { mcpPendingOperations, transactions } from "@/db/schema";
 import { authenticateToken } from "@/lib/api-token";
 import {
+  confirmMcpOperation,
   confirmMcpTransaction,
   previewMcpTransaction,
   purgeExpiredConfirmations,
@@ -142,6 +143,67 @@ describe("MCP transaction confirmation against the database", { skip: hasDb() ? 
       0,
       "no refused confirmation may leave a ledger row behind",
     );
+  });
+
+  it("will not let one tool confirm another tool's pending operation", async () => {
+    /*
+     * A credential holds several confirmations at once — a preview the person
+     * turned down sits there unclaimed for fifteen minutes — and the row is
+     * found by id and credential alone.
+     *
+     * So a tool handed the wrong id used to run whatever that id was staged for.
+     * Its fingerprint passed, because the fingerprint is compared against its
+     * own preview; the write went through; and the tool reported it as ITS
+     * success. The person declined an expense, said yes to something else, and
+     * got the expense written and a sentence about the something else.
+     *
+     * Every tool that hand-rolled this gate checked the name. Centralising the
+     * gate is what dropped it.
+     */
+    const principal = await authenticateToken(`Bearer ${token}`);
+    assert.ok(principal);
+
+    const declined = await previewMcpTransaction(principal, {
+      kind: "expense",
+      amount: "1.560,00",
+      currency: "VES",
+      account: "efectivo",
+      category: "mercado",
+      occurred_on: DATE,
+    });
+
+    const before = await db.select().from(transactions);
+
+    await assert.rejects(
+      // What planfly_product, planfly_recurring or planfly_financing would send
+      // on being handed the id of a transaction preview.
+      () => confirmMcpOperation(principal, declined.confirmationId, "merge_products"),
+      (error: Error & { code?: string }) => {
+        assert.equal(error.code, "not_found");
+        // The same sentence as a genuinely missing id: which operation an id was
+        // staged for is not something to answer, or the refusal becomes a way to
+        // enumerate what else is pending.
+        assert.match(error.message, /not found/i);
+        return true;
+      },
+    );
+
+    assert.equal(
+      (await db.select().from(transactions)).length,
+      before.length,
+      "the declined expense was written by a tool asking to confirm something else",
+    );
+
+    // And the confirmation is untouched: refused, not consumed.
+    const [row] = await db
+      .select()
+      .from(mcpPendingOperations)
+      .where(eq(mcpPendingOperations.id, declined.confirmationId));
+    assert.equal(row.confirmedAt, null);
+
+    // Named correctly, it still works.
+    const posted = await confirmMcpTransaction(principal, declined.confirmationId);
+    assert.equal(posted.dryRun, false);
   });
 
   it("purges the confirmations that expired and leaves the live one alone", async () => {
