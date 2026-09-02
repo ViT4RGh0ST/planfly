@@ -124,6 +124,12 @@ export async function createTransaction(
       description: String(form.get("description") ?? "") || undefined,
       occurredOn: String(form.get("occurred_on") ?? "") || undefined,
       notes: String(form.get("notes") ?? "") || undefined,
+      // The dialog's sentinel for «no place». Sending it through as a name would
+      // have the resolver look for a shop called «—» and refuse the whole entry.
+      payee:
+        String(form.get("payee") ?? "") === "—"
+          ? undefined
+          : String(form.get("payee") ?? "") || undefined,
       rate: String(form.get("rate") ?? "") || undefined,
       rateSource: (String(form.get("rate_source") ?? "") || undefined) as
         | "bcv"

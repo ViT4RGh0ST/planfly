@@ -150,6 +150,7 @@ export default async function TransactionsPage({
             rates={rates}
             baseCurrency={ctx.baseCurrency}
             ratedCurrencies={ratedCurrencies}
+            places={placeList.map((p) => p.name)}
           />
         </div>
         {/* The rates and the choice of which one rules are a single piece:
