@@ -241,6 +241,33 @@ Two things that make the integration far easier than it looks:
   formatted, to be repeated verbatim. Your bot has to do no arithmetic and no
   currency formatting — which is exactly where it gets things wrong.
 
+### With MCP
+
+planfly speaks **MCP** at `/api/mcp`, which is the shortest route if your
+assistant already talks it — Claude, or anything built on the same protocol. It
+is the same API underneath, so nothing about it is a second way for money to be
+written.
+
+```bash
+npm run mcp:token        # a plfy_ token carrying mcp:access
+```
+
+Or connect it over **OAuth 2.1**, which is what a client that manages its own
+authorisation will do; the endpoint publishes the discovery documents and asks
+for consent in the browser.
+
+**It does not list one tool per verb.** Four are always there — read the context,
+read a figure, propose an entry, commit the approved one — and the rest are found
+through `planfly_search_tool`, read with `planfly_tool_schema` and run with
+`planfly_use_tool`. Accounts, spending caps, instalments, recurring entries and
+products are all reachable that way and cost no tokens until somebody asks for
+one. `MCP_MODE=native` lists all of them instead, if your client would rather.
+
+Routing changes nothing about permission: a tool run through `planfly_use_tool`
+checks the same scope, against the same credential, as one called by name, and
+anything that moves money still previews first and still waits for an explicit
+yes.
+
 ### With openclaw
 
 There is a ready-made plugin in [`openclaw/planfly-plugin/`](openclaw/), with ten
