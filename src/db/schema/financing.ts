@@ -149,7 +149,22 @@ export const installments = pgTable(
     /** 1, 2, 3… The order they fall due in, and how they get named in speech. */
     number: integer("number").notNull(),
     dueOn: date("due_on").notNull(),
+    /** What leaves the account on the day: principal plus interest. */
     amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
+    /**
+     * How much of `amount_minor` is interest, and therefore is NOT a movement.
+     *
+     * The distinction is the whole reason this column exists. Paying an
+     * instalment with no interest moves money from your account to the debt and
+     * nothing is spent — the expense was counted on the day of the purchase.
+     * Interest is not that: it is money that leaves and reduces no debt, so it
+     * is a cost, and recording the whole payment as a transfer would pay down
+     * the debt by more than was paid and hide the cost from every report.
+     *
+     * It defaults to zero, which is what every instalment written before this
+     * column existed genuinely was: all principal.
+     */
+    interestMinor: bigint("interest_minor", { mode: "number" }).notNull().default(0),
     /**
      * The transfer that paid it. Null while it is pending.
      *
@@ -158,6 +173,19 @@ export const installments = pgTable(
      * installment would leave the plan with an unexplainable hole.
      */
     paidTransactionId: uuid("paid_transaction_id").references(() => transactions.id, {
+      onDelete: "set null",
+    }),
+    /**
+     * The expense that paid the interest, when there was any.
+     *
+     * A payment with interest is two entries — the principal moves, the interest
+     * is spent — and undoing has to reach both. Stored for the reason
+     * `down_payment_transaction_id` is stored: finding it by description would
+     * be guessing, and undoing halfway leaves the money out of the account with
+     * the debt standing again, which is a false figure arrived at by pressing a
+     * button that says «Undo».
+     */
+    interestTransactionId: uuid("interest_transaction_id").references(() => transactions.id, {
       onDelete: "set null",
     }),
     paidAt: timestamp("paid_at", { withTimezone: true }),
@@ -181,6 +209,12 @@ export const installments = pgTable(
       .where(sql`paid_at IS NULL`),
     uniqueIndex("installments_plan_number_unique").on(t.planId, t.number),
     check("installments_amount_positive", sql`${t.amountMinor} > 0`),
+    // Interest is a PART of the payment, never more than it. Above the payment
+    // it would make the principal negative and the debt grow on being paid.
+    check(
+      "installments_interest_within_amount",
+      sql`${t.interestMinor} >= 0 AND ${t.interestMinor} <= ${t.amountMinor}`,
+    ),
     check("installments_number_positive", sql`${t.number} > 0`),
     // Paid means having both or neither: an installment with a payment date but
     // no entry would be money that left without being recorded anywhere.

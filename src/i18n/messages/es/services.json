@@ -125,7 +125,9 @@
     "financedNote": "Financiada en {n, plural, one {# cuota} other {# cuotas}}",
     "downPaymentDescription": "Inicial · {description}",
     "installmentDescription": "Cuota {number} · {plan}",
+    "interestDescription": "Interés de la cuota {number} de {plan}",
     "installmentPaid": "Cuota {number} de {plan} pagada: {amount}.",
+    "installmentPaidWithInterest": "Pagada la cuota {number} de {plan}: {amount}, de los cuales {interest} son intereses.",
     "profileSaved": "{account} guardada como financiadora."
   },
   "recurring": {

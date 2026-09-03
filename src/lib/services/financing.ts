@@ -70,6 +70,19 @@ export type FinancedPurchaseInput = {
   description?: string;
   occurredOn?: string;
   installmentCount: number;
+  /**
+   * The interest AGREED for the whole schedule, in major units. Never derived.
+   *
+   * A financier's paper says what it says — its own rounding, its own day count,
+   * its own fees — and a rate applied here would give a figure close to it and
+   * different from it. The difference would surface, if ever, on the last
+   * instalment. So planfly stores what was agreed and computes nothing.
+   *
+   * It is spread across the instalments the same way the principal is, and each
+   * one records its share, because that is the part that must not be treated as
+   * a movement when it is paid.
+   */
+  interest?: string | number;
   frequency?: Frequency;
   /** Due date of the first installment. Defaults to one period later. */
   firstDueOn?: string;
@@ -245,7 +258,10 @@ export async function recordFinancedPurchase(input: FinancedPurchaseInput) {
   const frequency = input.frequency ?? "biweekly";
   const step = STEP_DAYS[frequency];
   const firstDue = input.firstDueOn ?? addDays(occurredOn, step);
+  const interestMinor =
+    input.interest == null ? 0 : parseAmountToMinor(String(input.interest), currency);
   const amounts = splitInstallments(remaining, input.installmentCount);
+  const interests = splitInstallments(interestMinor, input.installmentCount);
 
   // ── 1. The full expense, against the financier ───────────────────────────
   const purchase = await recordTransaction({
@@ -305,19 +321,22 @@ export async function recordFinancedPurchase(input: FinancedPurchaseInput) {
       .returning({ id: financingPlans.id });
 
     await tx.insert(installments).values(
-      amounts.map((amountMinor, i) => ({
+      amounts.map((principalMinor, i) => ({
         householdId: input.householdId,
         planId: plan.id,
         number: i + 1,
         dueOn: addDays(firstDue, step * i),
-        amountMinor,
+        // What leaves the account, interest included: every screen that already
+        // reads this column keeps reading the figure that is actually paid.
+        amountMinor: principalMinor + interests[i],
+        interestMinor: interests[i],
       })),
     );
 
     return plan.id;
   });
 
-  const installment = formatAmount(amounts[0], currency);
+  const installment = formatAmount(amounts[0] + interests[0], currency);
   return {
     ok: true,
     planId,
@@ -349,12 +368,22 @@ export async function payInstallment(params: {
   /** Which account the payment leaves from. */
   fromAccount: string;
   paidOn?: string;
+  /**
+   * Where the interest is counted, when the instalment carries any.
+   *
+   * Left empty it goes wherever an expense with no category goes, which is the
+   * review tray — deliberately. Interest is a real cost and putting it silently
+   * under the purchase's own category would make a month of «Mercado» include
+   * money that bought no food.
+   */
+  interestCategory?: string;
 }) {
   const [row] = await db
     .select({
       id: installments.id,
       number: installments.number,
       amountMinor: installments.amountMinor,
+      interestMinor: installments.interestMinor,
       paidAt: installments.paidAt,
       planDescription: financingPlans.description,
       currency: financingPlans.currency,
@@ -383,30 +412,86 @@ export async function payInstallment(params: {
     );
   }
 
+  /*
+   * The principal MOVES and the interest is SPENT, so a payment carrying
+   * interest is two entries and not one.
+   *
+   * Transferring the whole payment to the financier would pay the debt down by
+   * more than was actually paid off — on Bs 1.100 of which Bs 100 is interest,
+   * the debt would drop by 1.100 — and the cost would appear in no report at
+   * all. Nothing fails: the balance is simply wrong, by the interest, on every
+   * instalment, for the life of the loan.
+   *
+   * The description says which is which, because the two land side by side in
+   * the same day's list and «cuota 3» twice is unreadable.
+   */
+  const label = t("services.financing.installmentDescription", {
+    number: row.number,
+    plan: row.planDescription,
+  });
+  const principalMinor = row.amountMinor - row.interestMinor;
+
   const result = await recordTransaction({
     householdId: params.householdId,
     kind: "transfer",
-    amount: minorToDecimalString(row.amountMinor, row.currency),
+    amount: minorToDecimalString(principalMinor, row.currency),
     currency: row.currency,
     account: params.fromAccount,
     toAccount: row.financierName,
-    description: t("services.financing.installmentDescription", { number: row.number, plan: row.planDescription }),
+    description: label,
     occurredOn: params.paidOn,
     source: "form",
   });
 
+  /*
+   * The interest goes second, and only after the principal committed.
+   *
+   * The two are not one database transaction because `recordTransaction` owns
+   * its own, and reaching inside it to share one would fork the single write
+   * path this codebase keeps. So the order is chosen instead: if the interest
+   * fails, what is left is a paid-down debt and an uncounted cost — a figure
+   * that is too favourable and visible in the plan. The other order would leave
+   * an expense for a debt nobody paid.
+   */
+  let interestTransactionId: string | null = null;
+  if (row.interestMinor > 0) {
+    const interest = await recordTransaction({
+      householdId: params.householdId,
+      kind: "expense",
+      amount: minorToDecimalString(row.interestMinor, row.currency),
+      currency: row.currency,
+      account: params.fromAccount,
+      category: params.interestCategory,
+      description: t("services.financing.interestDescription", {
+        number: row.number,
+        plan: row.planDescription,
+      }),
+      occurredOn: params.paidOn,
+      source: "form",
+    });
+    interestTransactionId = interest.transactionId;
+  }
+
   await db
     .update(installments)
-    .set({ paidTransactionId: result.transactionId, paidAt: new Date() })
+    .set({ paidTransactionId: result.transactionId, interestTransactionId, paidAt: new Date() })
     .where(eq(installments.id, row.id));
 
   return {
     ok: true,
-    summary: t("services.financing.installmentPaid", {
-      number: row.number,
-      plan: row.planDescription,
-      amount: formatAmount(row.amountMinor, row.currency),
-    }),
+    summary:
+      row.interestMinor > 0
+        ? t("services.financing.installmentPaidWithInterest", {
+            number: row.number,
+            plan: row.planDescription,
+            amount: formatAmount(row.amountMinor, row.currency),
+            interest: formatAmount(row.interestMinor, row.currency),
+          })
+        : t("services.financing.installmentPaid", {
+            number: row.number,
+            plan: row.planDescription,
+            amount: formatAmount(row.amountMinor, row.currency),
+          }),
   };
 }
 
@@ -435,6 +520,7 @@ export async function unpayInstallment(householdId: string, installmentId: strin
       number: installments.number,
       amountMinor: installments.amountMinor,
       paidTransactionId: installments.paidTransactionId,
+      interestTransactionId: installments.interestTransactionId,
       currency: financingPlans.currency,
       planDescription: financingPlans.description,
     })
@@ -454,24 +540,39 @@ export async function unpayInstallment(householdId: string, installmentId: strin
   let voided = false;
 
   await db.transaction(async (tx) => {
-    if (row.paidTransactionId) {
+    /*
+     * BOTH entries, because a payment with interest is two.
+     *
+     * Voiding only the transfer would undo the movement and leave the interest
+     * standing as an expense of a payment that no longer happened — a cost in
+     * the month's total with nothing behind it. They go in one database
+     * transaction with the installment for the reason the whole function
+     * exists: any half-done state here is money out of the account with the
+     * debt still owed.
+     */
+    const voidOne = async (id: string | null) => {
+      if (!id) return false;
       const done = await tx
         .update(transactions)
         .set({ voidedAt: new Date(), voidReason: reason, needsReview: false })
         .where(
           and(
-            eq(transactions.id, row.paidTransactionId),
+            eq(transactions.id, id),
             eq(transactions.householdId, householdId),
             isNull(transactions.voidedAt),
           ),
         )
         .returning({ id: transactions.id });
-      voided = done.length > 0;
-    }
+      return done.length > 0;
+    };
+
+    const principalVoided = await voidOne(row.paidTransactionId);
+    const interestVoided = await voidOne(row.interestTransactionId);
+    voided = principalVoided || interestVoided;
 
     await tx
       .update(installments)
-      .set({ paidTransactionId: null, paidAt: null })
+      .set({ paidTransactionId: null, interestTransactionId: null, paidAt: null })
       .where(eq(installments.id, row.id));
   });
 

@@ -105,6 +105,63 @@ describe("financed purchases against the database", { skip: hasDb() ? false : "n
     assert.ok(p2.pendingMinor < plan.pendingMinor, "y baja lo que queda por pagar");
   });
 
+  it("interest leaves the account but pays down no debt", async () => {
+    /*
+     * The line the whole feature rests on. Bs 1.200 financed with Bs 300 of
+     * agreed interest is Bs 1.500 leaving the account across the schedule, of
+     * which only Bs 1.200 ever reaches the debt.
+     *
+     * Recording the payment whole — as a single transfer, which is what an
+     * instalment without interest is — would pay the debt down by the interest
+     * as well. Nothing fails: the debt simply reads Bs 300 lower than it is, the
+     * cost appears in no month, and both are found when the financier asks for a
+     * payment planfly says was already made.
+     */
+    const created = await recordFinancedPurchase({
+      householdId: e.home.id,
+      financier: "tdc",
+      total: "1.200,00",
+      interest: "300,00",
+      installmentCount: 3,
+      occurredOn: DATE,
+      description: "Con intereses",
+      source: "form",
+    });
+    assert.ok(created.ok);
+
+    const plan = (await financingPlansView(e.home.id)).find((p) => p.description === "Con intereses")!;
+    const debtBefore = await accountBalance(e.card.id);
+    const cashBefore = await accountBalance(e.cash.id);
+    const first = plan.installments[0];
+
+    // 400 a fortnight: 400 of principal and 100 of interest.
+    assert.equal(first.amountMinor, 50000, "la cuota es principal más interés");
+
+    await payInstallment({
+      householdId: e.home.id,
+      installmentId: first.id,
+      fromAccount: "efectivo",
+      paidOn: DATE,
+    });
+
+    assert.equal(
+      await accountBalance(e.cash.id),
+      cashBefore - 50000,
+      "de la cuenta sale la cuota entera",
+    );
+    assert.equal(
+      Math.abs(await accountBalance(e.card.id)),
+      Math.abs(debtBefore) - 40000,
+      "pero la deuda solo baja el principal: el interés no es un movimiento",
+    );
+
+    // And undoing has to reach BOTH entries, or the interest stays as a cost of
+    // a payment that no longer happened.
+    await unpayInstallment(e.home.id, first.id);
+    assert.equal(await accountBalance(e.cash.id), cashBefore, "deshacer devuelve el pago entero");
+    assert.equal(await accountBalance(e.card.id), debtBefore, "y devuelve la deuda");
+  });
+
   it("a financier that doesn't exist isn't invented", async () => {
     await assert.rejects(
       () => recordFinancedPurchase({

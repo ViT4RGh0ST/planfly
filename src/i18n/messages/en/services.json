@@ -125,7 +125,9 @@
     "financedNote": "Financed over {n, plural, one {# installment} other {# installments}}",
     "downPaymentDescription": "Deposit · {description}",
     "installmentDescription": "Installment {number} · {plan}",
+    "interestDescription": "Interest on installment {number} of {plan}",
     "installmentPaid": "Installment {number} of {plan} paid: {amount}.",
+    "installmentPaidWithInterest": "Installment {number} of {plan} paid: {amount}, of which {interest} is interest.",
     "profileSaved": "{account} saved as a financier."
   },
   "recurring": {
