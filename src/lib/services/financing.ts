@@ -362,6 +362,166 @@ export async function recordFinancedPurchase(input: FinancedPurchaseInput) {
  * The entry is a TRANSFER from your account to the financier, never an expense:
  * the expense was already counted in full on the day of the purchase.
  */
+export type LoanMadeInput = {
+  householdId: string;
+  /** The asset account standing for what this person owes you. */
+  borrower: string;
+  /** Which of your accounts the money actually leaves from. */
+  fromAccount: string;
+  /** What you handed over, in major units. */
+  total: string | number;
+  /** The interest AGREED for the whole schedule. Never derived. */
+  interest?: string | number;
+  description?: string;
+  occurredOn?: string;
+  installmentCount: number;
+  frequency?: Frequency;
+  firstDueOn?: string;
+  source?: "telegram" | "form" | "api";
+  createdByUserId?: string;
+};
+
+/**
+ * Money you lend, with a schedule for getting it back.
+ *
+ * A sibling of `recordFinancedPurchase` and deliberately not a flag on it. The
+ * two share a schedule and nothing else: borrowing starts with an EXPENSE
+ * against a liability — you got the goods and now owe for them — while lending
+ * starts with a TRANSFER out of your account into a receivable. You spent
+ * nothing by lending; what you have changed shape, from cash into somebody's
+ * promise, and net worth does not move on the day.
+ *
+ * Folded into one function behind a nature check, every parameter would mean two
+ * different things according to a test made a hundred lines away — `category`
+ * says where a purchase is counted and means nothing here; `downPayment` is what
+ * you paid up front and would have to become what they paid you. That is this
+ * codebase's own rule about a valid field in the wrong context, and it is worse
+ * than an invented one because it passes and lands in the bin.
+ *
+ * What IS shared is the part that must never diverge: the schedule, the interest
+ * split, and `payInstallment`, which reads the direction off the account's
+ * nature rather than being told.
+ */
+export async function recordLoanMade(input: LoanMadeInput) {
+  const home = await contextOf(input.householdId);
+  const t = getTranslator(home.locale);
+
+  const borrower = await resolveAccount(input.householdId, input.borrower);
+  if (!borrower) {
+    throw new InvalidTransactionError(
+      t("services.financing.financierNotFound", { input: input.borrower }),
+      "account_not_found",
+    );
+  }
+
+  const [borrowerRow] = await db
+    .select({ nature: accounts.nature, currency: accounts.currency, name: accounts.name })
+    .from(accounts)
+    .where(eq(accounts.id, borrower.id))
+    .limit(1);
+
+  /*
+   * What somebody owes you ADDS to net worth, so it has to be an asset. Against
+   * a liability this would record a loan you made as a debt you took, and the
+   * position would move by twice the amount in the wrong direction.
+   */
+  if (borrowerRow.nature !== "asset") {
+    throw new InvalidTransactionError(
+      t("services.financing.borrowerNotAsset", { account: borrowerRow.name }),
+      "borrower_not_asset",
+    );
+  }
+
+  const currency = borrowerRow.currency;
+  const totalMinor = Math.abs(parseAmountToMinor(input.total, currency));
+  if (totalMinor <= 0) {
+    throw new InvalidTransactionError(t("services.financing.totalPositive"), "total_not_positive");
+  }
+  if (input.installmentCount < 1) {
+    throw new InvalidTransactionError(
+      t("services.financing.installmentsPositive"),
+      "installments_not_positive",
+    );
+  }
+
+  const occurredOn = input.occurredOn ?? home.today;
+  const description = input.description?.trim() || t("services.financing.defaultLoanDescription");
+  const frequency = input.frequency ?? "biweekly";
+  const step = STEP_DAYS[frequency];
+  const firstDue = input.firstDueOn ?? addDays(occurredOn, step);
+  const interestMinor =
+    input.interest == null ? 0 : parseAmountToMinor(String(input.interest), currency);
+  const amounts = splitInstallments(totalMinor, input.installmentCount);
+  const interests = splitInstallments(interestMinor, input.installmentCount);
+
+  /*
+   * The disbursement: a transfer, not an expense.
+   *
+   * The money leaves your account and becomes what they owe you. Recording it as
+   * an expense would take it off net worth twice — once as spending and once as
+   * cash gone — and show a month in which you gave away what you actually lent.
+   */
+  const handover = await recordTransaction({
+    householdId: input.householdId,
+    kind: "transfer",
+    amount: minorToDecimalString(totalMinor, currency),
+    currency,
+    account: input.fromAccount,
+    toAccount: borrowerRow.name,
+    description,
+    occurredOn,
+    source: input.source ?? "form",
+    createdByUserId: input.createdByUserId,
+    notes: t("services.financing.lentNote", { n: input.installmentCount }),
+  });
+
+  const planId = await db.transaction(async (tx) => {
+    const [plan] = await tx
+      .insert(financingPlans)
+      .values({
+        householdId: input.householdId,
+        // Non-null because this call is never a dry run: the id is null only
+        // when `recordTransaction` simulates, and nothing here simulates.
+        purchaseTransactionId: handover.transactionId!,
+        financierAccountId: borrower.id,
+        description,
+        totalMinor,
+        // Nothing was paid up front: lending IS the handover.
+        downPaymentMinor: 0,
+        currency,
+        purchasedOn: occurredOn,
+      })
+      .returning({ id: financingPlans.id });
+
+    await tx.insert(installments).values(
+      amounts.map((principalMinor, i) => ({
+        householdId: input.householdId,
+        planId: plan.id,
+        number: i + 1,
+        dueOn: addDays(firstDue, step * i),
+        amountMinor: principalMinor + interests[i],
+        interestMinor: interests[i],
+      })),
+    );
+
+    return plan.id;
+  });
+
+  return {
+    ok: true as const,
+    planId,
+    transactionId: handover.transactionId,
+    summary: t("services.financing.loanSummary", {
+      description,
+      total: formatAmount(totalMinor, currency),
+      borrower: borrowerRow.name,
+      n: input.installmentCount,
+      installment: formatAmount(amounts[0] + interests[0], currency),
+      firstDue: formatDay(firstDue, home.locale),
+    }),
+  };
+}
+
 export async function payInstallment(params: {
   householdId: string;
   installmentId: string;
@@ -388,6 +548,15 @@ export async function payInstallment(params: {
       planDescription: financingPlans.description,
       currency: financingPlans.currency,
       financierName: accounts.name,
+      /*
+       * Which way the money goes, read from the counterparty and never asked for.
+       *
+       * A liability is somebody who lent to YOU: the instalment leaves your
+       * account. An asset is somebody who owes you: it arrives. Asking the caller
+       * would let a screen send the wrong direction and pay a loan that was owed
+       * to you — the balance moves twice the wrong way and nothing fails.
+       */
+      counterpartyNature: accounts.nature,
     })
     .from(installments)
     .innerJoin(financingPlans, eq(financingPlans.id, installments.planId))
@@ -431,13 +600,23 @@ export async function payInstallment(params: {
   });
   const principalMinor = row.amountMinor - row.interestMinor;
 
+  /*
+   * Lending and borrowing are the same schedule read from opposite ends.
+   *
+   * Owing: the principal goes from your account to the debt. Being owed: it
+   * comes from the receivable into your account, and what you gain is income,
+   * not a cost. One direction, taken from the account's own nature, rather than
+   * two functions that would drift apart on the first fix applied to one.
+   */
+  const theyOweYou = row.counterpartyNature === "asset";
+
   const result = await recordTransaction({
     householdId: params.householdId,
     kind: "transfer",
     amount: minorToDecimalString(principalMinor, row.currency),
     currency: row.currency,
-    account: params.fromAccount,
-    toAccount: row.financierName,
+    account: theyOweYou ? row.financierName : params.fromAccount,
+    toAccount: theyOweYou ? params.fromAccount : row.financierName,
     description: label,
     occurredOn: params.paidOn,
     source: "form",
@@ -457,7 +636,10 @@ export async function payInstallment(params: {
   if (row.interestMinor > 0) {
     const interest = await recordTransaction({
       householdId: params.householdId,
-      kind: "expense",
+      // Interest you PAY is a cost; interest you RECEIVE is income. Recording
+      // the second as an expense would show a loan that earns you money as a
+      // month of spending.
+      kind: theyOweYou ? "income" : "expense",
       amount: minorToDecimalString(row.interestMinor, row.currency),
       currency: row.currency,
       account: params.fromAccount,

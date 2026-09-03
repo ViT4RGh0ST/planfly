@@ -9,6 +9,7 @@ import {
   payInstallment,
   planForTransaction,
   recordFinancedPurchase,
+  recordLoanMade,
   removeFinancierProfile,
   saveFinancierProfile,
   unpayInstallment,
@@ -16,7 +17,8 @@ import {
   voidFinancingPlan,
 } from "./financing";
 import { accountBalance } from "./balances";
-import { pool } from "@/db";
+import { db, pool } from "@/db";
+import { accounts } from "@/db/schema";
 
 /**
  * Installment purchases, against the database.
@@ -160,6 +162,80 @@ describe("financed purchases against the database", { skip: hasDb() ? false : "n
     await unpayInstallment(e.home.id, first.id);
     assert.equal(await accountBalance(e.cash.id), cashBefore, "deshacer devuelve el pago entero");
     assert.equal(await accountBalance(e.card.id), debtBefore, "y devuelve la deuda");
+  });
+
+  it("lending is not spending, and getting paid back comes the other way", async () => {
+    /*
+     * The mirror. What you lend does not leave your net worth on the day: it
+     * changes shape, from cash into somebody's promise. Recording the handover
+     * as an expense — which is what a financed purchase's first entry is — would
+     * subtract it twice and show a month in which you gave away what you lent.
+     *
+     * And the instalment arrives instead of leaving. `payInstallment` reads that
+     * off the account's nature rather than being told, because a screen sending
+     * the wrong direction would move the balance twice the wrong way with
+     * nothing failing.
+     */
+    const lent = await db
+      .insert(accounts)
+      .values({
+        householdId: e.home.id,
+        name: "Le presté a Ana",
+        slug: "le-preste-a-ana",
+        type: "other",
+        nature: "asset",
+        currency: "VES",
+        openingDate: DATE,
+      })
+      .returning({ id: accounts.id });
+
+    const before = await accountBalance(e.cash.id);
+
+    const made = await recordLoanMade({
+      householdId: e.home.id,
+      borrower: "Le presté a Ana",
+      fromAccount: "efectivo",
+      total: "900,00",
+      interest: "90,00",
+      installmentCount: 3,
+      occurredOn: DATE,
+      description: "A Ana",
+      source: "form",
+    });
+    assert.ok(made.ok);
+
+    assert.equal(
+      await accountBalance(e.cash.id),
+      before - 90000,
+      "el efectivo sale de tu cuenta",
+    );
+    assert.equal(
+      await accountBalance(lent[0].id),
+      90000,
+      "y aparece como lo que te deben, no como un gasto",
+    );
+
+    const plan = (await financingPlansView(e.home.id)).find((p) => p.description === "A Ana")!;
+    const first = plan.installments[0];
+    assert.equal(first.amountMinor, 33000, "cada cuota son 300 de principal y 30 de interés");
+
+    await payInstallment({
+      householdId: e.home.id,
+      installmentId: first.id,
+      fromAccount: "efectivo",
+      paidOn: DATE,
+    });
+
+    assert.equal(
+      await accountBalance(e.cash.id),
+      before - 90000 + 33000,
+      "cobrar ENTRA a tu cuenta, no sale",
+    );
+    assert.equal(
+      await accountBalance(lent[0].id),
+      90000 - 30000,
+      "y lo que te deben baja solo el principal",
+    );
   });
 
   it("a financier that doesn't exist isn't invented", async () => {
