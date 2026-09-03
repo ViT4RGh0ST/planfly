@@ -40,6 +40,18 @@ export default async function RatesPage() {
    */
   const pairs = await pairsInUse();
   const rest = pairs.filter((pair) => pair.base !== "USD" || pair.quote !== "VES");
+  /*
+   * The hand-written form opens on the pair this screen opens on.
+   *
+   * `pairsInUse` sorts alphabetically, so a household holding pesos and
+   * bolívares got COP selected while every figure above it was in VES — the
+   * form offering to write a rate for a currency the reader was not looking at.
+   */
+  const leadFirst = [...pairs].sort((a, b) => {
+    const lead = (p: { base: string; quote: string }) =>
+      p.base === "USD" && p.quote === "VES" ? 0 : 1;
+    return lead(a) - lead(b);
+  });
 
   const [current, others, history, fijadas, top, currencyList] = await Promise.all([
     currentRates(date),
@@ -279,16 +291,26 @@ export default async function RatesPage() {
           id="a-mano"
           className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground"
         >
-          {t("ui.rates.setByHand")}{" "}
-          <span className="font-normal text-muted-foreground/70">
-            · {t("ui.rates.pair", { quote: "VES", base: "USD" })}
-          </span>
+          {t("ui.rates.setByHand")}
+          {/* The pair is named here only while there is one to name. With a
+              second currency the form carries its own selector, and a heading
+              claiming «VES por USD» over a form set to COP says the figure is
+              going somewhere it is not. */}
+          {pairs.length <= 1 && (
+            <span className="font-normal text-muted-foreground/70">
+              {" · "}
+              {t("ui.rates.pair", {
+                quote: pairs[0]?.quote ?? "VES",
+                base: pairs[0]?.base ?? "USD",
+              })}
+            </span>
+          )}
         </h2>
         <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
           {t("ui.rates.setByHandHint")}
         </p>
         <div className="mt-6">
-          <ManualRateForm today={date} />
+          <ManualRateForm today={date} pairs={leadFirst} />
         </div>
         <ManualRateList rows={fijadas} />
       </section>

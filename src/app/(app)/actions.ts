@@ -1282,10 +1282,23 @@ export async function setManualRate(_prev: ActionState, form: FormData): Promise
   const t = getTranslator(normalizeLocale(ctx.locale));
 
   try {
+    /*
+     * The pair arrives as one field, and is split here rather than sent as two.
+     *
+     * A rate is «so many of one currency per one of another», and the two halves
+     * mean nothing apart: a base sent without its quote would pass the schema and
+     * take the default VES, writing a COP figure into the bolívar's row. The
+     * screen sends them joined for that reason, so this is the only place that
+     * knows the shape.
+     */
+    const [pairBase, pairQuote] = String(form.get("pair") ?? "").split(">");
+
     const input = manualRateSchema.parse({
       slot: String(form.get("slot") ?? "official"),
       rate: String(form.get("rate") ?? ""),
       effective_on: String(form.get("effective_on") ?? "") || undefined,
+      base_currency: pairBase || undefined,
+      quote_currency: pairQuote || undefined,
       note: String(form.get("note") ?? "") || undefined,
     });
 
