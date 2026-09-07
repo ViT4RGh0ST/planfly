@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
 import { db } from "@/db";
+import { lazy } from "@/lib/lazy";
 import * as schema from "@/db/schema";
 
 /**
@@ -21,7 +22,17 @@ import * as schema from "@/db/schema";
  * `tokens_api` table (see src/lib/api-token.ts), which is revocable, carries
  * scopes and leaves a trail of which token wrote each row.
  */
-export const auth = betterAuth({
+/**
+ * Built on first use, not on importing this module.
+ *
+ * better-auth 1.7 touches the Drizzle adapter's database while it is being
+ * constructed, where 1.6 waited for the first query. `betterAuth(...)` runs at
+ * module scope and this module is reached from the root layout — through
+ * `@/i18n/request` → `@/lib/session` — so every route in the build imported it,
+ * woke the connection pool, and died on «DATABASE_URL is missing». The build
+ * does not have one and must not: see `@/lib/lazy`.
+ */
+export const auth = lazy(() => betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
@@ -64,6 +75,6 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 30, // 30 days — it is a personal tool
     updateAge: 60 * 60 * 24,
   },
-});
+}));
 
 export type Sesion = typeof auth.$Infer.Session;

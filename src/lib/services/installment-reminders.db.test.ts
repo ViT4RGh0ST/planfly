@@ -36,9 +36,22 @@ describe("installment reminders", { skip: hasDb() ? false : "no Postgres availab
   });
 
   it("with installments pending it still doesn't break the heartbeat", async () => {
+    /*
+     * Its instalments are pushed far into the future ON PURPOSE.
+     *
+     * Without a `firstDueOn` they fall two weeks after `DATE`, and `DATE` is
+     * fixed while «tomorrow» is not: on 2026-09-03 the first of them landed on
+     * exactly the day the next test warns about, and that test — which creates
+     * one purchase and expects one reminder — got two. It had been passing for
+     * a fortnight and broke at midnight, with nothing changed.
+     *
+     * A test that only holds on certain dates is worse than one that fails: it
+     * is one that will fail on a day when somebody is looking at something else.
+     */
     await recordFinancedPurchase({
       householdId: e.home.id, financier: "tdc",
       total: "1.000,00", installmentCount: 3, occurredOn: DATE,
+      firstDueOn: addDays(today("America/Caracas"), 90),
       description: "Con avisos", source: "form",
     });
     // Still no channel: what is checked is that walking real installments does
