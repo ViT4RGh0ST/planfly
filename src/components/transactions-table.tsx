@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Bot,
   Camera,
   FileSpreadsheet,
   Pencil,
@@ -56,10 +57,24 @@ export type TransactionRow = {
 /**
  * The provenance icon is what tells you at a glance whether a row was written by
  * the bot, by you, by a CSV or from a photo. It carries a name as well as a
- * shape: for a screen reader — and for anyone who doesn't know the six glyphs by
+ * shape: for a screen reader — and for anyone who does not know the glyphs by
  * heart — provenance did not exist, even though the product calls it part of the
  * datum.
+ *
+ * This map is the ONE list of the provenances the screen knows. It was two, and
+ * the second one was forgotten the first time the enum grew: an entry came out
+ * labelled `mcp`, in lower case, in both languages.
  */
+const SOURCES: Record<string, React.ComponentType<{ className?: string }>> = {
+  telegram: Send,
+  form: PenLine,
+  csv: FileSpreadsheet,
+  ocr: Camera,
+  mcp: Bot,
+  api: Terminal,
+  recurring: Repeat,
+};
+
 /**
  * How a row got here, said in words.
  *
@@ -68,19 +83,8 @@ export type TransactionRow = {
  * printing the key would say less than printing the value.
  */
 function sourceName(t: (key: string) => string, source: string): string {
-  const known = ["telegram", "form", "csv", "ocr", "api", "recurring"];
-  return known.includes(source) ? t(`domain.source.${source}`) : source;
+  return source in SOURCES ? t(`domain.source.${source}`) : source;
 }
-
-/** The icon per provenance. Its name is looked up in `domain.source`. */
-const SOURCES: Record<string, React.ComponentType<{ className?: string }>> = {
-  telegram: Send,
-  form: PenLine,
-  csv: FileSpreadsheet,
-  ocr: Camera,
-  api: Terminal,
-  recurring: Repeat,
-};
 
 /**
  * What is derived from a row, in one place.

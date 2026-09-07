@@ -237,6 +237,39 @@ describe("the message catalogues", () => {
     }
   });
 
+  it("every provenance the database can store has a name in both languages", () => {
+    /*
+     * `domain.source` is not a list of options a screen offers: it labels
+     * whatever came back from the database, for every row of the ledger. So its
+     * keys are not a choice — they are the `entry_source` enum, exactly.
+     *
+     * The other maps in `domain` (`entryKind`, `rowStatus`) DO offer a subset on
+     * purpose — the form does not let you write an adjustment by hand — which is
+     * why this rule names one map instead of walking them all.
+     *
+     * It exists because the enum grew by one and this did not: `mcp` entries came
+     * out labelled `mcp`, in lower case, in both languages. The screen falls back
+     * to the raw value rather than printing a key, so nothing failed and nothing
+     * was logged.
+     */
+    const enums = readFileSync(join(ROOT, "db", "schema", "enums.ts"), "utf8");
+    const declared = enums.match(/pgEnum\("entry_source",\s*\[([^\]]+)\]/);
+    assert.ok(declared, "entry_source is no longer declared where this guard looks for it.");
+    const values = [...declared[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
+    assert.ok(values.length > 0, "entry_source came out empty; the guard is reading it wrong.");
+
+    for (const locale of LOCALES) {
+      const keys = catalogue(locale);
+      const missing = values.filter((value) => !keys.has(`domain.source.${value}`));
+      assert.deepEqual(
+        missing,
+        [],
+        `${locale} has no name for ${missing.join(", ")}. A row written that way ` +
+          `shows its raw enum value in the table, in every language.`,
+      );
+    }
+  });
+
   it("the server-only catalogues never cross to the browser", () => {
     /*
      * `services` and `api` are ~250 messages worded on the server, which travel

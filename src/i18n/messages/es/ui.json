@@ -149,7 +149,8 @@
     "historyHint": "La paralela es lo que te pagarían hoy por vender, no un promedio del mercado. La oficial suele publicarse con fecha valor adelantada.",
     "form": {
       "which": "Cuál",
-      "perDollar": "Bolívares por dólar",
+      "unitsPer": "{quote} por {base}",
+      "currency": "Moneda",
       "forDay": "Para el día",
       "officialShort": "Oficial",
       "parallelShort": "Paralela",

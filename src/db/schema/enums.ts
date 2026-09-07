@@ -81,6 +81,7 @@ export const entrySourceEnum = pgEnum("entry_source", [
   "form",
   "csv",
   "ocr",
+  "mcp",
   "api",
   "recurring",
 ]);

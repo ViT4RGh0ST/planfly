@@ -10,8 +10,8 @@
  *   npm run token:create -- read-only context:read,reports:read
  *
  * The plain text is shown ONCE only: only the sha256 stays in the database.
- * After rotating it, put it in ~/.openclaw/openclaw.json
- * (plugins.entries.planfly.config.apiToken) and restart the gateway.
+ * After rotating it, put it in ~/.openclaw/openclaw.json as the Authorization
+ * header of the `planfly` MCP server, and restart the gateway.
  */
 import { and, eq, isNull } from "drizzle-orm";
 
@@ -31,6 +31,15 @@ const SCOPES = [
   "budgets:write",
   "financing:write",
   "recurring:write",
+  /*
+   * Entering /api/mcp at all.
+   *
+   * `npm run mcp:token` asked for it and this list refused it, so the script
+   * that exists to mint an MCP credential could not mint one: «I do not know
+   * mcp:access». Nothing caught it because the tests build their tokens through
+   * the fixture, which inserts the row directly and never asks this allowlist.
+   */
+  "mcp:access",
 ] as const;
 
 function requestedScopes(): string[] {
@@ -99,7 +108,7 @@ async function main() {
   console.log(`│ ${plain}`);
   console.log("│");
   console.log("│ Put it in ~/.openclaw/openclaw.json →");
-  console.log("│   plugins.entries.planfly.config.apiToken");
+  console.log('│   mcp.servers.planfly.headers.Authorization = "Bearer <this>"');
   console.log("│ then:");
   console.log("│   docker compose restart openclaw-gateway   (wherever openclaw lives)");
   console.log("└──────────────────────────────────────────────────────────────\n");

@@ -40,7 +40,7 @@ export const POST = withToken("transactions:write", async ({ principal, req }) =
     source: input.source,
     sourceRef: input.source_ref,
     createdByUserId: principal.userId,
-    createdViaTokenId: principal.tokenId,
+    createdViaTokenId: principal.tokenId ?? undefined,
     createdByAgent: input.agent,
     confidence: input.confidence,
     idempotencyKey,

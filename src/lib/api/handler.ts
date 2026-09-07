@@ -19,6 +19,19 @@ import { InvalidProductError } from "@/lib/services/products";
 
 export type HandlerContext = { principal: Principal; req: NextRequest };
 
+/*
+ * MCP is another server-side adapter, not an HTTP client. Keep its authenticated
+ * principal in a request-identity map so direct route reuse cannot be triggered
+ * by a header supplied over the network. A WeakMap also ensures no principal
+ * outlives the request object.
+ */
+const internalPrincipals = new WeakMap<NextRequest, Principal>();
+
+export function withInternalPrincipal(req: NextRequest, principal: Principal): NextRequest {
+  internalPrincipals.set(req, principal);
+  return req;
+}
+
 /** Keys a client may never send: they are identity, not data. */
 const FORBIDDEN_KEYS = [
   "householdId",
@@ -133,7 +146,8 @@ export function withToken(
     // token has already been read.
     let locale: Locale = DEFAULT_LOCALE;
     try {
-      const principal = await authenticateToken(req.headers.get("authorization"));
+      const principal =
+        internalPrincipals.get(req) ?? (await authenticateToken(req.headers.get("authorization")));
       if (!principal) {
         // No token means no household, and no household means no language: the
         // default is the only honest answer here.

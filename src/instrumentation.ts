@@ -50,6 +50,7 @@ export async function register() {
     "@/lib/services/installment-reminders"
   );
   const { runDueRecurrences } = await import("@/lib/services/recurring");
+  const { purgeExpiredConfirmations } = await import("@/lib/mcp/transactions");
 
   async function tick() {
     // Installment reminders run on every heartbeat and not only on the rate
@@ -70,6 +71,15 @@ export async function register() {
       if (runs.length > 0) console.log(`[recurrences] ${runs.length} fired`);
     } catch (err) {
       console.warn("[recurrences] the firing failed:", (err as Error).message);
+    }
+
+    // The MCP confirmations that nobody used. They last fifteen minutes and are
+    // written before every proposed write, so without this the table only grows.
+    try {
+      const gone = await purgeExpiredConfirmations();
+      if (gone > 0) console.log(`[mcp] ${gone} expired confirmations removed`);
+    } catch (err) {
+      console.warn("[mcp] the confirmation purge failed:", (err as Error).message);
     }
 
     try {

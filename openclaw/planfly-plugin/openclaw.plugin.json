@@ -1,48 +1,11 @@
 {
   "id": "planfly",
   "name": "Planfly",
-  "description": "Record and consult personal finances in planfly: expenses, income, transfers between accounts, net position and budgets, at both the BCV and P2P rates.",
+  "description": "Personal finance in planfly: the skill that teaches how to record and consult it. The tools come from planfly's MCP server.",
   "skills": [
     "./skills"
   ],
   "contracts": {
-    "tools": [
-      "planfly_record",
-      "planfly_report",
-      "planfly_context",
-      "planfly_amend",
-      "planfly_account",
-      "planfly_recurring",
-      "planfly_financing",
-      "planfly_budget",
-      "planfly_product",
-      "planfly_help"
-    ]
-  },
-  "configSchema": {
-    "type": "object",
-    "additionalProperties": false,
-    "properties": {
-      "baseUrl": {
-        "type": "string",
-        "description": "URL of your planfly. From another container, the container name on a shared network; from the same machine, http://localhost:3000"
-      },
-      "apiToken": {
-        "type": "string",
-        "description": "A plfy_… token. The identity (household and user) is derived from it, never from a tool parameter."
-      },
-      "timeoutMs": {
-        "type": "number",
-        "description": "Maximum time per request. Defaults to 10000."
-      },
-      "defaultCurrency": {
-        "type": "string",
-        "description": "Currency assumed when the message does not say. Defaults to VES."
-      },
-      "confirmOver": {
-        "type": "number",
-        "description": "Amount in base currency above which it is worth simulating (dry_run) and confirming before saving. Defaults to 100."
-      }
-    }
+    "tools": []
   }
 }

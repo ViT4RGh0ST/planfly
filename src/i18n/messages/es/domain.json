@@ -115,6 +115,7 @@
     "form": "a mano",
     "csv": "importado de un CSV",
     "ocr": "de una foto",
+    "mcp": "por MCP",
     "api": "por la API",
     "recurring": "recurrente"
   },

@@ -125,6 +125,12 @@ export async function createTransaction(
       description: String(form.get("description") ?? "") || undefined,
       occurredOn: String(form.get("occurred_on") ?? "") || undefined,
       notes: String(form.get("notes") ?? "") || undefined,
+      // The dialog's sentinel for «no place». Sending it through as a name would
+      // have the resolver look for a shop called «—» and refuse the whole entry.
+      payee:
+        String(form.get("payee") ?? "") === "—"
+          ? undefined
+          : String(form.get("payee") ?? "") || undefined,
       rate: String(form.get("rate") ?? "") || undefined,
       rateSource: (String(form.get("rate_source") ?? "") || undefined) as
         | "official"
@@ -1276,10 +1282,23 @@ export async function setManualRate(_prev: ActionState, form: FormData): Promise
   const t = getTranslator(normalizeLocale(ctx.locale));
 
   try {
+    /*
+     * The pair arrives as one field, and is split here rather than sent as two.
+     *
+     * A rate is «so many of one currency per one of another», and the two halves
+     * mean nothing apart: a base sent without its quote would pass the schema and
+     * take the default VES, writing a COP figure into the bolívar's row. The
+     * screen sends them joined for that reason, so this is the only place that
+     * knows the shape.
+     */
+    const [pairBase, pairQuote] = String(form.get("pair") ?? "").split(">");
+
     const input = manualRateSchema.parse({
       slot: String(form.get("slot") ?? "official"),
       rate: String(form.get("rate") ?? ""),
       effective_on: String(form.get("effective_on") ?? "") || undefined,
+      base_currency: pairBase || undefined,
+      quote_currency: pairQuote || undefined,
       note: String(form.get("note") ?? "") || undefined,
     });
 

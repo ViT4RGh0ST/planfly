@@ -1,65 +1,38 @@
 import { definePluginEntry } from "./api.js";
-import { createRecordTool } from "./src/record-tool.js";
-import { createReportTool } from "./src/report-tool.js";
-import { createContextTool } from "./src/context-tool.js";
-import { createAmendTool } from "./src/amend-tool.js";
-import { createAccountTool } from "./src/account-tool.js";
-import { createRecurringTool } from "./src/recurring-tool.js";
-import { createFinancingTool } from "./src/financing-tool.js";
-import { createBudgetTool } from "./src/budget-tool.js";
-import { createProductTool } from "./src/product-tool.js";
-import { createHelpTool } from "./src/help-tool.js";
 
 /**
- * planfly's plugin for openclaw.
+ * planfly's plugin for openclaw — the skill, and nothing else.
  *
- * Plain JS with `definePluginEntry`, NOT `defineToolPlugin`: the typed route
- * with TypeBox requires openclaw >= 2026.5.17 and the image running here is
- * 2026.4.15-beta.1 (the source monorepo says 2026.7.2, but that is not what is
- * running). This form is the one that already works with bcv-rates and p2p-rates.
+ * It used to carry ten tools of its own: a hand-written HTTP client, ten schemas
+ * and ten descriptions, all of them a second implementation of what planfly's API
+ * already exposes. Every parameter added to a route had to be added here too, and
+ * whichever of the two was forgotten did not fail — it silently dropped the datum
+ * and answered 201.
  *
- * Nine tools and not one: a single tool with a discriminator produces a union
- * schema the model gets wrong, and one per action would inflate the catalogue on
- * every turn. Nine map to the domains that genuinely exist — writing, reading,
- * getting your bearings, correcting, accounts, recurrences, installments,
- * budgets and products — and inside each one the actions go by parameter.
+ * planfly now speaks MCP at `/api/mcp`, and openclaw connects to it directly,
+ * under `mcp.servers.planfly` in the gateway's configuration. The tools come from
+ * the server, so there is one description of each and it cannot drift.
  *
- * The last three go separately and not inside `planfly_record`, for two
- * different reasons. Opening an account or configuring a recurrence happens a
- * few times a year against the fifty times a month of recording an expense, and
- * joining them invites the model to create an account every time it does not
- * recognise a name.
+ * **What could not move is this file's other half.** A tool list tells a model
+ * what it CAN do; it does not tell it that answering «anotado» without calling
+ * anything is the worst failure there is, or that one purchase is one call, or
+ * how a Venezuelan invoice is read. That is the skill, it is worth more than the
+ * tools were, and it stays here — which is why this remains a plugin rather than
+ * being deleted: `openclaw.plugin.json` mounts `./skills`, and a plugin is how a
+ * skill gets mounted.
  *
- * The installments one is more serious: a financed purchase is TWO entries and a
- * schedule. With no tool of its own the model improvises with the recording one,
- * the ledger looks reasonable and the schedule says something else — half an
- * installment purchase fails nowhere and leaves the debt wrong forever.
+ * So `register` is deliberately empty. Registering nothing is the point.
  */
 export default definePluginEntry({
   id: "planfly",
   name: "Planfly",
   description:
-    "Record and consult personal finances in planfly: expenses, income, transfers, net position and budgets.",
-  register(api) {
-    const tools = [
-      createRecordTool(api),
-      createReportTool(api),
-      createContextTool(api),
-      createAmendTool(api),
-      createAccountTool(api),
-      createRecurringTool(api),
-      createFinancingTool(api),
-      createBudgetTool(api),
-      createProductTool(api),
-    ];
-
-    // planfly_help is built over this same list, not over a copy: a catalogue
-    // written separately falls out of sync on the first parameter change, and
-    // then it lies to the agent instead of guiding it.
-    tools.push(createHelpTool(api, tools));
-
-    for (const tool of tools) {
-      api.registerTool(tool);
-    }
+    "Personal finance in planfly. The tools come from planfly's MCP server; this carries the skill that says how to use them.",
+  register() {
+    /*
+     * Nothing. Registering a tool here would be a SECOND way to write the
+     * ledger, alongside MCP — and two write paths do not conflict noisily, they
+     * both succeed, and one purchase is recorded twice.
+     */
   },
 });

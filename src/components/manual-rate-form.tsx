@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,37 @@ import { useTranslations } from "next-intl";
  *
  * A single row: the screen exists to read two numbers at a glance, and this
  * cannot compete with them.
+ *
+ * Which is why the currency is only offered when there is more than one pair to
+ * choose between. A household holding bolívares alone sees exactly the form it
+ * saw before; the control appears on the day a second currency makes it mean
+ * something, and never as a select with one option in it.
  */
-export function ManualRateForm({ today }: { today: string }) {
+export function ManualRateForm({
+  today,
+  pairs,
+}: {
+  today: string;
+  /** The pairs this household actually holds. Never an invented list. */
+  pairs: Array<{ base: string; quote: string }>;
+}) {
   const [state, action, pending] = useActionState<ActionState, FormData>(setManualRate, null);
   const t = useTranslations();
   const formRef = useRef<HTMLFormElement>(null);
+
+  /*
+   * The pair travels as one value, so the two halves cannot arrive apart.
+   *
+   * `base` and `quote` are only meaningful together — a rate is «so many of this
+   * per one of that» — and two selects would let somebody send a base without
+   * its quote and have the schema fill the missing half with USD/VES. That is
+   * this codebase's own rule: a valid field in the wrong context is worse than
+   * an invented one, because it passes and lands somewhere nobody looks.
+   */
+  const [pair, setPair] = useState(() =>
+    pairs.length > 0 ? `${pairs[0].base}>${pairs[0].quote}` : "USD>VES",
+  );
+  const [base, quote] = pair.split(">");
 
   useEffect(() => {
     if (!state) return;
@@ -60,9 +86,34 @@ export function ManualRateForm({ today }: { today: string }) {
         </Select>
       </div>
 
+      {/* Only when there is a choice to make. */}
+      {pairs.length > 1 && (
+        <div className="grow-0">
+          <Label htmlFor="pair" className="text-xs text-muted-foreground">
+            {t("ui.rates.form.currency")}
+          </Label>
+          <Select name="pair" value={pair} onValueChange={setPair}>
+            <SelectTrigger id="pair" className="mt-1.5 h-9 w-[8.5rem]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pairs.map((p) => (
+                <SelectItem key={`${p.base}>${p.quote}`} value={`${p.base}>${p.quote}`}>
+                  {p.quote}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {/* With one pair the select is not drawn, so the value still has to travel. */}
+      {pairs.length <= 1 && <input type="hidden" name="pair" value={pair} />}
+
       <div className="grow-0">
         <Label htmlFor="rate" className="text-xs text-muted-foreground">
-          {t("ui.rates.form.perDollar")}
+          {/* «Bolívares por dólar» named one pair and lied as soon as there was
+              a second. It says which two currencies this figure is between. */}
+          {t("ui.rates.form.unitsPer", { quote, base })}
         </Label>
         <Input
           id="rate"

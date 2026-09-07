@@ -24,6 +24,15 @@ import { createTransaction, type ActionState } from "@/app/(app)/actions";
 
 type Option = { name: string; currency?: string };
 
+/**
+ * «No place», as a value a Select can hold.
+ *
+ * Radix refuses an empty string as an item value, and the correction dialog
+ * spells it the same way. The action turns it back into "no place" on arrival,
+ * so the two doors agree on what an unset shop looks like.
+ */
+const NO_PLACE = "—";
+
 export function TransactionForm({
   accounts,
   expenseCategories,
@@ -34,6 +43,7 @@ export function TransactionForm({
   rates,
   baseCurrency,
   ratedCurrencies,
+  places,
   onDone,
 }: {
   accounts: Option[];
@@ -53,6 +63,8 @@ export function TransactionForm({
    *  solved, so offering a rate to a USDT account promised a conversion that
    *  afterwards never happened. */
   ratedCurrencies: string[];
+  /** The shops on record. Empty until somebody creates one, and then no field. */
+  places: string[];
 }) {
   const t = useTranslations();
   const [kind, setKind] = useState<"expense" | "income" | "transfer">("expense");
@@ -216,6 +228,30 @@ export function TransactionForm({
               {categories.map((c) => (
                 <SelectItem key={c.name} value={c.name}>
                   {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Where it was bought.
+          Outside the category block, as in the correction dialog and for the
+          same reason: a transfer has no category and can still have been made
+          at a shop. It only appears once there are shops — an empty selector
+          would be a field that explains nothing about why it is empty. */}
+      {places.length > 0 && (
+        <div className="grid gap-2">
+          <Label htmlFor="payee-trigger">{t("ui.form.place")}</Label>
+          <Select name="payee" defaultValue={NO_PLACE}>
+            <SelectTrigger id="payee-trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_PLACE}>{t("ui.edit.noPlace")}</SelectItem>
+              {places.map((place) => (
+                <SelectItem key={place} value={place}>
+                  {place}
                 </SelectItem>
               ))}
             </SelectContent>

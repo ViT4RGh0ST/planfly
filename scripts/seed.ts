@@ -8,6 +8,7 @@
  * It is idempotent: it can be re-run without duplicating anything.
  * The environment is loaded by `tsx --env-file=.env.local` (see package.json).
  */
+import { createLocalAccountIssuer } from "@better-auth/core/db";
 import { and, eq } from "drizzle-orm";
 
 import { CURRENCIES } from "../src/lib/currencies";
@@ -173,10 +174,11 @@ async function createUser(email: string, password: string, name: string) {
     email,
     name,
     emailVerified: false,
-  });
+  }, { method: "email-password" });
   await ctx.internalAdapter.linkAccount({
     userId: created.id,
     providerId: "credential",
+    issuer: createLocalAccountIssuer("credential"),
     accountId: created.id,
     password: await ctx.password.hash(password),
   });
@@ -384,8 +386,8 @@ async function main() {
     console.log("  │ TOKEN (shown ONCE only — save it now):");
     console.log(`  │ ${plain}`);
     console.log("  │");
-    console.log("  │ It goes in ~/.openclaw/openclaw.json, under");
-    console.log("  │ plugins.entries.planfly.config.apiToken");
+    console.log("  │ It goes in ~/.openclaw/openclaw.json, as the bearer of");
+    console.log("  │ the planfly MCP server: mcp.servers.planfly.headers");
     console.log("  └─────────────────────────────────────────────────────────────\n");
   }
 

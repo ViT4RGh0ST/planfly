@@ -149,7 +149,8 @@
     "historyHint": "The parallel rate is what you would be paid to sell today, not a market average. The official one is usually published with the value date ahead.",
     "form": {
       "which": "Which",
-      "perDollar": "Bolívares per dollar",
+      "unitsPer": "{quote} per {base}",
+      "currency": "Currency",
       "forDay": "For the day",
       "officialShort": "Official",
       "parallelShort": "Parallel",
