@@ -70,6 +70,19 @@ export type FinancedPurchaseInput = {
   description?: string;
   occurredOn?: string;
   installmentCount: number;
+  /**
+   * The interest AGREED for the whole schedule, in major units. Never derived.
+   *
+   * A financier's paper says what it says — its own rounding, its own day count,
+   * its own fees — and a rate applied here would give a figure close to it and
+   * different from it. The difference would surface, if ever, on the last
+   * instalment. So planfly stores what was agreed and computes nothing.
+   *
+   * It is spread across the instalments the same way the principal is, and each
+   * one records its share, because that is the part that must not be treated as
+   * a movement when it is paid.
+   */
+  interest?: string | number;
   frequency?: Frequency;
   /** Due date of the first installment. Defaults to one period later. */
   firstDueOn?: string;
@@ -245,7 +258,10 @@ export async function recordFinancedPurchase(input: FinancedPurchaseInput) {
   const frequency = input.frequency ?? "biweekly";
   const step = STEP_DAYS[frequency];
   const firstDue = input.firstDueOn ?? addDays(occurredOn, step);
+  const interestMinor =
+    input.interest == null ? 0 : parseAmountToMinor(String(input.interest), currency);
   const amounts = splitInstallments(remaining, input.installmentCount);
+  const interests = splitInstallments(interestMinor, input.installmentCount);
 
   // ── 1. The full expense, against the financier ───────────────────────────
   const purchase = await recordTransaction({
@@ -305,19 +321,22 @@ export async function recordFinancedPurchase(input: FinancedPurchaseInput) {
       .returning({ id: financingPlans.id });
 
     await tx.insert(installments).values(
-      amounts.map((amountMinor, i) => ({
+      amounts.map((principalMinor, i) => ({
         householdId: input.householdId,
         planId: plan.id,
         number: i + 1,
         dueOn: addDays(firstDue, step * i),
-        amountMinor,
+        // What leaves the account, interest included: every screen that already
+        // reads this column keeps reading the figure that is actually paid.
+        amountMinor: principalMinor + interests[i],
+        interestMinor: interests[i],
       })),
     );
 
     return plan.id;
   });
 
-  const installment = formatAmount(amounts[0], currency);
+  const installment = formatAmount(amounts[0] + interests[0], currency);
   return {
     ok: true,
     planId,
@@ -343,22 +362,201 @@ export async function recordFinancedPurchase(input: FinancedPurchaseInput) {
  * The entry is a TRANSFER from your account to the financier, never an expense:
  * the expense was already counted in full on the day of the purchase.
  */
+export type LoanMadeInput = {
+  householdId: string;
+  /** The asset account standing for what this person owes you. */
+  borrower: string;
+  /** Which of your accounts the money actually leaves from. */
+  fromAccount: string;
+  /** What you handed over, in major units. */
+  total: string | number;
+  /** The interest AGREED for the whole schedule. Never derived. */
+  interest?: string | number;
+  description?: string;
+  occurredOn?: string;
+  installmentCount: number;
+  frequency?: Frequency;
+  firstDueOn?: string;
+  source?: "telegram" | "form" | "api";
+  createdByUserId?: string;
+};
+
+/**
+ * Money you lend, with a schedule for getting it back.
+ *
+ * A sibling of `recordFinancedPurchase` and deliberately not a flag on it. The
+ * two share a schedule and nothing else: borrowing starts with an EXPENSE
+ * against a liability — you got the goods and now owe for them — while lending
+ * starts with a TRANSFER out of your account into a receivable. You spent
+ * nothing by lending; what you have changed shape, from cash into somebody's
+ * promise, and net worth does not move on the day.
+ *
+ * Folded into one function behind a nature check, every parameter would mean two
+ * different things according to a test made a hundred lines away — `category`
+ * says where a purchase is counted and means nothing here; `downPayment` is what
+ * you paid up front and would have to become what they paid you. That is this
+ * codebase's own rule about a valid field in the wrong context, and it is worse
+ * than an invented one because it passes and lands in the bin.
+ *
+ * What IS shared is the part that must never diverge: the schedule, the interest
+ * split, and `payInstallment`, which reads the direction off the account's
+ * nature rather than being told.
+ */
+export async function recordLoanMade(input: LoanMadeInput) {
+  const home = await contextOf(input.householdId);
+  const t = getTranslator(home.locale);
+
+  const borrower = await resolveAccount(input.householdId, input.borrower);
+  if (!borrower) {
+    throw new InvalidTransactionError(
+      t("services.financing.financierNotFound", { input: input.borrower }),
+      "account_not_found",
+    );
+  }
+
+  const [borrowerRow] = await db
+    .select({ nature: accounts.nature, currency: accounts.currency, name: accounts.name })
+    .from(accounts)
+    .where(eq(accounts.id, borrower.id))
+    .limit(1);
+
+  /*
+   * What somebody owes you ADDS to net worth, so it has to be an asset. Against
+   * a liability this would record a loan you made as a debt you took, and the
+   * position would move by twice the amount in the wrong direction.
+   */
+  if (borrowerRow.nature !== "asset") {
+    throw new InvalidTransactionError(
+      t("services.financing.borrowerNotAsset", { account: borrowerRow.name }),
+      "borrower_not_asset",
+    );
+  }
+
+  const currency = borrowerRow.currency;
+  const totalMinor = Math.abs(parseAmountToMinor(input.total, currency));
+  if (totalMinor <= 0) {
+    throw new InvalidTransactionError(t("services.financing.totalPositive"), "total_not_positive");
+  }
+  if (input.installmentCount < 1) {
+    throw new InvalidTransactionError(
+      t("services.financing.installmentsPositive"),
+      "installments_not_positive",
+    );
+  }
+
+  const occurredOn = input.occurredOn ?? home.today;
+  const description = input.description?.trim() || t("services.financing.defaultLoanDescription");
+  const frequency = input.frequency ?? "biweekly";
+  const step = STEP_DAYS[frequency];
+  const firstDue = input.firstDueOn ?? addDays(occurredOn, step);
+  const interestMinor =
+    input.interest == null ? 0 : parseAmountToMinor(String(input.interest), currency);
+  const amounts = splitInstallments(totalMinor, input.installmentCount);
+  const interests = splitInstallments(interestMinor, input.installmentCount);
+
+  /*
+   * The disbursement: a transfer, not an expense.
+   *
+   * The money leaves your account and becomes what they owe you. Recording it as
+   * an expense would take it off net worth twice — once as spending and once as
+   * cash gone — and show a month in which you gave away what you actually lent.
+   */
+  const handover = await recordTransaction({
+    householdId: input.householdId,
+    kind: "transfer",
+    amount: minorToDecimalString(totalMinor, currency),
+    currency,
+    account: input.fromAccount,
+    toAccount: borrowerRow.name,
+    description,
+    occurredOn,
+    source: input.source ?? "form",
+    createdByUserId: input.createdByUserId,
+    notes: t("services.financing.lentNote", { n: input.installmentCount }),
+  });
+
+  const planId = await db.transaction(async (tx) => {
+    const [plan] = await tx
+      .insert(financingPlans)
+      .values({
+        householdId: input.householdId,
+        // Non-null because this call is never a dry run: the id is null only
+        // when `recordTransaction` simulates, and nothing here simulates.
+        purchaseTransactionId: handover.transactionId!,
+        financierAccountId: borrower.id,
+        description,
+        totalMinor,
+        // Nothing was paid up front: lending IS the handover.
+        downPaymentMinor: 0,
+        currency,
+        purchasedOn: occurredOn,
+      })
+      .returning({ id: financingPlans.id });
+
+    await tx.insert(installments).values(
+      amounts.map((principalMinor, i) => ({
+        householdId: input.householdId,
+        planId: plan.id,
+        number: i + 1,
+        dueOn: addDays(firstDue, step * i),
+        amountMinor: principalMinor + interests[i],
+        interestMinor: interests[i],
+      })),
+    );
+
+    return plan.id;
+  });
+
+  return {
+    ok: true as const,
+    planId,
+    transactionId: handover.transactionId,
+    summary: t("services.financing.loanSummary", {
+      description,
+      total: formatAmount(totalMinor, currency),
+      borrower: borrowerRow.name,
+      n: input.installmentCount,
+      installment: formatAmount(amounts[0] + interests[0], currency),
+      firstDue: formatDay(firstDue, home.locale),
+    }),
+  };
+}
+
 export async function payInstallment(params: {
   householdId: string;
   installmentId: string;
   /** Which account the payment leaves from. */
   fromAccount: string;
   paidOn?: string;
+  /**
+   * Where the interest is counted, when the instalment carries any.
+   *
+   * Left empty it goes wherever an expense with no category goes, which is the
+   * review tray — deliberately. Interest is a real cost and putting it silently
+   * under the purchase's own category would make a month of «Mercado» include
+   * money that bought no food.
+   */
+  interestCategory?: string;
 }) {
   const [row] = await db
     .select({
       id: installments.id,
       number: installments.number,
       amountMinor: installments.amountMinor,
+      interestMinor: installments.interestMinor,
       paidAt: installments.paidAt,
       planDescription: financingPlans.description,
       currency: financingPlans.currency,
       financierName: accounts.name,
+      /*
+       * Which way the money goes, read from the counterparty and never asked for.
+       *
+       * A liability is somebody who lent to YOU: the instalment leaves your
+       * account. An asset is somebody who owes you: it arrives. Asking the caller
+       * would let a screen send the wrong direction and pay a loan that was owed
+       * to you — the balance moves twice the wrong way and nothing fails.
+       */
+      counterpartyNature: accounts.nature,
     })
     .from(installments)
     .innerJoin(financingPlans, eq(financingPlans.id, installments.planId))
@@ -383,30 +581,99 @@ export async function payInstallment(params: {
     );
   }
 
+  /*
+   * The principal MOVES and the interest is SPENT, so a payment carrying
+   * interest is two entries and not one.
+   *
+   * Transferring the whole payment to the financier would pay the debt down by
+   * more than was actually paid off — on Bs 1.100 of which Bs 100 is interest,
+   * the debt would drop by 1.100 — and the cost would appear in no report at
+   * all. Nothing fails: the balance is simply wrong, by the interest, on every
+   * instalment, for the life of the loan.
+   *
+   * The description says which is which, because the two land side by side in
+   * the same day's list and «cuota 3» twice is unreadable.
+   */
+  const label = t("services.financing.installmentDescription", {
+    number: row.number,
+    plan: row.planDescription,
+  });
+  const principalMinor = row.amountMinor - row.interestMinor;
+
+  /*
+   * Lending and borrowing are the same schedule read from opposite ends.
+   *
+   * Owing: the principal goes from your account to the debt. Being owed: it
+   * comes from the receivable into your account, and what you gain is income,
+   * not a cost. One direction, taken from the account's own nature, rather than
+   * two functions that would drift apart on the first fix applied to one.
+   */
+  const theyOweYou = row.counterpartyNature === "asset";
+
   const result = await recordTransaction({
     householdId: params.householdId,
     kind: "transfer",
-    amount: minorToDecimalString(row.amountMinor, row.currency),
+    amount: minorToDecimalString(principalMinor, row.currency),
     currency: row.currency,
-    account: params.fromAccount,
-    toAccount: row.financierName,
-    description: t("services.financing.installmentDescription", { number: row.number, plan: row.planDescription }),
+    account: theyOweYou ? row.financierName : params.fromAccount,
+    toAccount: theyOweYou ? params.fromAccount : row.financierName,
+    description: label,
     occurredOn: params.paidOn,
     source: "form",
   });
 
+  /*
+   * The interest goes second, and only after the principal committed.
+   *
+   * The two are not one database transaction because `recordTransaction` owns
+   * its own, and reaching inside it to share one would fork the single write
+   * path this codebase keeps. So the order is chosen instead: if the interest
+   * fails, what is left is a paid-down debt and an uncounted cost — a figure
+   * that is too favourable and visible in the plan. The other order would leave
+   * an expense for a debt nobody paid.
+   */
+  let interestTransactionId: string | null = null;
+  if (row.interestMinor > 0) {
+    const interest = await recordTransaction({
+      householdId: params.householdId,
+      // Interest you PAY is a cost; interest you RECEIVE is income. Recording
+      // the second as an expense would show a loan that earns you money as a
+      // month of spending.
+      kind: theyOweYou ? "income" : "expense",
+      amount: minorToDecimalString(row.interestMinor, row.currency),
+      currency: row.currency,
+      account: params.fromAccount,
+      category: params.interestCategory,
+      description: t("services.financing.interestDescription", {
+        number: row.number,
+        plan: row.planDescription,
+      }),
+      occurredOn: params.paidOn,
+      source: "form",
+    });
+    interestTransactionId = interest.transactionId;
+  }
+
   await db
     .update(installments)
-    .set({ paidTransactionId: result.transactionId, paidAt: new Date() })
+    .set({ paidTransactionId: result.transactionId, interestTransactionId, paidAt: new Date() })
     .where(eq(installments.id, row.id));
 
   return {
     ok: true,
-    summary: t("services.financing.installmentPaid", {
-      number: row.number,
-      plan: row.planDescription,
-      amount: formatAmount(row.amountMinor, row.currency),
-    }),
+    summary:
+      row.interestMinor > 0
+        ? t("services.financing.installmentPaidWithInterest", {
+            number: row.number,
+            plan: row.planDescription,
+            amount: formatAmount(row.amountMinor, row.currency),
+            interest: formatAmount(row.interestMinor, row.currency),
+          })
+        : t("services.financing.installmentPaid", {
+            number: row.number,
+            plan: row.planDescription,
+            amount: formatAmount(row.amountMinor, row.currency),
+          }),
   };
 }
 
@@ -435,6 +702,7 @@ export async function unpayInstallment(householdId: string, installmentId: strin
       number: installments.number,
       amountMinor: installments.amountMinor,
       paidTransactionId: installments.paidTransactionId,
+      interestTransactionId: installments.interestTransactionId,
       currency: financingPlans.currency,
       planDescription: financingPlans.description,
     })
@@ -454,24 +722,39 @@ export async function unpayInstallment(householdId: string, installmentId: strin
   let voided = false;
 
   await db.transaction(async (tx) => {
-    if (row.paidTransactionId) {
+    /*
+     * BOTH entries, because a payment with interest is two.
+     *
+     * Voiding only the transfer would undo the movement and leave the interest
+     * standing as an expense of a payment that no longer happened — a cost in
+     * the month's total with nothing behind it. They go in one database
+     * transaction with the installment for the reason the whole function
+     * exists: any half-done state here is money out of the account with the
+     * debt still owed.
+     */
+    const voidOne = async (id: string | null) => {
+      if (!id) return false;
       const done = await tx
         .update(transactions)
         .set({ voidedAt: new Date(), voidReason: reason, needsReview: false })
         .where(
           and(
-            eq(transactions.id, row.paidTransactionId),
+            eq(transactions.id, id),
             eq(transactions.householdId, householdId),
             isNull(transactions.voidedAt),
           ),
         )
         .returning({ id: transactions.id });
-      voided = done.length > 0;
-    }
+      return done.length > 0;
+    };
+
+    const principalVoided = await voidOne(row.paidTransactionId);
+    const interestVoided = await voidOne(row.interestTransactionId);
+    voided = principalVoided || interestVoided;
 
     await tx
       .update(installments)
-      .set({ paidTransactionId: null, paidAt: null })
+      .set({ paidTransactionId: null, interestTransactionId: null, paidAt: null })
       .where(eq(installments.id, row.id));
   });
 
