@@ -1,6 +1,7 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
+import { lazy } from "@/lib/lazy";
 import * as schema from "./schema";
 
 /**
@@ -48,18 +49,6 @@ function getDb(): PlanflyDb {
     globalRef.__planflyDb = drizzle(getPool(), { schema, casing: "snake_case" });
   }
   return globalRef.__planflyDb;
-}
-
-/** Wraps an object that should only exist when someone genuinely uses it. */
-function lazy<T extends object>(resolve: () => T): T {
-  return new Proxy({} as T, {
-    get(_target, prop, receiver) {
-      const real = resolve();
-      const value = Reflect.get(real, prop, receiver);
-      return typeof value === "function" ? value.bind(real) : value;
-    },
-    has: (_t, prop) => Reflect.has(resolve(), prop),
-  });
 }
 
 export const pool = lazy(getPool);
