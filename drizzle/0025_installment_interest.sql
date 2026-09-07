@@ -1,0 +1,4 @@
+ALTER TABLE "installments" ADD COLUMN "interest_minor" bigint DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "installments" ADD COLUMN "interest_transaction_id" uuid;--> statement-breakpoint
+ALTER TABLE "installments" ADD CONSTRAINT "installments_interest_transaction_id_transactions_id_fk" FOREIGN KEY ("interest_transaction_id") REFERENCES "public"."transactions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "installments" ADD CONSTRAINT "installments_interest_within_amount" CHECK ("installments"."interest_minor" >= 0 AND "installments"."interest_minor" <= "installments"."amount_minor");

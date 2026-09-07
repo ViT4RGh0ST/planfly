@@ -40,12 +40,36 @@ export function installmentSchedule(params: {
   purchasedOn: string;
   /** If not given, the first falls due one period after the purchase. */
   firstDueOn?: string;
-}): Array<{ number: number; amountMinor: number; dueOn: string }> {
+  /**
+   * The interest AGREED across the whole schedule, if any. Never computed here.
+   *
+   * planfly does not derive interest from a rate, and deliberately: what a
+   * financier actually charges is the figure on the paper, arrived at with its
+   * own rounding, its own day count and its own fees. A rate applied here would
+   * produce a number close to that one and different from it, and the difference
+   * would be found — if it ever were — a year later, on the last installment.
+   *
+   * So it is asked for and stored. What this splits is the total across the
+   * instalments, exactly as it splits the principal.
+   */
+  interestMinor?: number;
+}): Array<{ number: number; amountMinor: number; interestMinor: number; dueOn: string }> {
   const step = STEP_DAYS[params.frequency];
   const first = params.firstDueOn || addDays(params.purchasedOn, step);
-  return splitInstallments(params.remainingMinor, params.count).map((amountMinor, i) => ({
+  const principal = splitInstallments(params.remainingMinor, params.count);
+  const interest = splitInstallments(Math.max(0, params.interestMinor ?? 0), params.count);
+
+  return principal.map((principalMinor, i) => ({
     number: i + 1,
-    amountMinor,
+    /*
+     * What is actually paid, which is principal plus interest. The interest goes
+     * INSIDE it and not beside it, so that every screen and every report that
+     * already reads `amountMinor` keeps reading the figure that leaves the
+     * account — and one that has never heard of interest is not wrong, only
+     * silent about the split.
+     */
+    amountMinor: principalMinor + interest[i],
+    interestMinor: interest[i],
     dueOn: addDays(first, step * i),
   }));
 }

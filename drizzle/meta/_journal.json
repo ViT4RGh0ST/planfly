@@ -176,6 +176,13 @@
       "when": 1788385239241,
       "tag": "0024_mcp",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1788440540860,
+      "tag": "0025_installment_interest",
+      "breakpoints": true
     }
   ]
 }
