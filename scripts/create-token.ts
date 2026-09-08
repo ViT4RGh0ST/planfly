@@ -78,12 +78,36 @@ async function main() {
   const [household] = await db.select().from(households).limit(1);
   if (!household) throw new Error("There is no household. Run `npm run db:seed` first.");
 
-  const [member] = await db
-    .select({ userId: householdMembers.userId })
+  /*
+   * Which member the token speaks as, and whether that member may write.
+   *
+   * It took the first row the database happened to return, with no order and no
+   * regard for the role. In a household of two where one is read-only, that could
+   * bind a token carrying `transactions:write` to the member who is not allowed
+   * to write — and until the role was checked at authentication, it wrote.
+   *
+   * Now it prefers somebody who can write, and refuses to mint a write scope for
+   * a read-only member instead of leaving the failure for later, at a moment when
+   * whoever reads it will be looking at a bot and not at this.
+   */
+  const scopes = requestedScopes();
+
+  const members = await db
+    .select({ userId: householdMembers.userId, role: householdMembers.role })
     .from(householdMembers)
     .where(eq(householdMembers.householdId, household.id))
-    .limit(1);
-  if (!member) throw new Error("The household has no users.");
+    .orderBy(householdMembers.role);
+  if (members.length === 0) throw new Error("The household has no users.");
+
+  const member = members.find((m) => m.role !== "viewer") ?? members[0];
+  const writes = scopes.filter((scope) => scope.endsWith(":write"));
+  if (member.role === "viewer" && writes.length > 0) {
+    throw new Error(
+      `Everybody in this household is read-only, so ${writes.join(", ")} would be ` +
+        "refused on every call. Mint a reading token instead:\n" +
+        `  npm run token:create -- "${tokenName}" "${scopes.filter((s) => !s.endsWith(":write")).join(",")}"`,
+    );
+  }
 
   // Revoke earlier ones with the same name: two live tokens for the same client
   // is exactly what makes it impossible to know which to revoke when the time comes.
@@ -103,7 +127,6 @@ async function main() {
     console.log(`Revoked ${revoked.length} earlier token(s) named "${tokenName}".`);
   }
 
-  const scopes = requestedScopes();
   const { plain, hash, prefix } = generateToken();
   await db.insert(apiTokens).values({
     householdId: household.id,
@@ -141,7 +164,8 @@ async function main() {
    * actually being minted rather than from a list written here, so a narrowed
    * token says so and a list cannot drift from what was granted.
    */
-  console.log("This credential can:");
+  console.log(`This credential speaks as a household ${member.role}.`);
+  console.log("It can:");
   for (const scope of scopes) {
     console.log(`  ${scope.padEnd(20)} ${WHAT_A_SCOPE_REACHES[scope] ?? ""}`);
   }

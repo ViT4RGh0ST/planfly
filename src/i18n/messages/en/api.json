@@ -1,6 +1,7 @@
 {
   "unauthorized": "Missing, invalid or revoked token.",
   "forbiddenScope": "This token does not have the \"{scope}\" permission.",
+  "forbiddenReadOnly": "This credential belongs to somebody with read-only access to the household: it can consult, but change nothing. The scope «{scope}» needs a member who can write.",
   "forbiddenField": "The field \"{key}\" is not accepted from the API: identity is derived from the token, not from the body.",
   "unknownField": {
     "head": "I don't know the field \"{key}\".",
