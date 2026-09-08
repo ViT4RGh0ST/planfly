@@ -21,6 +21,24 @@ import { generateToken } from "../src/lib/api-token";
 
 const tokenName = process.argv[2] ?? "openclaw-telegram";
 
+/**
+ * What each scope actually reaches, in the words of somebody about to grant it.
+ *
+ * Printed beside the token. A scope name says what a developer means; this says
+ * what is being handed over.
+ */
+const WHAT_A_SCOPE_REACHES: Record<string, string> = {
+  "context:read": "see your accounts, categories and the day's rates",
+  "transactions:read": "read what you have recorded",
+  "transactions:write": "record and correct entries",
+  "reports:read": "read your balances, spending and net worth",
+  "accounts:write": "open, rename and archive accounts",
+  "budgets:write": "set and remove spending caps",
+  "financing:write": "record instalment purchases and pay them",
+  "recurring:write": "set up entries that record themselves",
+  "mcp:access": "enter the MCP endpoint at all",
+};
+
 /** The scopes the API recognises. If a new route is added, it goes here. */
 const SCOPES = [
   "context:read",
@@ -112,6 +130,29 @@ async function main() {
   console.log("│ then:");
   console.log("│   docker compose restart openclaw-gateway   (wherever openclaw lives)");
   console.log("└──────────────────────────────────────────────────────────────\n");
+
+  /*
+   * What this credential can reach, and what leaves the machine — here, and not
+   * only in the README.
+   *
+   * This is the moment somebody decides: the token is on screen and about to be
+   * pasted into an agent's configuration. Nobody re-reads documentation at that
+   * moment, and everybody reads this. The scopes are printed from the token
+   * actually being minted rather than from a list written here, so a narrowed
+   * token says so and a list cannot drift from what was granted.
+   */
+  console.log("This credential can:");
+  for (const scope of scopes) {
+    console.log(`  ${scope.padEnd(20)} ${WHAT_A_SCOPE_REACHES[scope] ?? ""}`);
+  }
+  console.log(
+    "\nWhoever holds it reads and writes THIS household's ledger. If you paste it\n" +
+      "into an agent that runs in somebody else's cloud, what you ask and what\n" +
+      "planfly answers — amounts, account names, the text of a receipt — go to that\n" +
+      "provider. That is the trade, and it is worth making on purpose.\n\n" +
+      "It is revocable: `npm run token:revoke` ends it without touching anything it\n" +
+      "recorded, and every entry it wrote keeps its name.\n",
+  );
 }
 
 main()
