@@ -268,6 +268,26 @@ checks the same scope, against the same credential, as one called by name, and
 anything that moves money still previews first and still waits for an explicit
 yes.
 
+**What leaves your machine.** planfly is self-hosted, and connecting an agent is
+the one decision that reaches past it. If that agent runs in somebody else's
+cloud, what you ask and what planfly answers — amounts, account names, the text
+of a receipt — go to that provider. Nothing is sent by planfly itself, and no
+image ever leaves: MCP grants no vision, so a client that reads a receipt does it
+on its own side and sends planfly the facts it extracted.
+
+The credential decides how much is reachable, and `npm run mcp:token` prints
+exactly what it grants beside the token. Narrow it if the assistant only ever
+needs to look:
+
+```bash
+npm run token:create -- read-only "mcp:access,context:read,reports:read"
+```
+
+Every token is revocable with `npm run token:revoke`, without touching anything
+it recorded. And whatever comes back through a tool — a receipt's text above all
+— is data planfly stores, never an instruction it follows; the MCP server tells
+the model as much in its own opening words.
+
 ### With openclaw
 
 Two halves. The **tools** come from the MCP endpoint above — openclaw speaks it

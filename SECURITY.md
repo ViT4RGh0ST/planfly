@@ -40,6 +40,17 @@ You always get one, even if it is to say it is not a fault.
 
 ## What is already known
 
+**Connecting an agent sends financial data to whoever runs it.** The MCP endpoint
+and the token API are the only ways anything leaves this machine, and both are
+things you switch on. An agent running in somebody's cloud receives what you ask
+and what planfly answers: amounts, account names, the text of a receipt. planfly
+cannot know where a client runs, so it does not pretend to — it prints what a
+credential grants at the moment you mint one, keeps every credential revocable,
+and never sends an image, because MCP grants no vision.
+
+Tool content is data, not instruction. Receipt text arrives from a camera and a
+model, and is stored and shown; it never decides what planfly does.
+
 Said here so nobody spends an afternoon finding it:
 
 - The Postgres password in `compose.yaml` is an example one and the database
