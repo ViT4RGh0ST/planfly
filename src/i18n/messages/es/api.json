@@ -1,6 +1,7 @@
 {
   "unauthorized": "Token ausente, inválido o revocado.",
   "forbiddenScope": "Este token no tiene el permiso \"{scope}\".",
+  "forbiddenReadOnly": "Esta credencial pertenece a alguien con acceso de solo lectura en el hogar: puede consultar, pero no modificar nada. El alcance «{scope}» necesita un miembro que pueda escribir.",
   "forbiddenField": "El campo \"{key}\" no se acepta desde la API: la identidad se deriva del token, no del cuerpo.",
   "unknownField": {
     "head": "No conozco el campo \"{key}\".",

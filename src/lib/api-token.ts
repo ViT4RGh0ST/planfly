@@ -2,7 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, isNull, or } from "drizzle-orm";
 
 import { db } from "@/db";
-import { apiTokens, households } from "@/db/schema";
+import { apiTokens, householdMembers, households } from "@/db/schema";
 
 /**
  * Machine credentials: this is how the openclaw plugin authenticates.
@@ -33,7 +33,30 @@ export type Principal = {
   timezone: string;
   /** The household's language. What the bot answers in, taken from the token. */
   locale: string;
+  /**
+   * What this person may do in the household, which is NOT what the token says.
+   *
+   * A scope answers «what may this credential do»; the role answers «may this
+   * person do it at all». The web has always asked both — `requireWriter()`
+   * refuses a viewer — and this path asked only the first, so a token minted for
+   * a read-only member wrote the ledger and answered 201. The two doors now
+   * agree.
+   */
+  role: HouseholdRole;
 };
+
+export type HouseholdRole = "owner" | "member" | "viewer";
+
+/**
+ * The scopes a read-only member may never exercise, whatever the token carries.
+ *
+ * By suffix rather than by list: the next `something:write` is covered the day
+ * it is invented, and a scope that has to be exempted has to be named. A list
+ * would silently omit it.
+ */
+export function isWriteScope(scope: string): boolean {
+  return scope.endsWith(":write");
+}
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");
@@ -70,9 +93,22 @@ export async function authenticateToken(header: string | null): Promise<Principa
       baseCurrency: households.baseCurrency,
       timezone: households.timezone,
       locale: households.locale,
+      role: householdMembers.role,
     })
     .from(apiTokens)
     .innerJoin(households, eq(households.id, apiTokens.householdId))
+    /*
+     * INNER, so a token whose user is no longer a member of the household stops
+     * authenticating at all. Left outer would leave the role null and turn
+     * «they were removed» into a question every caller has to remember to ask.
+     */
+    .innerJoin(
+      householdMembers,
+      and(
+        eq(householdMembers.householdId, apiTokens.householdId),
+        eq(householdMembers.userId, apiTokens.userId),
+      ),
+    )
     .where(
       and(
         eq(apiTokens.tokenHash, hash),
@@ -105,9 +141,20 @@ export async function authenticateToken(header: string | null): Promise<Principa
     baseCurrency: row.baseCurrency,
     timezone: row.timezone,
     locale: row.locale,
+    role: row.role,
   };
 }
 
+/**
+ * Whether this principal may exercise a scope — token AND role.
+ *
+ * The role check lives here, in the one funnel every route and every MCP tool
+ * already passes through, and not in each of them: a check repeated per caller
+ * is one the next caller forgets, and what it guards is writing to somebody's
+ * ledger. A viewer holding `transactions:write` on a token genuinely does not
+ * have it, so answering false is the honest answer and not a special case.
+ */
 export function hasScope(principal: Principal, scope: string): boolean {
-  return principal.scopes.includes(scope);
+  if (!principal.scopes.includes(scope)) return false;
+  return !(principal.role === "viewer" && isWriteScope(scope));
 }

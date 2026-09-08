@@ -34,6 +34,9 @@ export async function oauthPrincipal(claims: JWTPayload): Promise<Principal> {
       baseCurrency: households.baseCurrency,
       timezone: households.timezone,
       locale: households.locale,
+      // The same question the token path asks. An OAuth client authorised by a
+      // read-only member is still a read-only member.
+      role: householdMembers.role,
     })
     .from(householdMembers)
     .innerJoin(households, eq(households.id, householdMembers.householdId))
@@ -50,6 +53,7 @@ export async function oauthPrincipal(claims: JWTPayload): Promise<Principal> {
     householdId: membership.householdId,
     userId: claims.sub,
     scopes: scopeList(claims.scope),
+    role: membership.role,
     baseCurrency: membership.baseCurrency,
     timezone: membership.timezone,
     locale: membership.locale,

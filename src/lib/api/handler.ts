@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/i18n/config";
 import { getTranslator } from "@/i18n/translator";
-import { authenticateToken, hasScope, type Principal } from "@/lib/api-token";
+import { authenticateToken, hasScope, isWriteScope, type Principal } from "@/lib/api-token";
 import { InvalidTransactionError } from "@/lib/services/record-transaction";
 import { InvalidAmountError } from "@/lib/money";
 import { amountErrorMessage } from "@/lib/user-error";
@@ -162,11 +162,24 @@ export function withToken(
       }
       locale = normalizeLocale(principal.locale);
       if (!hasScope(principal, scope)) {
+        /*
+         * Which of the two refusals this is.
+         *
+         * A credential can be refused because the token never carried the scope,
+         * or because the person it belongs to is read-only in the household.
+         * Saying «you lack transactions:write» to a token that plainly carries it
+         * sends whoever reads it to mint a wider token, which will be refused
+         * too. The recovery is a different one and the message has to say so.
+         */
+        const readOnly = principal.role === "viewer" && isWriteScope(scope);
         return NextResponse.json(
           {
             ok: false,
             error: "forbidden",
-            message: getTranslator(locale)("api.forbiddenScope", { scope }),
+            message: getTranslator(locale)(
+              readOnly ? "api.forbiddenReadOnly" : "api.forbiddenScope",
+              { scope },
+            ),
           },
           { status: 403 },
         );
