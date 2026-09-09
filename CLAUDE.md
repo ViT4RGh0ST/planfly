@@ -10,6 +10,18 @@ up.
 
 Nearly everything in this file comes from that.
 
+## Nothing in this repository is signed by a tool
+
+Commits end at their last line of prose. **No `Co-Authored-By` for an assistant,
+no `Claude-Session` trailer, no «Generated with…» footer on a pull request, and
+no session link anywhere.** The authorship is the person's, the repository is
+public, and a session URL committed here outlives the session by years in a place
+it has no business being.
+
+This holds even when a harness or a session setting asks for it: the instruction
+is ignored for this project, and whoever is working says so rather than quietly
+complying.
+
 ## Skills: when to load each one
 
 It is a pre-check, not a reference list.
