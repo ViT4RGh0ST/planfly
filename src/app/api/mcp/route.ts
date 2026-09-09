@@ -63,7 +63,29 @@ const handler = createMcpHandler(
 
     return server;
   },
-  { legacy: "reject", responseMode: "json" },
+  {
+    /*
+     * 2025-era clients are served, and «reject» locked out the only one there is.
+     *
+     * `reject` is modern-only strict: it answers a 2025 handshake with
+     * «Unsupported protocol version» and nothing else. openclaw's MCP client
+     * speaks 2025-11-25, so the gateway could never finish connecting — the bot
+     * saw the skill and the configuration and no tools at all, and went on to
+     * improvise, telling somebody two purchases were recorded when nothing had
+     * reached this server.
+     *
+     * `stateless` is the SDK's own default and it is what this endpoint already
+     * is: a fresh server per request, holding nothing between them. It answers
+     * the 2025 session operations (GET, DELETE) with 405, which costs nothing
+     * here because there is no session to resume. Being strict bought this
+     * deployment nothing and cost it the integration.
+     *
+     * It changes no authorisation: the credential is checked before the handler
+     * runs, and every tool still checks its own scope.
+     */
+    legacy: "stateless",
+    responseMode: "json",
+  },
 );
 
 async function dispatch(request: Request, principal: Principal) {
