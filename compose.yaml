@@ -35,6 +35,16 @@ services:
       MAP_TILES_ATTRIBUTION: "${MAP_TILES_ATTRIBUTION:-}"
       # Address <-> point. Empty means the address stays plain text.
       GEOCODER_URL: "${GEOCODER_URL:-}"
+      # Where MCP clients actually reach this planfly, and the names its endpoint
+      # answers to. The URL is the resource identifier OAuth binds tokens to, so
+      # it is the address a client dials from outside; the extra hosts are the
+      # names it also answers to inside — a container on a shared network reaches
+      # it as `planfly`, and without that name the Host check refuses it.
+      MCP_PUBLIC_URL: "${MCP_PUBLIC_URL:-http://localhost:3000/api/mcp}"
+      MCP_ALLOWED_HOSTS: "${MCP_ALLOWED_HOSTS:-}"
+      MCP_ALLOWED_ORIGINS: "${MCP_ALLOWED_ORIGINS:-}"
+      # How many tools the server LISTS. It never changes what is reachable.
+      MCP_MODE: "${MCP_MODE:-gateway}"
       # Installment alerts. Optional on purpose: without them the app works the
       # same, only quietly. The `:-` keeps compose from failing if they are absent.
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
