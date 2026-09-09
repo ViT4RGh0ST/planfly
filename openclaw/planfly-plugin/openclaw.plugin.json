@@ -7,5 +7,10 @@
   ],
   "contracts": {
     "tools": []
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
   }
 }
