@@ -39,8 +39,30 @@ export const mcpAllowedOriginHostnames = [
   ...configuredOrigins.map((origin) => parseUrl(origin, "MCP_ALLOWED_ORIGINS").hostname),
 ];
 
-/** Host header allowlist; ports are intentionally ignored by the SDK helper. */
-export const mcpAllowedHosts = [mcpResourceUrl.hostname];
+/**
+ * Host header allowlist; ports are intentionally ignored by the SDK helper.
+ *
+ * One deployment legitimately answers to more than one name. planfly is reached
+ * at `localhost:3000` from the machine and at `planfly:3000` from another
+ * container on a shared network, and the endpoint refused the second with
+ * «Invalid Host: planfly» — correctly, since that check is what stops a rebound
+ * DNS name pointing a browser at this port.
+ *
+ * The alternative was to make `MCP_PUBLIC_URL` the container name, and that is
+ * worse: it is the resource identifier OAuth binds tokens to and the address the
+ * discovery documents publish, so a browser following them would be sent to a
+ * name only Docker resolves. The public identity stays truthful, and the extra
+ * names are declared — exactly as `MCP_ALLOWED_ORIGINS` already declares extra
+ * origins. A closed list either way: each entry is a name whose requests are
+ * accepted, so it grows only with what is actually used.
+ */
+export const mcpAllowedHosts = [
+  mcpResourceUrl.hostname,
+  ...(process.env.MCP_ALLOWED_HOSTS ?? "")
+    .split(",")
+    .map((host) => host.trim())
+    .filter(Boolean),
+];
 
 export type McpMode = "native" | "gateway" | "both";
 
