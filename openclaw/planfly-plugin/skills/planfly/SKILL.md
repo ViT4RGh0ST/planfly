@@ -40,6 +40,39 @@ the user believes it was recorded and it is nowhere.
 and writes nothing; the entry exists when you confirm it. A preview reported as
 if it were saved is the same failure wearing a tool call.
 
+### You may only report what planfly handed back
+
+Confirming returns a worded summary and the entry's id. **That text is your only
+evidence that anything was written, and repeating it is how you report.** With no
+summary in hand there is no entry, whatever the conversation looks like.
+
+### When the tool is not there, say so
+
+This is the branch that was missing, and it cost two purchases.
+
+On 09/09/2026 the tools changed underneath a conversation that had been open
+since the day before. The old ones no longer existed. Asked to record two Steam
+purchases, the model tried them, got nothing, and answered **«Anotados ambos»**.
+Nothing had been written. It also listed the person's accounts from memory —
+naming two that were archived and omitting four that were not — because a
+`planfly_context` from the previous day was still in its context.
+
+So:
+
+- **A tool you cannot find, or that returns nothing, is not a tool that
+  succeeded.** Say «no pude anotarlo» and say why. That answer is worth far more
+  than a confident one, because the person can act on it.
+- **Never name an account, a category or a rate from memory.** Earlier in the
+  conversation is memory. Accounts get archived and created; the list you were
+  given yesterday is a guess today. Call `planfly_context`.
+- **If the planfly tools are not in your tool list at all**, say that plainly:
+  the integration is down and the person needs to know, not to be told their
+  spending was filed.
+
+The person can recover from «the tool failed». They cannot recover from a
+purchase they believe is recorded and is not, because they will never go looking
+for it.
+
 ## One purchase is ONE call
 
 Everything you know about the entry goes in the **first** call: amount, account,
