@@ -1,4 +1,4 @@
-import type { McpTool } from "@/lib/mcp/registry";
+import type { McpSurface, McpTool } from "@/lib/mcp/registry";
 import { accountTool } from "@/lib/mcp/tools/account";
 import { amendTool } from "@/lib/mcp/tools/amend";
 import { budgetTool } from "@/lib/mcp/tools/budget";
@@ -53,6 +53,7 @@ export function resolve(name: string): McpTool | undefined {
 export type ToolSummary = {
   name: string;
   title: string;
+  surface: McpSurface;
   summary: string;
   scopes: string[];
   writes: boolean;
@@ -90,14 +91,29 @@ const NOISE = new Set([
   "the", "a", "an", "of", "to", "in", "on", "for", "and", "or", "my", "i",
 ]);
 
-export function search(query: string | undefined, limit: number, offset = 0) {
+export function search(
+  query: string | undefined,
+  limit: number,
+  offset = 0,
+  surface?: McpSurface,
+) {
   const tokens = (query ?? "")
     .toLowerCase()
     .split(/\s+/)
     .map((token) => token.trim())
     .filter((token) => token && !NOISE.has(token));
 
-  const scored = NATIVE.filter((tool) => tool.gatewayRoutable !== false)
+  /*
+   * The family narrows BEFORE ranking, and never instead of it.
+   *
+   * Filtering after the fact would page through a ranked list and drop most of
+   * it, leaving `total_matched` counting tools the caller cannot see; narrowing
+   * first makes the count and `next_offset` describe the same list the caller
+   * asked for.
+   */
+  const scored = NATIVE.filter(
+    (tool) => tool.gatewayRoutable !== false && (surface === undefined || tool.surface === surface),
+  )
     .map((tool) => {
       const name = tool.name.toLowerCase();
       const summary = firstSentence(tool.description);
@@ -121,6 +137,7 @@ export function search(query: string | undefined, limit: number, offset = 0) {
     ({ tool, summary }): ToolSummary => ({
       name: tool.name,
       title: tool.title,
+      surface: tool.surface,
       summary,
       scopes: tool.scopes,
       // The one fact worth knowing before reading a schema: does this move money.

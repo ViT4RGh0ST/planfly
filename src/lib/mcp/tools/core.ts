@@ -26,6 +26,7 @@ export const contextTool = defineTool({
     "Get the authenticated household's accounts, categories, current rates and net worth.",
   inputSchema: z.object({}),
   annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  surface: "catalog",
   keywords: ["accounts", "categories", "rates", "cuentas", "categorias", "tasas", "saldo", "context"],
   scopes: ["context:read"],
   essential: true,
@@ -66,6 +67,7 @@ export const reportTool = defineTool({
     needs_review: z.boolean().optional(),
   }),
   annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  surface: "reports",
   keywords: [
     "report", "spending", "balance", "net worth", "budget", "summary",
     "reporte", "gastos", "saldo", "patrimonio", "presupuesto", "resumen", "cuanto",
@@ -101,6 +103,7 @@ export const previewTransactionTool = defineTool({
     "planfly_confirm_transaction only after explicit approval. MCP itself does not perform OCR or vision.",
   inputSchema: mcpTransactionDraftSchema,
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  surface: "ledger",
   keywords: [
     "expense", "income", "transfer", "record", "spend", "buy", "receipt",
     "gasto", "ingreso", "transferencia", "compra", "pagar", "factura", "recibo", "gaste",
@@ -138,6 +141,7 @@ export const confirmTransactionTool = defineTool({
     "approved that confirmation id.",
   inputSchema: z.object({ confirmation_id: z.uuid() }),
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  surface: "ledger",
   keywords: ["confirm", "approve", "yes", "commit", "confirmar", "aprobar", "si", "dale"],
   scopes: ["transactions:write"],
   essential: true,

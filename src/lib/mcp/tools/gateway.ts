@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { essentials, resolve, search } from "@/lib/mcp/catalog";
-import { defineTool, RULES, type McpTool } from "@/lib/mcp/registry";
+import { defineTool, RULES, SURFACES, type McpTool } from "@/lib/mcp/registry";
 import type { McpToolContext, ToolResult } from "@/lib/mcp/tools/context";
 
 /**
@@ -83,8 +83,24 @@ export const searchToolTool = defineTool({
       ),
     limit: z.number().int().min(1).max(20).optional().describe("Max results. Defaults to 8."),
     offset: z.number().int().min(0).optional().describe("For paging, from a previous next_offset."),
+    /*
+     * The enum comes from `SURFACES` and is not written out here.
+     *
+     * A second copy of the list is a second thing to update, and the day they
+     * disagree the schema refuses a family that exists — which reads to a model
+     * as the family not existing.
+     */
+    surface: z
+      .enum(SURFACES)
+      .optional()
+      .describe(
+        "Narrow to one family: ledger (what moves money), catalog (what names and groups it), " +
+          "credit (what is owed over time), reports (what is only read). Every result says which " +
+          "family it is in, so one search tells you what to narrow to next.",
+      ),
   }),
   annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  surface: "meta",
   keywords: ["search", "find", "discover", "which tool", "buscar", "herramienta"],
   /*
    * No scope: it reads the catalogue, not the household. Which is also why the
@@ -96,7 +112,7 @@ export const searchToolTool = defineTool({
     try {
       return ctx.result({
         ok: true,
-        ...search(input.query, input.limit ?? 8, input.offset ?? 0),
+        ...search(input.query, input.limit ?? 8, input.offset ?? 0, input.surface),
         how_to_run: "planfly_tool_schema for the parameters, then planfly_use_tool with { name, arguments }.",
         rules: RULES,
       });
@@ -116,6 +132,7 @@ export const toolSchemaTool = defineTool({
     name: z.string().max(100).describe("The tool name, exactly as planfly_search_tool returned it."),
   }),
   annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  surface: "meta",
   keywords: ["schema", "parameters", "arguments", "how", "esquema", "parametros", "como"],
   scopes: [],
   run: async ({ name }, ctx) => {
@@ -164,6 +181,7 @@ export const useToolTool = defineTool({
    * destructive calls should refuse this one, because what is behind it may be.
    */
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  surface: "meta",
   keywords: ["run", "call", "execute", "use", "ejecutar", "llamar", "usar"],
   scopes: [],
   run: async (input, ctx) => {

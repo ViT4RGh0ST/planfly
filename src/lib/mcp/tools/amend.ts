@@ -200,6 +200,7 @@ export const amendTool = defineTool({
     `${AGENT_EDITABLE_DAYS} days: it cannot touch what came from a bank statement.`,
   inputSchema: amendInputSchema,
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  surface: "ledger",
   keywords: [
     "amend", "correct", "fix", "void", "cancel", "undo", "wrong", "edit", "approve", "receipt",
     "corregir", "arreglar", "anular", "borrar", "equivoque", "cambiar", "error", "factura", "desglose",

@@ -24,6 +24,36 @@ import type { McpToolContext, ToolResult } from "@/lib/mcp/tools/context";
  * exist to keep it that way when the next tool is written.
  */
 
+/**
+ * The families a tool belongs to, declared and never inferred.
+ *
+ * With parity the catalogue goes from ten tools to around twenty, and a default
+ * `limit` of 8 means an ambiguous question comes back with eight results drawn
+ * from five domains — at which point the model is choosing badly out of a list
+ * that looks helpful. A family narrows the list before ranking narrows it.
+ *
+ * **Declared, not read off the file path.** Inferring it from `tools/<x>.ts`
+ * would reclassify a tool the day somebody moved a file, in silence; the
+ * fallback for an unrecognised path would land on a family the validating enum
+ * does not accept; and the list of families would then live in three places at
+ * once. It is one word in the definition, next to the scopes.
+ *
+ * A family is added when the first tool in it is written, and not before: an
+ * empty family is a filter that answers nothing and a hint that misleads. That
+ * is why `rates` is not here yet — it arrives with `planfly_rate`.
+ */
+export const SURFACES = ["ledger", "catalog", "credit", "reports"] as const;
+
+/**
+ * `meta` is the three doors, and it is deliberately not in `SURFACES`.
+ *
+ * They are always listed natively and never discovered, so offering them as a
+ * filter value would be offering a family that always answers nothing. They
+ * still declare where they belong, because a field that some tools may skip is
+ * a field the next tool skips by accident.
+ */
+export type McpSurface = (typeof SURFACES)[number] | "meta";
+
 /** A tool as both doors need to see it: described, schema'd, and runnable. */
 export type McpTool = {
   name: string;
@@ -47,6 +77,12 @@ export type McpTool = {
    * the financing tool, because the description is written in English.
    */
   keywords: string[];
+  /**
+   * Which family this belongs to, for `search_tool` to filter by. See
+   * `SURFACES`: `ledger` is what moves money, `catalog` what names and groups
+   * it, `credit` what is owed over time, `reports` what is only ever read.
+   */
+  surface: McpSurface;
   /**
    * Listed natively even in gateway mode. Reserve it for what a finance chat
    * does constantly: every essential is paid for by every conversation.

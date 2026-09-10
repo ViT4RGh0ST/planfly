@@ -126,6 +126,7 @@ export const accountTool = defineTool({
     "surface that 409 as a question for the person, and never resend confirm on your own initiative.",
   inputSchema: accountInputSchema,
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  surface: "catalog",
   keywords: [
     "account", "bank", "card", "wallet", "open", "archive", "opening balance",
     "cuenta", "banco", "tarjeta", "billetera", "abrir", "archivar", "saldo", "inicial", "cashea",

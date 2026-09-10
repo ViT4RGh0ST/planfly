@@ -118,6 +118,7 @@ export const budgetTool = defineTool({
     destructiveHint: false,
     openWorldHint: false,
   },
+  surface: "reports",
   keywords: [
     "budget", "cap", "limit", "spending limit", "set budget",
     "presupuesto", "tope", "limite", "gastar", "cuanto",
