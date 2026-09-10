@@ -366,4 +366,204 @@ describe("the routes that write", { skip: hasDb() ? false : "no Postgres availab
     const body = await res.json();
     assert.equal(body.detail.suggestion, "product");
   });
+
+  it("a recurrence that is not there says so, instead of an internal error", async () => {
+    // `InvalidRecurrenceError` had no branch in the handler, so every refusal
+    // this service words — no days, no name, no such rule — left as a 500 with
+    // «Planfly could not complete the request» and nothing to act on.
+    const { PATCH } = await import("./recurring/[id]/route");
+    const res = await PATCH(
+      pide("/api/v1/recurring/00000000-0000-4000-8000-000000000000", {
+        method: "PATCH", token, body: { active: false },
+      }),
+    );
+
+    assert.equal(res.status, 404);
+    const body = (await res.json()) as { error: string; message: string };
+    assert.equal(body.error, "rule_not_found");
+    assert.doesNotMatch(body.message, /no pudo completar/i, "the service's own sentence, not the fallback");
+  });
+
+  /**
+   * An id from somebody else's household, presented with your own token.
+   *
+   * The scope checks say what a credential may DO. Nothing in them says what it
+   * may do it TO, and every route that takes an opaque id is one `where` clause
+   * away from letting a stranger pay your instalment or void your entry. That
+   * clause is written by hand in each service, which is exactly the kind of thing
+   * that is right in five places and missing in the sixth.
+   *
+   * The failure would not look like a failure: the id is valid, the token is
+   * valid, the row is found, and the answer is 200. It is the shape of mistake
+   * this project exists to refuse — nothing breaks, a figure moves.
+   *
+   * So it is a table, and every route that starts taking an id adds a row to it.
+   */
+  describe("an id that belongs to another household", { skip: hasDb() ? false : "no Postgres available" }, () => {
+    type Ids = { transaction: string; recurrence: string; plan: string; installment: string };
+    type Attack = { what: string; call: (ids: Ids) => Promise<Response> };
+    let theirs: Ids;
+
+    before(async () => {
+      // A whole second household, seeded through the same door as the first: its
+      // ids have to be real ones, not strings that were never written anywhere.
+      const other = await seedScenario({ date: DATE, bcvRate: "780.0000000000", p2pRate: "900.0000000000" });
+      const theirToken = await tokenFor(other.home);
+
+      const tx = await (await import("./transactions/route")).POST(
+        pide("/api/v1/transactions", {
+          method: "POST", token: theirToken,
+          body: { kind: "expense", amount: 50, currency: "VES", account: "efectivo", category: "mercado", occurred_on: DATE },
+        }),
+      );
+      const recurrence = await (await import("./recurring/route")).POST(
+        pide("/api/v1/recurring", {
+          method: "POST", token: theirToken,
+          body: {
+            name: "Ajeno", cadence: "custom", days_of_month: [5], kind: "expense",
+            amount: "100,00", account: "efectivo", category: "mercado", start_on: DATE,
+          },
+        }),
+      );
+      const financed = await (await import("./financing/route")).POST(
+        pide("/api/v1/financing", {
+          method: "POST", token: theirToken,
+          body: {
+            financier: "tdc", total: "400,00", down_payment: "0",
+            down_payment_account: "efectivo", installments: 2, occurred_on: DATE,
+            description: "Ajena a cuotas",
+          },
+        }),
+      );
+
+      // The instalment ids are not in what a purchase returns: they are read
+      // back the way the agent reads them, from what is owed.
+      const owed = await (await import("./financing/route")).GET(
+        pide("/api/v1/financing", { token: theirToken }),
+      );
+
+      const txBody = (await tx.json()) as { transactionId?: string };
+      const recurrenceBody = (await recurrence.json()) as { id?: string };
+      const financedBody = (await financed.json()) as { planId?: string };
+      const owedBody = (await owed.json()) as {
+        plans?: Array<{ id: string; installments?: Array<{ id: string }> }>;
+      };
+
+      theirs = {
+        transaction: txBody.transactionId ?? "",
+        recurrence: recurrenceBody.id ?? "",
+        plan: financedBody.planId ?? "",
+        installment: owedBody.plans?.[0]?.installments?.[0]?.id ?? "",
+      };
+
+      for (const [name, id] of Object.entries(theirs)) {
+        assert.ok(
+          typeof id === "string" && id.length > 0,
+          `the fixture did not get a real ${name} id, so the attacks below would prove nothing`,
+        );
+      }
+    });
+
+    const attacks = (): Attack[] => [
+      {
+        what: "correcting their entry",
+        call: async (ids) =>
+          (await import("./transactions/[id]/route")).PATCH(
+            pide(`/api/v1/transactions/${ids.transaction}`, { method: "PATCH", token, body: { amount: "1,00" } }),
+          ),
+      },
+      {
+        what: "voiding their entry",
+        call: async (ids) =>
+          (await import("./transactions/[id]/route")).DELETE(
+            pide(`/api/v1/transactions/${ids.transaction}`, { method: "DELETE", token, body: { reason: "no es mía" } }),
+          ),
+      },
+      {
+        what: "pausing their recurrence",
+        call: async (ids) =>
+          (await import("./recurring/[id]/route")).PATCH(
+            pide(`/api/v1/recurring/${ids.recurrence}`, { method: "PATCH", token, body: { active: false } }),
+          ),
+      },
+      {
+        what: "deleting their recurrence",
+        call: async (ids) =>
+          (await import("./recurring/[id]/route")).DELETE(
+            pide(`/api/v1/recurring/${ids.recurrence}`, { method: "DELETE", token }),
+          ),
+      },
+      {
+        what: "paying their instalment",
+        call: async (ids) =>
+          (await import("./financing/route")).POST(
+            pide("/api/v1/financing", {
+              method: "POST", token,
+              body: { installment_id: ids.installment, from_account: "efectivo", paid_on: DATE },
+            }),
+          ),
+      },
+      {
+        what: "undoing their instalment",
+        call: async (ids) =>
+          (await import("./financing/route")).POST(
+            pide("/api/v1/financing", {
+              method: "POST", token,
+              body: { installment_id: ids.installment, undo: true },
+            }),
+          ),
+      },
+      {
+        what: "voiding their financing plan",
+        call: async (ids) =>
+          (await import("./financing/route")).POST(
+            pide("/api/v1/financing", {
+              method: "POST", token,
+              body: { plan_id: ids.plan, reason: "no es mío" },
+            }),
+          ),
+      },
+    ];
+
+    it("answers exactly as it would for an id that never existed", async () => {
+      /*
+       * The property is not «it fails»: it is that it fails IDENTICALLY.
+       *
+       * A refusal that tells «yours but not allowed» apart from «not yours»
+       * answers a question the caller was not entitled to ask, and turns every
+       * one of these routes into a way of confirming that an id exists
+       * somewhere in this installation. So each attack is run twice — once with
+       * the neighbour's real id, once with one that was never written anywhere
+       * — and the two answers have to match, status and code.
+       *
+       * That also frees the check from arguing about which number is right: the
+       * routes may answer 404 or 422 depending on whether the id came in the
+       * path or in the body, and the rule holds either way.
+       */
+      const invented = "00000000-0000-4000-8000-000000000000";
+
+      for (const attack of attacks()) {
+        const real = await attack.call(theirs);
+        const realBody = (await real.json()) as { ok?: boolean; error?: string };
+
+        assert.ok(
+          !real.ok && realBody.ok !== true,
+          `${attack.what} came back ${real.status} ${JSON.stringify(realBody).slice(0, 200)}. ` +
+            "A token from one household reached a row in another.",
+        );
+
+        const nowhere = await attack.call({
+          transaction: invented, recurrence: invented, plan: invented, installment: invented,
+        });
+        const nowhereBody = (await nowhere.json()) as { error?: string };
+
+        assert.equal(
+          `${real.status} ${realBody.error}`,
+          `${nowhere.status} ${nowhereBody.error}`,
+          `${attack.what} is answered differently for a real id in another household than for ` +
+            "one that exists nowhere. That difference is how you find out whose id it is.",
+        );
+      }
+    });
+  });
 });

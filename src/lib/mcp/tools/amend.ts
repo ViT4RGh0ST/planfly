@@ -226,7 +226,22 @@ export const amendTool = defineTool({
       const body = correctionsFrom(input);
       const asked = Object.keys(body).length > 0;
 
-      const staged = async (
+      /*
+     * `await`, and not only for tidiness — see the three `return await` below.
+     *
+     * `return staged(...)` inside a `try` hands the promise back instead of
+     * waiting for it, and the rejection is adopted after the block has already
+     * been left: the `catch` never runs. Everything `mcpErrorResult` is careful
+     * to word — which transaction was not found, which amount could not be read
+     * — left this tool as a bare rejection, and the SDK turned it into a
+     * protocol error with none of that in it. The model's only move then is to
+     * repeat the identical call.
+     *
+     * It showed only through the native door: `planfly_use_tool` awaits the
+     * tool it routes to, so the same failure was worded on one door and generic
+     * on the other.
+     */
+    const staged = async (
         action: "correct" | "void" | "approve",
         payload: Record<string, unknown>,
       ) => {
@@ -343,7 +358,7 @@ export const amendTool = defineTool({
          * would be a 400 at best; the confirmation is where they belong, and
          * it is what the person approves before the entry stops counting.
          */
-        return staged("void", { body: {}, reason: input.reason });
+        return await staged("void", { body: {}, reason: input.reason });
       }
 
       if (input.action === "approve") {
@@ -359,7 +374,7 @@ export const amendTool = defineTool({
             true,
           );
         }
-        return staged("approve", { body: updateTransactionSchema.parse({ approve: true }) });
+        return await staged("approve", { body: updateTransactionSchema.parse({ approve: true }) });
       }
 
       if (!asked) {
@@ -395,7 +410,7 @@ export const amendTool = defineTool({
       // Validated before a person is asked to approve it: a malformed date or
       // amount is the route's answer to give, and it should not arrive after
       // the approval, when it reads as the approval having failed.
-      return staged("correct", { body: updateTransactionSchema.parse(body) });
+      return await staged("correct", { body: updateTransactionSchema.parse(body) });
     } catch (error) {
       return ctx.fail(error);
     }
