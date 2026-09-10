@@ -155,6 +155,7 @@ export async function tokenFor(
     "budgets:write",
     "financing:write",
     "recurring:write",
+    "rates:write",
   ],
 ): Promise<string> {
   const userId = await userOf(home, `tok${scopes.length}`);

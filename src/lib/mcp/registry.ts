@@ -42,7 +42,7 @@ import type { McpToolContext, ToolResult } from "@/lib/mcp/tools/context";
  * empty family is a filter that answers nothing and a hint that misleads. That
  * is why `rates` is not here yet — it arrives with `planfly_rate`.
  */
-export const SURFACES = ["ledger", "catalog", "credit", "reports"] as const;
+export const SURFACES = ["ledger", "catalog", "credit", "reports", "rates"] as const;
 
 /**
  * `meta` is the three doors, and it is deliberately not in `SURFACES`.

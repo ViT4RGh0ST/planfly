@@ -377,6 +377,36 @@ export const removeBudgetSchema = z.object({
 export const toggleRecurringSchema = z.object({ active: z.boolean() });
 
 /**
+ * Adding a currency this installation does not know.
+ *
+ * No `minor_unit` field, and it is not an oversight: `money.ts` keeps its own
+ * map of decimals and cannot read the table — it is pure and synchronous and a
+ * client component formats with it. A currency created at runtime therefore
+ * takes the decimals that map would use anyway, which is two. The handful
+ * written whole — the yen, the Chilean peso — need a line of code, and the
+ * service says so rather than accepting a number it would ignore.
+ */
+export const createCurrencySchema = z.object({
+  code: z.string().min(2).max(6).toUpperCase(),
+  name: z.string().min(1).max(60),
+  /** Only the symbol the formatter will actually print. The service says which. */
+  symbol: z.string().max(8).optional(),
+  has_official: z.boolean().optional(),
+  is_crypto: z.boolean().optional(),
+});
+
+/** The two things that describe a currency. The code and the decimals are not among them. */
+export const patchCurrencySchema = z.object({
+  code: z.string().min(2).max(6).toUpperCase(),
+  name: z.string().min(1).max(60).optional(),
+  has_official: z.boolean().optional(),
+});
+
+export const removeCurrencySchema = z.object({
+  code: z.string().min(2).max(6).toUpperCase(),
+});
+
+/**
  * Splitting: pulling a line item out of a product and giving it its own.
  *
  * `raw_text` is the text EXACTLY as it came out on the receipt, not a new name:

@@ -36,6 +36,7 @@ const WHAT_A_SCOPE_REACHES: Record<string, string> = {
   "budgets:write": "set and remove spending caps",
   "financing:write": "record instalment purchases and pay them",
   "recurring:write": "set up entries that record themselves",
+  "rates:write": "add currencies and write rates by hand, for everyone on this planfly",
   "mcp:access": "enter the MCP endpoint at all",
 };
 
@@ -49,6 +50,15 @@ const SCOPES = [
   "budgets:write",
   "financing:write",
   "recurring:write",
+  /*
+   * Reference data, and the only scope here that is not scoped to a household.
+   *
+   * `currencies` and `exchange_rates` have no household column: they belong to
+   * the installation. Granting this is granting «decide with what this planfly
+   * values everything», which is why it is its own scope and not folded into
+   * accounts:write.
+   */
+  "rates:write",
   /*
    * Entering /api/mcp at all.
    *
