@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/i18n/config";
 import { getTranslator } from "@/i18n/translator";
 import { authenticateToken, hasScope, isWriteScope, type Principal } from "@/lib/api-token";
+import { InvalidRecurrenceError } from "@/lib/services/recurring";
 import { InvalidTransactionError } from "@/lib/services/record-transaction";
 import { InvalidAmountError } from "@/lib/money";
 import { amountErrorMessage } from "@/lib/user-error";
@@ -267,6 +268,26 @@ export function handleError(err: unknown, locale: Locale = DEFAULT_LOCALE): Next
     return NextResponse.json(
       { ok: false, error: err.code, message: err.message, detail: err.detail },
       { status: 422 },
+    );
+  }
+  /*
+   * The recurrence refusals, which were leaving as «Planfly could not complete
+   * the request».
+   *
+   * The web has worded them since they were written (`user-error.ts`), and so
+   * does the MCP tool — but only because that tool still calls the service
+   * directly, which is the shortcut `DIRECT_SERVICE_CALLS` carries as debt. The
+   * day it goes through this route, as it should, a rule with no days and a
+   * rule that does not exist would both answer «internal_error» and a bot would
+   * have nothing to fix its call with.
+   *
+   * Not found is 404 and the rest is 422: what the id names is missing, what
+   * the body says is wrong.
+   */
+  if (err instanceof InvalidRecurrenceError) {
+    return NextResponse.json(
+      { ok: false, error: err.code, message: err.message },
+      { status: err.code === "rule_not_found" ? 404 : 422 },
     );
   }
   if (err instanceof InvalidProductError) {
