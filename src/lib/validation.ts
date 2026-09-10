@@ -129,6 +129,21 @@ export const updateTransactionSchema = z.object({
   description: z.string().max(500).optional(),
   occurred_on: isoDate.optional(),
   notes: z.string().max(2000).optional(),
+  /**
+   * Where it was bought. An empty string clears it.
+   *
+   * `updateTransaction` has always accepted this and its own comment says a
+   * correction «is where a place gets put on an entry that never had one — which
+   * is nearly all of them». The schema did not declare it, and the v1 route runs
+   * `rejectUnknownKeys` against this schema, so no door but the dashboard could
+   * ever set one. Eleven entries of a hundred and nine carried a place, and the
+   * question the whole feature exists to answer — what a product cost and where
+   * — could only be fed by hand.
+   *
+   * The service refuses a name it cannot resolve rather than leaving the entry
+   * as it was, so a corrected place is one that exists or an error that says so.
+   */
+  payee: z.string().max(120).optional(),
   rate: z.union([z.string(), z.number()]).optional(),
   rate_source: rateSourceSchema.optional(),
   approve: z.boolean().optional(),

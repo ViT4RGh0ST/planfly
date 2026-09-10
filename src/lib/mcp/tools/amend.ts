@@ -39,6 +39,7 @@ const CORRECTION_FIELDS = [
   "category",
   "description",
   "occurred_on",
+  "payee",
   "rate",
 ] as const;
 
@@ -97,6 +98,19 @@ const amendInputSchema = z.object({
     ),
   amount: z.union([z.string().min(1), z.number()]).optional().describe("New amount, in major units."),
   category: z.string().min(1).optional().describe("New category, in the user's own words."),
+  payee: z
+    .string()
+    .max(120)
+    .optional()
+    .describe(
+      "Where it was bought, by name: 'farmatodo', 'el super de la esquina'. " +
+        "This is usually what a correction is FOR: a place gets put on an entry that never " +
+        "had one, because the person remembers afterwards. " +
+        "An empty string clears it. " +
+        "A name planfly cannot match is REFUSED naming it — it does not silently leave the " +
+        "entry as it was — so call planfly_context or create the place first rather than " +
+        "guessing at a spelling.",
+    ),
   description: z.string().max(500).optional(),
   occurred_on: z.string().optional().describe("YYYY-MM-DD."),
   rate: z.union([z.string().min(1), z.number()]).optional().describe("Rate to set by hand."),

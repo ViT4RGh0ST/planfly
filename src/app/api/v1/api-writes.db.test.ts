@@ -4,7 +4,10 @@ import { NextRequest } from "next/server";
 
 import { hasDb, prepareDb } from "@/test/db";
 import { seedScenario, tokenFor, type Scenario } from "@/test/fixtures";
-import { pool } from "@/db";
+import { db, pool } from "@/db";
+import { payees, transactions } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { today } from "@/lib/dates";
 
 /**
  * The routes that write, against the database.
@@ -278,6 +281,77 @@ describe("the routes that write", { skip: hasDb() ? false : "no Postgres availab
     const body = await res.json();
     assert.equal(body.error, "invalid_product");
     assert.match(body.message, /ninguna línea/i);
+  });
+
+  it("puts a place on an entry that never had one, and refuses a place that is not there", async () => {
+    /*
+     * The correction is where a place gets put on an entry, because the person
+     * remembers afterwards — the service's own comment says so. It has always
+     * accepted `payee`; the schema did not declare it, and `rejectUnknownKeys`
+     * walks the schema, so no door but the dashboard could ever set one. Eleven
+     * entries of a hundred and nine carried a place.
+     */
+    const { POST } = await import("./transactions/route");
+    const created = await POST(
+      pide("/api/v1/transactions", {
+        method: "POST",
+        token,
+        body: {
+          kind: "expense", amount: "120,00", currency: "VES",
+          account: "efectivo", category: "mercado",
+          /*
+           * Dated TODAY, not `DATE`. The correction window is seven days from
+           * now and `DATE` is a fixed day in the past, so an entry stamped with
+           * it stops being correctable the moment the calendar walks past it —
+           * a test that passes for a week and then breaks at midnight with
+           * nothing changed.
+           */
+          occurred_on: today("America/Caracas"),
+          /*
+           * `telegram`, because the correction window only reaches what an agent
+           * itself recorded — `api` is not in AGENT_EDITABLE_SOURCES. Somebody
+           * correcting from a chat is correcting what that chat wrote.
+           */
+          source: "telegram",
+          description: "Compra sin sitio",
+        },
+      }),
+    );
+    const { transactionId } = (await created.json()) as { transactionId: string };
+
+    const [place] = await db
+      .insert(payees)
+      .values({ householdId: e.home.id, name: "Farmatodo", slug: "farmatodo" })
+      .returning({ id: payees.id });
+
+    const { PATCH } = await import("./transactions/[id]/route");
+    const ok = await PATCH(
+      pide(`/api/v1/transactions/${transactionId}`, {
+        method: "PATCH", token, body: { payee: "farmatodo" },
+      }),
+    );
+    assert.equal(ok.status, 200, await ok.text());
+
+    const [row] = await db
+      .select({ payeeId: transactions.payeeId })
+      .from(transactions)
+      .where(eq(transactions.id, transactionId));
+    assert.equal(row.payeeId, place.id, "the place has to actually land on the entry");
+
+    /*
+     * And a name that matches nothing is REFUSED naming it. Leaving the entry as
+     * it was would be the door pretending to have understood — the service says
+     * exactly that, and this pins that the refusal survives the route.
+     */
+    const refused = await PATCH(
+      pide(`/api/v1/transactions/${transactionId}`, {
+        method: "PATCH", token, body: { payee: "una tienda que no existe" },
+      }),
+    );
+    assert.equal(refused.status, 422);
+    const body = (await refused.json()) as { error: string; message: string };
+    assert.equal(body.error, "payee_not_found");
+    assert.match(body.message, /una tienda que no existe/, "the refusal has to name what it looked for");
   });
 
   it("a made-up field in split names the right one instead of swallowing it", async () => {

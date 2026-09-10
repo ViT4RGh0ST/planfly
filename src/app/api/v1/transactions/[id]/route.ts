@@ -102,6 +102,7 @@ export const PATCH = withToken("transactions:write", async ({ principal, req }) 
       description: input.description,
       occurredOn: input.occurred_on,
       notes: input.notes,
+      payee: input.payee,
       rate: input.rate,
       toRate: input.to_rate,
       rateSource: input.rate_source,
