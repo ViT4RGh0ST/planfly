@@ -113,5 +113,16 @@
   "currencies": {
     "unused": "{code} ({name}): sin cuentas, se puede quitar.",
     "held": "{code} ({name}): {n} cuenta(s) en esta moneda."
+  },
+  "places": {
+    "list": "{n} sitio(s) registrados.",
+    "none": "Todavía no hay sitios registrados.",
+    "archived": "Retirados: {names}.",
+    "noneArchived": "No hay sitios retirados.",
+    "unplaced": "{n} descripción(es) repetidas sin sitio. Solo gastos: un sueldo, un retiro o un traspaso no pasan en una tienda.",
+    "notFound": "No encontré ningún sitio que responda a «{input}».",
+    "parentNotFound": "No encontré la marca «{input}». Créala primero y luego cuelga la sucursal de ella.",
+    "categoryNotFound": "No encontré una categoría de gasto que responda a «{input}».",
+    "nothingMatched": "Ningún movimiento sin sitio dice exactamente «{description}». Cópiala tal cual de la lista de pendientes."
   }
 }

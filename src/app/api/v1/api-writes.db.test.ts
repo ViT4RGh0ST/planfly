@@ -459,6 +459,122 @@ describe("the routes that write", { skip: hasDb() ? false : "no Postgres availab
     assert.match((await refused.json()).message, /rates:write/);
   });
 
+  it("groups what has no place, then labels all of it at once", async () => {
+    /*
+     * The whole reason places exist, end to end.
+     *
+     * For months no door could set one: the form never asked, the correction
+     * dialog could not, and the v1 route resolved a name against an empty table
+     * and dropped it in silence. So the shop stayed inside the description,
+     * «Compra en MI SUPER, C.A», over and over — which is why eleven entries out
+     * of a hundred and nine carry a place.
+     */
+    const text = "PAGO C31 FARMATODO";
+    for (const amount of [30, 45, 12]) {
+      const posted = await (await import("./transactions/route")).POST(
+        pide("/api/v1/transactions", {
+          method: "POST", token,
+          body: {
+            kind: "expense", amount, currency: "VES", account: "efectivo",
+            category: "mercado", occurred_on: DATE, description: text,
+          },
+        }),
+      );
+      assert.equal(posted.status, 201);
+    }
+
+    const places = await import("./places/route");
+    const created = await places.POST(
+      pide("/api/v1/places", {
+        method: "POST", token,
+        body: { name: "Farmatodo C31", aliases: text },
+      }),
+    );
+    assert.equal(created.status, 201);
+
+    const pending = await places.GET(pide("/api/v1/places?view=unplaced", { token }));
+    const groups = (await pending.json()).groups as Array<{
+      description: string; entries: number; suggestion: string | null;
+    }>;
+    const mine = groups.find((group) => group.description === text);
+    assert.ok(mine, "the repeated text has to come back as one group, not as three entries");
+    assert.equal(mine.entries, 3);
+    // The suggestion goes through the same resolver the bot uses, so what it
+    // proposes is what would have matched had the place existed at the time.
+    assert.equal(mine.suggestion, "Farmatodo C31");
+
+    const assign = await import("./places/assign/route");
+    const done = await assign.POST(
+      pide("/api/v1/places/assign", {
+        method: "POST", token,
+        body: { description: text, place: "Farmatodo C31" },
+      }),
+    );
+    assert.equal(done.status, 200);
+    assert.equal((await done.json()).n, 3, "one answer has to settle all three");
+
+    const after = await places.GET(pide("/api/v1/places?view=unplaced", { token }));
+    const stillThere = ((await after.json()).groups as Array<{ description: string }>).some(
+      (group) => group.description === text,
+    );
+    assert.equal(stillThere, false, "what was just placed cannot still be pending");
+  });
+
+  it("says nothing matched instead of answering ok with a zero in it", async () => {
+    /*
+     * `{"ok": true, "n": 0}` is the answer a model reports as done — it did what
+     * it was told and the server said yes. The description was mistyped, or those
+     * entries already have a place, and the person is told their purchases were
+     * labelled when none were.
+     */
+    const { POST } = await import("./places/assign/route");
+    const res = await POST(
+      pide("/api/v1/places/assign", {
+        method: "POST", token,
+        body: { description: "UN TEXTO QUE NO ESTA EN NINGUN MOVIMIENTO", place: "Farmatodo C31" },
+      }),
+    );
+    assert.equal(res.status, 422);
+    assert.equal((await res.json()).error, "nothing_matched");
+  });
+
+  it("refuses a brand that is not there instead of creating the branch loose", async () => {
+    const { POST } = await import("./places/route");
+    const res = await POST(
+      pide("/api/v1/places", {
+        method: "POST", token,
+        body: { name: "Farmatodo Los Palos Grandes", parent: "una cadena que no existe" },
+      }),
+    );
+    assert.equal(res.status, 422);
+    const body = (await res.json()) as { error: string; message: string };
+    assert.equal(body.error, "parent_not_found");
+    // Hanging it off nothing would look like it worked and quietly split the
+    // chain's total in two.
+    assert.match(body.message, /cadena que no existe/);
+  });
+
+  it("needs catalog:write to name a place, and only context:read to see them", async () => {
+    const reader = await tokenFor(e.home, ["context:read", "transactions:write"]);
+    const places = await import("./places/route");
+
+    assert.equal((await places.GET(pide("/api/v1/places", { token: reader }))).status, 200);
+
+    const refused = await places.POST(
+      pide("/api/v1/places", { method: "POST", token: reader, body: { name: "Bodega" } }),
+    );
+    assert.equal(refused.status, 403);
+    assert.match((await refused.json()).message, /catalog:write/);
+
+    const alsoRefused = await (await import("./places/assign/route")).POST(
+      pide("/api/v1/places/assign", {
+        method: "POST", token: reader,
+        body: { description: "PAGO C31 FARMATODO", place: "Farmatodo C31" },
+      }),
+    );
+    assert.equal(alsoRefused.status, 403, "relabelling the ledger is a write even though no figure moves");
+  });
+
   it("a recurrence that is not there says so, instead of an internal error", async () => {
     // `InvalidRecurrenceError` had no branch in the handler, so every refusal
     // this service words — no days, no name, no such rule — left as a 500 with

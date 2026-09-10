@@ -37,6 +37,7 @@ const WHAT_A_SCOPE_REACHES: Record<string, string> = {
   "financing:write": "record instalment purchases and pay them",
   "recurring:write": "set up entries that record themselves",
   "rates:write": "add currencies and write rates by hand, for everyone on this planfly",
+  "catalog:write": "name and group things: shops, categories and the rules that sort them",
   "mcp:access": "enter the MCP endpoint at all",
 };
 
@@ -59,6 +60,14 @@ const SCOPES = [
    * accounts:write.
    */
   "rates:write",
+  /*
+   * What names and groups, never what a figure is.
+   *
+   * Shops, categories and the rules that classify what is imported. A credential
+   * with this can relabel where forty purchases were bought — which changes
+   * every answer about them — and cannot move a cent.
+   */
+  "catalog:write",
   /*
    * Entering /api/mcp at all.
    *
