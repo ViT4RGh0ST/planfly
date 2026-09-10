@@ -77,6 +77,14 @@ const ACTIONS: Record<string, Record<string, readonly string[]>> = {
     confirm: ["transactions:write", "reports:read"],
     "(omitted)": ["transactions:write", "reports:read"],
   },
+  planfly_currency: {
+    list: ["context:read"],
+    // Reference data for the whole installation, not for one household: a
+    // different thing to hand over, and its own scope.
+    create: ["rates:write"],
+    update: ["rates:write"],
+    remove: ["rates:write"],
+  },
   planfly_recurring: {
     list: ["context:read"],
     create: ["recurring:write"],

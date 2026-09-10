@@ -147,11 +147,6 @@ const GAPS: Array<{ fn: string; plan: string; because: string }> = [
   { fn: "categoryTree", plan: "categories", because: "/api/v1/context lists them flat, without the tree" },
   { fn: "archivedCategories", plan: "categories", because: "what was retired" },
 
-  // Currencies. Blocks a flow planfly_account describes and cannot complete.
-  { fn: "createCurrency", plan: "currencies", because: "planfly_account demands a known currency and nothing can add one" },
-  { fn: "updateCurrency", plan: "currencies", because: "whether it has an official rate" },
-  { fn: "removeCurrency", plan: "currencies", because: "dropping one nothing is held in" },
-  { fn: "listCurrencies", plan: "currencies", because: "context returns them, but not their decimals or flags" },
 
   // Rates written by hand. What makes planfly useful with no source connected.
   { fn: "saveManualRate", plan: "rates", because: "«la tasa de hoy es 300» has no door at all" },
@@ -184,7 +179,7 @@ const GAPS: Array<{ fn: string; plan: string; because: string }> = [
 ];
 
 /** Raise this and you are declaring a new gap in a diff. Lower it and you closed one. */
-const CEILING = 35;
+const CEILING = 31;
 
 // ── Reading the tree ────────────────────────────────────────────────────────
 

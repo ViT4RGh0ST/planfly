@@ -109,5 +109,9 @@
     "fromAccount": " de {account}",
     "nextOn": "la próxima el {date}",
     "paused": "pausada"
+  },
+  "currencies": {
+    "unused": "{code} ({name}): sin cuentas, se puede quitar.",
+    "held": "{code} ({name}): {n} cuenta(s) en esta moneda."
   }
 }

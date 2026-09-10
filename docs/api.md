@@ -33,6 +33,7 @@ Every token carries its **scopes**, and a request outside them is rejected with
 | `budgets:write` | Setting and removing budgets |
 | `financing:write` | Installment purchases and their payments |
 | `recurring:write` | Operations that repeat on their own |
+| `rates:write` | Currencies and hand-written rates — **installation-wide, not per household** |
 
 The household **does not travel in the body**: it comes from the token. Sending
 `household_id`, `user_id` or any other identity field is rejected with 400. It is
@@ -50,6 +51,7 @@ what makes it impossible for an integration to write into the wrong household.
 | `/api/v1/financing` | `GET` `POST` | `context:read` · `financing:write` |
 | `/api/v1/recurring` | `GET` `POST` | `context:read` · `recurring:write` |
 | `/api/v1/recurring/{id}` | `PATCH` `DELETE` | `recurring:write` |
+| `/api/v1/currencies` | `GET` `POST` `PATCH` `DELETE` | `context:read` · `rates:write` |
 | `/api/v1/products` | `GET` `POST` | `reports:read` · `transactions:write` |
 | `/api/v1/reports` | `GET` | `reports:read` |
 | `/api/v1/rates` | `GET` `POST` | `reports:read` · `transactions:write` |

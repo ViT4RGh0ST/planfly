@@ -367,6 +367,98 @@ describe("the routes that write", { skip: hasDb() ? false : "no Postgres availab
     assert.equal(body.detail.suggestion, "product");
   });
 
+  it("a currency this planfly did not know becomes one an account can be opened in", async () => {
+    /*
+     * The root of the dependency, end to end.
+     *
+     * `planfly_account` refuses a currency the installation does not have, and
+     * until this route there was no way to add one without a deploy. The test
+     * is the two halves together: adding it is worth nothing if an account
+     * still cannot be opened in it.
+     */
+    const currencies = await import("./currencies/route");
+    const created = await currencies.POST(
+      pide("/api/v1/currencies", {
+        method: "POST", token,
+        body: { code: "pen", name: "Sol peruano" },
+      }),
+    );
+    assert.equal(created.status, 201);
+    // Lowercase in, uppercase stored: the code is what every amount is written
+    // against, and two spellings of it would be two currencies.
+    assert.equal((await created.json()).code, "PEN");
+
+    const account = await (await import("./accounts/route")).POST(
+      pide("/api/v1/accounts", {
+        method: "POST", token,
+        body: { name: "Cuenta en soles", type: "bank", currency: "PEN", opening_balance: "100,00" },
+      }),
+    );
+    assert.equal(account.status, 201, "the currency was added and the account still cannot use it");
+  });
+
+  it("refuses a second one with the same code, and a symbol it would not print", async () => {
+    const { POST } = await import("./currencies/route");
+    const again = await POST(
+      pide("/api/v1/currencies", { method: "POST", token, body: { code: "PEN", name: "Otro sol" } }),
+    );
+    assert.equal(again.status, 422);
+    assert.equal((await again.json()).error, "duplicate_currency");
+
+    /*
+     * `formatAmount` reads its own map of symbols and falls back to the code, so
+     * a symbol typed here for a currency that map does not know would be stored
+     * and never shown. Accepting it silently is the failure this refuses: the
+     * person would see the code and believe the write did not take.
+     */
+    const symbol = await POST(
+      pide("/api/v1/currencies", {
+        method: "POST", token,
+        body: { code: "BOB", name: "Boliviano", symbol: "Bs" },
+      }),
+    );
+    assert.equal(symbol.status, 422);
+    const body = (await symbol.json()) as { error: string; message: string };
+    assert.equal(body.error, "symbol_fixed");
+    assert.match(body.message, /BOB/, "the refusal has to name the symbol that will be used");
+  });
+
+  it("will not take away a currency something is held in", async () => {
+    const { DELETE } = await import("./currencies/route");
+    const held = await DELETE(
+      pide("/api/v1/currencies", { method: "DELETE", token, body: { code: "PEN" } }),
+    );
+    assert.equal(held.status, 422);
+    const body = (await held.json()) as { error: string; message: string };
+    assert.equal(body.error, "currency_in_use");
+    assert.match(body.message, /1/, "the refusal has to say how many accounts are in the way");
+  });
+
+  it("needs rates:write, and reading them does not", async () => {
+    // The scope exists to be a real boundary: reference data decides what every
+    // figure is worth, and a token that may open accounts must not gain it.
+    const reader = await tokenFor(e.home, ["context:read", "accounts:write"]);
+    const { GET, POST } = await import("./currencies/route");
+
+    assert.equal(
+      (await GET(pide("/api/v1/currencies", { token: reader }))).status,
+      200,
+      "listing what currencies exist is part of reading the household's context",
+    );
+
+    const refused = await POST(
+      pide("/api/v1/currencies", {
+        method: "POST", token: reader,
+        body: { code: "CLP", name: "Peso chileno" },
+      }),
+    );
+    assert.equal(refused.status, 403);
+    // The route names the missing scope in its sentence rather than in a field
+    // of its own; what matters is that it names it, so the caller knows what to
+    // ask its owner for instead of retrying the same call.
+    assert.match((await refused.json()).message, /rates:write/);
+  });
+
   it("a recurrence that is not there says so, instead of an internal error", async () => {
     // `InvalidRecurrenceError` had no branch in the handler, so every refusal
     // this service words — no days, no name, no such rule — left as a 500 with

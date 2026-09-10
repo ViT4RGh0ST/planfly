@@ -109,5 +109,9 @@
     "fromAccount": " from {account}",
     "nextOn": "the next one on {date}",
     "paused": "paused"
+  },
+  "currencies": {
+    "unused": "{code} ({name}): no accounts, can be removed.",
+    "held": "{code} ({name}): {n} account(s) held in it."
   }
 }
