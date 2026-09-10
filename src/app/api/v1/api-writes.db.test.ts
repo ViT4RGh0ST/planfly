@@ -575,6 +575,139 @@ describe("the routes that write", { skip: hasDb() ? false : "no Postgres availab
     assert.equal(alsoRefused.status, 403, "relabelling the ledger is a write even though no figure moves");
   });
 
+  it("stops before splitting the history in two, and creates it once told to", async () => {
+    /*
+     * The failure this guards is silent. «Mercado» and «Supermercado» are
+     * different slugs, so no unique index sees them clash, and from that moment
+     * half the spending is in each: both totals false, every budget on either
+     * measuring a fraction, and nothing failing anywhere.
+     */
+    const { POST } = await import("./categories/route");
+    const clash = await POST(
+      pide("/api/v1/categories", {
+        method: "POST", token,
+        body: { name: "Supermercado", kind: "expense" },
+      }),
+    );
+    assert.equal(clash.status, 409);
+    const warned = (await clash.json()) as { error: string; existing: { name: string } };
+    assert.equal(warned.error, "category_may_exist");
+    assert.equal(warned.existing.name, "Mercado", "the refusal has to name what it found");
+
+    // What the 409 tells the caller to do next has to be a thing the API accepts.
+    const anyway = await POST(
+      pide("/api/v1/categories", {
+        method: "POST", token,
+        body: { name: "Supermercado", kind: "expense", confirm: true },
+      }),
+    );
+    assert.equal(anyway.status, 201);
+  });
+
+  it("hangs one under another, and refuses a parent of the other kind", async () => {
+    const { GET, POST } = await import("./categories/route");
+    const created = await POST(
+      pide("/api/v1/categories", {
+        method: "POST", token,
+        body: { name: "Medicinas", kind: "expense", parent: "Supermercado", aliases: "farmacia" },
+      }),
+    );
+    assert.equal(created.status, 201);
+
+    const listed = await GET(pide("/api/v1/categories", { token }));
+    const rows = (await listed.json()).categories as Array<{ name: string; parent: string | null }>;
+    assert.equal(
+      rows.find((row) => row.name === "Medicinas")?.parent,
+      "Supermercado",
+      "the tree has to come back flattened with the parent named, not as ids",
+    );
+
+    // An income parent for a spending category would put a salary at the head of
+    // a spending tree, and every report on it would count both.
+    const income = await POST(
+      pide("/api/v1/categories", { method: "POST", token, body: { name: "Sueldo", kind: "income" } }),
+    );
+    assert.equal(income.status, 201);
+
+    const crossed = await POST(
+      pide("/api/v1/categories", {
+        method: "POST", token,
+        body: { name: "Bono", kind: "expense", parent: "Sueldo" },
+      }),
+    );
+    assert.equal(crossed.status, 422);
+    assert.equal((await crossed.json()).error, "parent_not_found");
+  });
+
+  it("retires a category and brings it back, without deleting anything", async () => {
+    const { GET, PATCH } = await import("./categories/route");
+    const archived = await PATCH(
+      pide("/api/v1/categories", {
+        method: "PATCH", token,
+        body: { category: "Medicinas", action: "archive" },
+      }),
+    );
+    assert.equal(archived.status, 200);
+
+    const retired = await GET(pide("/api/v1/categories?view=archived", { token }));
+    const names = ((await retired.json()).categories as Array<{ name: string }>).map((c) => c.name);
+    assert.ok(names.includes("Medicinas"), "a retired category has to be findable, or it is a psql job");
+
+    const back = await PATCH(
+      pide("/api/v1/categories", {
+        method: "PATCH", token,
+        body: { category: "Medicinas", action: "unarchive" },
+      }),
+    );
+    assert.equal(back.status, 200);
+  });
+
+  it("brings back a retired place too, which the same filter had made unreachable", async () => {
+    /*
+     * The same hole, found in categories and true here as well.
+     *
+     * `resolveIn` filters `archived_at IS NULL` in all three of its branches —
+     * right for everything that records or reports, and it made unarchive-by-name
+     * impossible: the only row it could match is exactly the one it excludes.
+     * A place could be retired from the chat and never brought back.
+     */
+    const places = await import("./places/route");
+    const gone = await places.PATCH(
+      pide("/api/v1/places", {
+        method: "PATCH", token,
+        body: { place: "Farmatodo C31", action: "archive" },
+      }),
+    );
+    assert.equal(gone.status, 200);
+
+    const back = await places.PATCH(
+      pide("/api/v1/places", {
+        method: "PATCH", token,
+        body: { place: "Farmatodo C31", action: "unarchive" },
+      }),
+    );
+    assert.equal(back.status, 200, "a place retired by name has to be reinstatable by name");
+
+    const listed = await places.GET(pide("/api/v1/places", { token }));
+    const names = ((await listed.json()).places as Array<{ name: string }>).map((p) => p.name);
+    assert.ok(names.includes("Farmatodo C31"), "and it has to be back in the list");
+  });
+
+  it("needs catalog:write to add a category, and only context:read to read them", async () => {
+    const reader = await tokenFor(e.home, ["context:read", "transactions:write"]);
+    const { GET, POST } = await import("./categories/route");
+
+    assert.equal((await GET(pide("/api/v1/categories", { token: reader }))).status, 200);
+    const refused = await POST(
+      pide("/api/v1/categories", {
+        method: "POST", token: reader,
+        body: { name: "Regalos", kind: "expense" },
+      }),
+    );
+    assert.equal(refused.status, 403);
+    assert.match((await refused.json()).message, /catalog:write/);
+  });
+
   it("a recurrence that is not there says so, instead of an internal error", async () => {
     // `InvalidRecurrenceError` had no branch in the handler, so every refusal
     // this service words — no days, no name, no such rule — left as a 500 with

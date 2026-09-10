@@ -377,6 +377,40 @@ export const removeBudgetSchema = z.object({
 export const toggleRecurringSchema = z.object({ active: z.boolean() });
 
 /**
+ * A spending or earning category, as the API takes one.
+ *
+ * A second shape and not a reuse of `createCategorySchema`, which is the FORM's:
+ * that one takes a `parent_id` and a colour because a dialog has both in front
+ * of it. This one takes a parent by NAME — the model does not handle foreign
+ * keys — and takes no colour at all.
+ *
+ * No `color` and no `sort_order`. Both are the screen's business — what a colour
+ * should be and what order reads well are decided looking at the list, and a
+ * chat that sets them is a chat picking hex codes nobody asked for. The service
+ * keeps its own default for the colour and puts a new category at the end of
+ * its level.
+ */
+export const apiCategorySchema = z.object({
+  name: z.string().min(1).max(80),
+  /** Spending or earning. It is what keeps income off a spending report. */
+  kind: z.enum(["expense", "income"]),
+  /** The category this hangs under, by name. Same kind, always. */
+  parent: z.string().max(80).optional(),
+  /** Comma-separated: what the person calls it when recording. */
+  aliases: z.string().max(500).optional(),
+  /** «Yes, I know it looks like that other one; make it anyway.» */
+  confirm: z.boolean().optional(),
+});
+
+export const apiCategoryPatchSchema = apiCategorySchema.partial().extend({
+  /** Which category, by name or alias. */
+  category: z.string().min(1),
+  action: z.enum(["update", "archive", "unarchive"]).default("update"),
+  /** Empty lifts it back to the top level; absent leaves it where it is. */
+  parent: z.string().max(80).optional(),
+});
+
+/**
  * A place: the shop, the pharmacy, the petrol station.
  *
  * Named and never id'd, like an account. The model does not handle foreign keys,

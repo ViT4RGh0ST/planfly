@@ -13,7 +13,7 @@ import {
   updatePayee,
   type PayeeNode,
 } from "@/lib/services/manage-payees";
-import { resolveCategory, resolvePayee } from "@/lib/services/resolve-entities";
+import { resolveArchived, resolveCategory, resolvePayee } from "@/lib/services/resolve-entities";
 import { createPlaceSchema, patchPlaceSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -197,7 +197,17 @@ export const PATCH = withToken("catalog:write", async ({ principal, req }) => {
   rejectUnknownKeys(body, patchPlaceSchema);
   const input = patchPlaceSchema.parse(body);
 
-  const match = await resolvePayee(principal.householdId, input.place);
+  /*
+     * Reinstating looks in the other half of the table.
+     *
+     * `resolveIn` filters `archived_at IS NULL`, which is right for everything
+     * else and makes unarchive-by-name unreachable: the only thing it could
+     * match is precisely what it excludes.
+     */
+  const match =
+    input.action === "unarchive"
+      ? await resolveArchived("payees", principal.householdId, input.place)
+      : await resolvePayee(principal.householdId, input.place);
   if (!match) {
     return NextResponse.json(
       { ok: false, error: "payee_not_found", message: t("api.places.notFound", { input: input.place }) },

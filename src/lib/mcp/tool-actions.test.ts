@@ -85,6 +85,14 @@ const ACTIONS: Record<string, Record<string, readonly string[]>> = {
     update: ["rates:write"],
     remove: ["rates:write"],
   },
+  planfly_category: {
+    list: ["context:read"],
+    archived: ["context:read"],
+    create: ["catalog:write"],
+    update: ["catalog:write"],
+    archive: ["catalog:write"],
+    unarchive: ["catalog:write"],
+  },
   planfly_place: {
     list: ["context:read"],
     archived: ["context:read"],

@@ -59,13 +59,28 @@ export async function resolveIn(
   householdId: string,
   input: string,
   extraFilter = sql``,
+  /**
+   * Which half of the table to look in. Opt-in, and named rather than a boolean.
+   *
+   * Everything that records or reports wants the active ones, and that has to
+   * stay the default: resolving an archived account for a new expense would put
+   * money into something the household retired on purpose.
+   *
+   * The archived half exists for exactly one caller — bringing something BACK.
+   * A category or a place is retired by name and can only be reinstated by name
+   * too, and with the filter hard-coded that call could never find its target:
+   * `action='unarchive'` answered «I found no category answering to that» for
+   * one that was sitting in the archived list a request earlier.
+   */
+  among: "active" | "archived" = "active",
 ): Promise<Match | null> {
   const text = normalize(input);
   if (text === "") return null;
   const slug = toSlug(input);
 
   const tableSql = sql.raw(table);
-  const archivedFilter = sql`AND archived_at IS NULL`;
+  const archivedFilter =
+    among === "archived" ? sql`AND archived_at IS NOT NULL` : sql`AND archived_at IS NULL`;
 
   const { rows } = await db.execute<{
     id: string;
@@ -157,5 +172,18 @@ export function resolveCategory(
 
 export function resolvePayee(householdId: string, input: string) {
   return resolveIn("payees", householdId, input);
+}
+
+/**
+ * The same match, among what was retired.
+ *
+ * Only for reinstating. Nothing that writes a figure may reach through here.
+ */
+export function resolveArchived(
+  table: "accounts" | "categories" | "payees",
+  householdId: string,
+  input: string,
+) {
+  return resolveIn(table, householdId, input, sql``, "archived");
 }
 

@@ -124,5 +124,15 @@
     "parentNotFound": "No encontré la marca «{input}». Créala primero y luego cuelga la sucursal de ella.",
     "categoryNotFound": "No encontré una categoría de gasto que responda a «{input}».",
     "nothingMatched": "Ningún movimiento sin sitio dice exactamente «{description}». Cópiala tal cual de la lista de pendientes."
+  },
+  "categories": {
+    "list": "{n} categoría(s).",
+    "none": "Todavía no hay categorías.",
+    "archived": "Retiradas: {names}.",
+    "noneArchived": "No hay categorías retiradas.",
+    "notFound": "No encontré ninguna categoría que responda a «{input}».",
+    "parentNotFound": "No encontré una categoría {kind} que responda a «{input}» para colgarla de ella.",
+    "duplicate": "Ya tienes una categoría que responde a ese nombre: «{name}».",
+    "maybeDuplicate": "Puede que ya tengas esta categoría: «{name}». Si de verdad quieres otra aparte, manda la misma llamada con confirm: true."
   }
 }

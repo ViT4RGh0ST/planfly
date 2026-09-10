@@ -53,6 +53,7 @@ what makes it impossible for an integration to write into the wrong household.
 | `/api/v1/recurring` | `GET` `POST` | `context:read` · `recurring:write` |
 | `/api/v1/recurring/{id}` | `PATCH` `DELETE` | `recurring:write` |
 | `/api/v1/currencies` | `GET` `POST` `PATCH` `DELETE` | `context:read` · `rates:write` |
+| `/api/v1/categories` | `GET` `POST` `PATCH` | `context:read` · `catalog:write` |
 | `/api/v1/places` | `GET` `POST` `PATCH` | `context:read` · `catalog:write` |
 | `/api/v1/places/assign` | `POST` | `catalog:write` |
 | `/api/v1/products` | `GET` `POST` | `reports:read` · `transactions:write` |
