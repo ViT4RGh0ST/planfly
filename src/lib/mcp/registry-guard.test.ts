@@ -27,6 +27,57 @@ import { GATEWAY, listedTools, useToolTool } from "@/lib/mcp/tools/gateway";
 
 const TOOLS_DIR = join(process.cwd(), "src/lib/mcp/tools");
 
+/**
+ * Tools that still reach a service without going through its route.
+ *
+ * Debt with a name on it, not a licence. `recurring.ts` calls
+ * `setRecurringActive` and `removeRecurringRule` straight, and the routes it
+ * should be using — PATCH and DELETE on `/api/v1/recurring/[id]` — already
+ * exist: there is no reason for the shortcut beyond the order things were
+ * written in.
+ */
+const DIRECT_SERVICE_CALLS: Array<{ file: string; because: string }> = [
+  {
+    file: "recurring.ts",
+    because:
+      "pause/resume/remove call the service instead of PATCH and DELETE on " +
+      "/api/v1/recurring/[id], which already exist. The exemption is the whole file, so it " +
+      "also covers the reads it does on the way — daysFor and resolveAccount.",
+  },
+];
+
+/**
+ * The service functions a module actually calls.
+ *
+ * Naming is not reaching. `amend.ts` imports `AGENT_EDITABLE_DAYS` to say in
+ * its own description how far back a correction may go, and `context.ts`
+ * imports two error classes to recognise them with `instanceof`. Neither writes
+ * anything, and putting them in a debt list would teach the next reader that
+ * the list is noise. So only an imported name that appears as the callee of a
+ * call counts — the same rule `coverage-guard.test.ts` uses, for the same
+ * reason.
+ */
+function serviceCallsIn(text: string): string[] {
+  const imported: string[] = [];
+  const statements = text.matchAll(/import\s+(type\s+)?({[^}]*}|[\w$]+)\s+from\s+"@\/lib\/services\/[^"]+"/g);
+  for (const [, typeOnly, clause] of statements) {
+    if (typeOnly) continue;
+    for (const specifier of clause.replace(/[{}]/g, "").split(",")) {
+      const name = specifier.trim().split(/\s+as\s+/).pop()?.trim();
+      // `import { type Match, resolveAccount }` — the type half is not reachable.
+      if (name && !/^type\s/.test(specifier.trim())) imported.push(name);
+    }
+  }
+
+  return imported.filter((name) => {
+    const called = new RegExp(`(^|[^.\\w$])(new\\s+)?${name}\\s*\\(`, "g");
+    for (const [, , constructed] of text.matchAll(called)) {
+      if (!constructed) return true; // `new InvalidTransactionError(...)` is not a call to a service.
+    }
+    return false;
+  });
+}
+
 /** The text of every tool module, so a `run` can be read as well as called. */
 function toolSources(): Map<string, string> {
   const sources = new Map<string, string>();
@@ -102,6 +153,48 @@ describe("the MCP catalogue", () => {
           "each tool checks its own; a tool that does not is open to every credential.",
       );
     }
+  });
+
+  it("goes through the v1 routes and not straight to a service", () => {
+    /*
+     * One write path, and the MCP is not a second one.
+     *
+     * A tool that imports a service directly skips everything the route does
+     * around it — `rejectIdentityKeys`, `rejectUnknownKeys` naming the field it
+     * meant, the refusals worded in the household's language — and the two doors
+     * start answering differently to the same mistake. That divergence is what
+     * the MCP was built to remove, not to reintroduce one import at a time.
+     *
+     * The list below is debt, not licence. It carries what predates the rule.
+     */
+    const allowed = new Set(DIRECT_SERVICE_CALLS.map((entry) => entry.file));
+    const sources = toolSources();
+    const offenders: string[] = [];
+
+    for (const [file, text] of sources) {
+      if (allowed.has(file)) continue;
+      for (const call of serviceCallsIn(text)) offenders.push(`${file}: ${call}()`);
+    }
+
+    assert.deepEqual(
+      offenders,
+      [],
+      "these reach a service without passing through its route. Call the v1 route " +
+        "with ctx.callRoute, as account.ts does, or declare the file in " +
+        "DIRECT_SERVICE_CALLS with the reason it cannot yet.",
+    );
+
+    // And an entry that stopped offending has to go, or the list stops meaning
+    // anything the day somebody reads it.
+    const stale = DIRECT_SERVICE_CALLS.filter((entry) => {
+      const text = sources.get(entry.file);
+      return text === undefined || serviceCallsIn(text).length === 0;
+    }).map((entry) => entry.file);
+    assert.deepEqual(
+      stale,
+      [],
+      "these no longer call a service directly (or no longer exist): delete their line",
+    );
   });
 
   it("can publish every tool's schema", () => {
