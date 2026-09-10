@@ -190,4 +190,52 @@
   [role="button"]:not([aria-disabled="true"]) {
     @apply cursor-pointer;
   }
+
+  /* The scrollbar, in the app's own palette rather than the platform's.
+
+     Left alone, Windows and Linux draw a wide light-grey channel that sits on a
+     near-black panel like a strip of tape — the one element on screen that
+     belongs to another program. It is drawn from the same tokens as everything
+     else, so it follows the theme instead of contradicting it.
+
+     Quiet by default and firmer under the pointer: this screen exists to be read
+     at a glance, and a scrollbar that competes with the figures is a scrollbar
+     that won an argument it should not have been in. `--border` is the same
+     value that separates a row from the next, which is exactly the weight a
+     track deserves. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  *:hover {
+    scrollbar-color: var(--muted-foreground) transparent;
+  }
+
+  /* WebKit and Chromium take the shorthand above, but only these give the thumb
+     its inset: a transparent border with `background-clip` leaves the bar
+     narrower than the gutter it travels in, so it reads as a mark on the page
+     and not as a channel cut into it. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  /* No track colour at all. A drawn channel would outline every panel that
+     happens to overflow, turning a scrollbar into a border nobody asked for. */
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+  /* Where the two bars meet. Left default it is a small opaque square in the
+     platform's own grey — the one pixel that gives the whole thing away. */
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
