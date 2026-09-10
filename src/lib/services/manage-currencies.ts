@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { normalizeLocale, type Locale } from "@/i18n/config";
@@ -246,13 +246,4 @@ export async function removeCurrency(code: string, locale: string) {
 
   await db.delete(currencies).where(eq(currencies.code, wanted));
   return { code: wanted, summary: t("services.manageCurrencies.removed", { code: wanted }) };
-}
-
-/** The codes, for whoever offers them as options. */
-export async function currencyCodes(): Promise<string[]> {
-  const rows = await db
-    .select({ code: currencies.code })
-    .from(currencies)
-    .orderBy(asc(currencies.code));
-  return rows.map((r) => r.code);
 }
