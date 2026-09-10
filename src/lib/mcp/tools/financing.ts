@@ -281,6 +281,7 @@ export const financingTool = defineTool({
     "explicitly approved that preview.",
   inputSchema: financingInputSchema,
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  surface: "credit",
   keywords: [
     "financing", "installment", "installments", "loan", "debt", "instalment", "quota",
     "cuota", "cuotas", "financiamiento", "prestamo", "deuda", "cashea", "abono", "inicial",

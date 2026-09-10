@@ -165,6 +165,7 @@ export const recurringTool = defineTool({
     "created straight away.",
   inputSchema: recurringInputSchema,
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  surface: "ledger",
   keywords: [
     "recurring", "recurrence", "subscription", "rent", "salary", "payroll",
     "monthly", "biweekly", "schedule", "rule", "pause", "resume",

@@ -139,6 +139,7 @@ export const productTool = defineTool({
     "it shows.",
   inputSchema: productInputSchema,
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  surface: "reports",
   keywords: [
     "product", "price", "price history", "catalogue", "merge", "split", "receipt", "duplicate",
     "producto", "precio", "precios", "catalogo", "historial", "fusionar", "unir", "separar",

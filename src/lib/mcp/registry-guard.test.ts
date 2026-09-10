@@ -5,7 +5,7 @@ import { describe, it } from "node:test";
 import { z } from "zod";
 
 import { NATIVE, essentials, resolve, search } from "@/lib/mcp/catalog";
-import type { McpTool } from "@/lib/mcp/registry";
+import { SURFACES, type McpTool } from "@/lib/mcp/registry";
 import { toolResult, type McpToolContext, type ToolResult } from "@/lib/mcp/tools/context";
 import { GATEWAY, listedTools, useToolTool } from "@/lib/mcp/tools/gateway";
 
@@ -194,6 +194,75 @@ describe("the MCP catalogue", () => {
       stale,
       [],
       "these no longer call a service directly (or no longer exist): delete their line",
+    );
+  });
+
+  it("keeps the families a filter can actually reach", () => {
+    /*
+     * A family is added when its first tool is written, never before.
+     *
+     * `search_tool` publishes `SURFACES` as the values its `surface` parameter
+     * takes, so an empty family is an option offered to a model that answers
+     * nothing — and «no tools in that family» reads exactly like «planfly
+     * cannot do that», which is the sentence a bot repeats to the person.
+     */
+    for (const surface of SURFACES) {
+      assert.ok(
+        NATIVE.some((tool) => tool.surface === surface),
+        `${surface} is offered as a filter and no tool is in it. Add the family with its first ` +
+          "tool, not ahead of it.",
+      );
+    }
+
+    // `meta` is the three doors. They are always listed and never discovered,
+    // so a filter value for them would be one that always comes back empty.
+    assert.deepEqual(
+      NATIVE.filter((tool) => tool.surface === "meta").map((tool) => tool.name),
+      [],
+      "a catalogue tool declared itself meta: meta is for the doors, which are not in NATIVE",
+    );
+  });
+
+  it("narrows to one family without changing what ranked first", () => {
+    // The whole matched list, not one page of it: with twenty tools a page of
+    // eight could leave out a credit tool and the counts below would differ for
+    // an honest reason, which is how a check like this quietly stops checking.
+    const wide = search("gasto", 50);
+    const narrow = search("gasto", 50, 0, "ledger");
+
+    assert.ok(wide.tools.length > 0, "the fixed rankings below depend on this matching something");
+    /*
+     * A query that spans families on purpose.
+     *
+     * «cuota» reads better and proves less: it only ever matched credit, so a
+     * filter applied AFTER ranking — which would leave `total_matched` counting
+     * the wide list — passed every assertion here. «gasto» matches one tool in
+     * `ledger` and one in `reports`, which is the only shape where filtering
+     * first and filtering last give different answers.
+     */
+    assert.ok(
+      new Set(wide.tools.map((tool) => tool.surface)).size > 1,
+      "this query stopped spanning families, so it can no longer tell the two implementations apart",
+    );
+    assert.deepEqual(
+      [...new Set(narrow.tools.map((tool) => tool.surface))],
+      ["ledger"],
+      "the filter let another family through",
+    );
+    // Narrowing has to be a filter and not a different search: the first result
+    // of the narrowed list is the first result of the wide one that survives it.
+    assert.equal(
+      narrow.tools[0]?.name,
+      wide.tools.find((tool) => tool.surface === "ledger")?.name,
+      "filtering reordered the results, which means it changed the ranking instead of narrowing it",
+    );
+    // The count has to describe the narrowed list. Filtering after ranking would
+    // leave `total_matched` — and with it `next_offset` — counting tools the
+    // caller cannot see, and paging would return blank pages.
+    assert.equal(
+      narrow.total_matched,
+      wide.tools.filter((tool) => tool.surface === "ledger").length,
+      "total_matched still counts the wide list, so paging a narrowed search would skip results",
     );
   });
 
