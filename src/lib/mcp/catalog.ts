@@ -2,6 +2,7 @@ import type { McpSurface, McpTool } from "@/lib/mcp/registry";
 import { accountTool } from "@/lib/mcp/tools/account";
 import { amendTool } from "@/lib/mcp/tools/amend";
 import { budgetTool } from "@/lib/mcp/tools/budget";
+import { categoryTool } from "@/lib/mcp/tools/category";
 import { currencyTool } from "@/lib/mcp/tools/currency";
 import { financingTool } from "@/lib/mcp/tools/financing";
 import { placeTool } from "@/lib/mcp/tools/place";
@@ -35,6 +36,7 @@ export const NATIVE: readonly McpTool[] = [
   recurringTool,
   currencyTool,
   placeTool,
+  categoryTool,
 ];
 
 /** The always-on ones, listed natively even in gateway mode. */

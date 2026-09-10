@@ -132,12 +132,6 @@ const GAPS: Array<{ fn: string; plan: string; because: string }> = [
   // Places. The most conversational of the lot.
 
   // Categories. The chat resolves them by name and cannot create one.
-  { fn: "createCategory", plan: "categories", because: "the chat matches categories but cannot add one" },
-  { fn: "updateCategory", plan: "categories", because: "renaming, aliases, parent" },
-  { fn: "archiveCategory", plan: "categories", because: "accounts have this and categories do not" },
-  { fn: "unarchiveCategory", plan: "categories", because: "a category retired by mistake, or needed again" },
-  { fn: "categoryTree", plan: "categories", because: "/api/v1/context lists them flat, without the tree" },
-  { fn: "archivedCategories", plan: "categories", because: "what was retired" },
 
 
   // Rates written by hand. What makes planfly useful with no source connected.
@@ -171,7 +165,7 @@ const GAPS: Array<{ fn: string; plan: string; because: string }> = [
 ];
 
 /** Raise this and you are declaring a new gap in a diff. Lower it and you closed one. */
-const CEILING = 23;
+const CEILING = 17;
 
 // ── Reading the tree ────────────────────────────────────────────────────────
 

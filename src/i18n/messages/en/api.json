@@ -124,5 +124,15 @@
     "parentNotFound": "I found no brand called «{input}». Create it first, then hang the branch off it.",
     "categoryNotFound": "I found no spending category answering to «{input}».",
     "nothingMatched": "No unplaced entry says exactly «{description}». Copy it back from the pending list as it is."
+  },
+  "categories": {
+    "list": "{n} category(ies).",
+    "none": "No categories yet.",
+    "archived": "Retired: {names}.",
+    "noneArchived": "No categories have been retired.",
+    "notFound": "I found no category answering to «{input}».",
+    "parentNotFound": "I found no {kind} category answering to «{input}» to hang it under.",
+    "duplicate": "You already have a category answering to that name: «{name}».",
+    "maybeDuplicate": "You may already have this category: «{name}». If you really want a separate one, send the same call with confirm: true."
   }
 }
