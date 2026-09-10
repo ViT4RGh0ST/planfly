@@ -130,14 +130,6 @@ const EXEMPT: Array<{ fn: string; kind: Kind; because: string }> = [
  */
 const GAPS: Array<{ fn: string; plan: string; because: string }> = [
   // Places. The most conversational of the lot.
-  { fn: "createPayee", plan: "places", because: "«lo compré en la Farmatodo» cannot create the shop" },
-  { fn: "updatePayee", plan: "places", because: "renaming or re-aliasing a shop" },
-  { fn: "archivePayee", plan: "places", because: "retiring a shop that closed" },
-  { fn: "unarchivePayee", plan: "places", because: "a shop that reopened, or was retired by mistake" },
-  { fn: "placeUnplaced", plan: "places", because: "«esto de PAGO C31 FARMATODO es Farmatodo»" },
-  { fn: "payeeTree", plan: "places", because: "the chat cannot see a single shop" },
-  { fn: "unplacedGroups", plan: "places", because: "what is still unplaced" },
-  { fn: "archivedPayees", plan: "places", because: "what was retired" },
 
   // Categories. The chat resolves them by name and cannot create one.
   { fn: "createCategory", plan: "categories", because: "the chat matches categories but cannot add one" },
@@ -179,7 +171,7 @@ const GAPS: Array<{ fn: string; plan: string; because: string }> = [
 ];
 
 /** Raise this and you are declaring a new gap in a diff. Lower it and you closed one. */
-const CEILING = 31;
+const CEILING = 23;
 
 // ── Reading the tree ────────────────────────────────────────────────────────
 

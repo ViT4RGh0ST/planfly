@@ -113,5 +113,16 @@
   "currencies": {
     "unused": "{code} ({name}): no accounts, can be removed.",
     "held": "{code} ({name}): {n} account(s) held in it."
+  },
+  "places": {
+    "list": "{n} place(s) recorded.",
+    "none": "No places recorded yet.",
+    "archived": "Retired: {names}.",
+    "noneArchived": "No places have been retired.",
+    "unplaced": "{n} repeated description(s) with no place. Expenses only: a salary, a withdrawal or a transfer does not happen at a shop.",
+    "notFound": "I found no place answering to «{input}».",
+    "parentNotFound": "I found no brand called «{input}». Create it first, then hang the branch off it.",
+    "categoryNotFound": "I found no spending category answering to «{input}».",
+    "nothingMatched": "No unplaced entry says exactly «{description}». Copy it back from the pending list as it is."
   }
 }

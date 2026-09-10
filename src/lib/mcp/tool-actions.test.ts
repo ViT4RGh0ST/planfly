@@ -85,6 +85,19 @@ const ACTIONS: Record<string, Record<string, readonly string[]>> = {
     update: ["rates:write"],
     remove: ["rates:write"],
   },
+  planfly_place: {
+    list: ["context:read"],
+    archived: ["context:read"],
+    unplaced: ["context:read"],
+    // What names and groups. Relabelling forty entries changes every answer
+    // about where the money went, and moves no money at all.
+    create: ["catalog:write"],
+    update: ["catalog:write"],
+    archive: ["catalog:write"],
+    unarchive: ["catalog:write"],
+    place: ["catalog:write"],
+    confirm: ["catalog:write"],
+  },
   planfly_recurring: {
     list: ["context:read"],
     create: ["recurring:write"],

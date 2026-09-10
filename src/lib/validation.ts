@@ -377,6 +377,57 @@ export const removeBudgetSchema = z.object({
 export const toggleRecurringSchema = z.object({ active: z.boolean() });
 
 /**
+ * A place: the shop, the pharmacy, the petrol station.
+ *
+ * Named and never id'd, like an account. The model does not handle foreign keys,
+ * and the person says «Farmatodo», not a uuid — the route resolves it with the
+ * same matcher that decides where an expense goes.
+ */
+export const createPlaceSchema = z.object({
+  name: z.string().min(1).max(120),
+  /** RIF, NIT, CUIT: whatever the receipt prints. Two branches may share one. */
+  tax_id: z.string().max(40).optional(),
+  address: z.string().max(240).optional(),
+  /** The brand this is a branch of, by name. A shop that is nobody's branch has none. */
+  parent: z.string().min(1).max(120).optional(),
+  /** A pasted pair of numbers or a map link. Never invented. */
+  coordinates: z.string().max(120).optional(),
+  /** By name: what this place's purchases usually are. */
+  default_category: z.string().min(1).max(120).optional(),
+  /** Comma-separated, as they come off a statement: «FARMATODO C31, PAGO FARMATODO». */
+  aliases: z.string().max(500).optional(),
+  /** «Yes, it really is another branch of that same company.» */
+  confirm: z.boolean().optional(),
+});
+
+export const patchPlaceSchema = createPlaceSchema.partial().extend({
+  /** Which place, by name or alias. */
+  place: z.string().min(1),
+  action: z.enum(["update", "archive", "unarchive"]).default("update"),
+  /*
+   * Empty is meaningful here and only here: it CLEARS.
+   *
+   * A shop leaves its brand, or stops having a usual category, and the only way
+   * to say that in JSON is a value — `undefined` already means «leave it alone»
+   * and the two must not collide. Hence the override of the create schema's
+   * min(1): on the way in it is a name, on the way out it is an erasure.
+   */
+  parent: z.string().max(120).optional(),
+  default_category: z.string().max(120).optional(),
+});
+
+/**
+ * Putting a place on every entry that carries exactly one description.
+ *
+ * The description is matched EXACTLY, not fuzzily: what gets written has to be
+ * the set that was counted and shown, never a wider one a resemblance swept in.
+ */
+export const assignPlaceSchema = z.object({
+  description: z.string().min(1).max(500),
+  place: z.string().min(1).max(120),
+});
+
+/**
  * Adding a currency this installation does not know.
  *
  * No `minor_unit` field, and it is not an oversight: `money.ts` keeps its own
